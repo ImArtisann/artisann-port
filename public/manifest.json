@@ -1,0 +1,35 @@
+{
+  "short_name": "TanStack App",
+  "name": "Create TanStack App Sample",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "Milo.png",
+      "type": "image/png",
+      "sizes": "542x928"
+    },
+    {
+      "src": "perforce-logo.png",
+      "type": "image/png",
+      "sizes": "2509x2050"
+    },
+    {
+      "src": "recon-logo.png",
+      "type": "image/png",
+      "sizes": "101x101"
+    },
+    {
+      "src": "verizon-logo.png",
+      "type": "image/png",
+      "sizes": "1572x1429"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#ffffff"
+}
