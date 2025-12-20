@@ -4,13 +4,14 @@ import {openSourceProjects, personalProjects, workExperiences} from "@/lib/about
 import {Badge} from "@/components/ui/badge.tsx";
 import {Moon, Sun} from "lucide-react";
 import {useTheme} from "@/components/theme-provider.tsx";
+import * as React from "react";
 
 export const Route = createFileRoute('/')({ component: App })
 
 function App() {
 
   const {theme, setTheme} = useTheme()
-
+  const [isExpanded, setIsExpanded] = React.useState(false);
 
   return (
     <div className="min-h-screen bg-background">
@@ -46,7 +47,12 @@ function App() {
           </h2>
           <div className={'flex flex-col w-full gap-4'}>
             {workExperiences.map((experience, index) => (
-                <div key={`${experience.company}-${index}`} className={'group flex flex-col w-full gap-2'}>
+                <button
+                    type="button"
+                    key={`${experience.company}-${index}`}
+                    className={'group flex flex-col w-full gap-2 text-left cursor-pointer md:cursor-default focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm'}
+                    onClick={() => setIsExpanded(!isExpanded)}
+                >
                   <div  className={'flex flex-row w-full items-center justify-between'}>
                     <div className={'flex flex-row items-center gap-4'}>
                       <img src={experience.logo} alt={'My Cat Milo'} className={'h-6 w-auto'}/>
@@ -76,7 +82,7 @@ function App() {
                       {experience.description}
                     </p>
                   </div>
-                </div>
+                </button>
             ))}
           </div>
         </div>
