@@ -1,6 +1,6 @@
 import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
 import appCss from '../styles.css?url'
-import * as React from "react";
+import type * as React from "react";
 import {ThemeProvider} from "@/components/theme-provider.tsx";
 
 export const Route = createRootRoute({

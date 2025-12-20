@@ -17,7 +17,7 @@ function App() {
       <header className={'mx-auto max-w-4xl px-6 pt-14'}>
         <div className={'flex flex-row items-center justify-between'}>
           <div className={'flex flex-col gap-4 items-start'}>
-            <h1 className={'text-6xl font-bold text-foreground'}>
+            <h1 className={'text-4xl md:text-6xl font-bold text-foreground'}>
               Artisann
             </h1>
             <div className={'flex flex-row gap-2 items-center'}>
@@ -51,20 +51,20 @@ function App() {
                     <div className={'flex flex-row items-center gap-4'}>
                       <img src={experience.logo} alt={'My Cat Milo'} className={'h-6 w-auto'}/>
                     <div className={'flex flex-col gap-1 items-start'}>
-                      <h3 className={'font-semibold text-foreground'}>
+                      <h3 className={'text-sm md:text-base font-semibold text-foreground'}>
                         {experience.company}
                       </h3>
-                      <div className={'flex flex-row gap-2 items-start'}>
-                        <span className={'text-sm text-foreground/80'}>
+                      <div className={'flex flex-col md:flex-row gap-2 items-start'}>
+                        <span className={'text-xs md:text-sm text-foreground/80'}>
                         {experience.role}
                         </span>
-                        <span className={'text-sm text-muted-foreground'}>
+                        <span className={'text-xs md:text-sm text-muted-foreground'}>
                           {experience.technologies.join(', ')}
                         </span>
                       </div>
                     </div>
                   </div>
-                  <div className={'flex flex-row gap-2 items-center text-sm text-muted-foreground'}>
+                  <div className={'flex flex-row gap-2 items-center text-xs md:text-sm text-muted-foreground'}>
                     <p>{experience.start}</p>
                     <p>-</p>
                     <p>{experience.end}</p>
@@ -72,7 +72,7 @@ function App() {
                 </div>
                   <div
                       className={'max-h-0 opacity-0 group-hover:max-h-32 group-hover:opacity-100 transition-all duration-300 ease-in-out overflow-hidden'}>
-                    <p className={'text-sm text-foreground'}>
+                    <p className={'text-xs md:text-sm text-foreground'}>
                       {experience.description}
                     </p>
                   </div>
@@ -107,7 +107,7 @@ function App() {
           </div>
         </div>
       </section>
-      <section className={'mx-auto max-w-4xl px-6 pt-14'}>
+      <section className={'mx-auto max-w-4xl px-6 py-14'}>
         <div className={'flex flex-col gap-4'}>
           <h2 className={'font-semibold text-muted-foreground'}>
             Open Source
@@ -132,8 +132,12 @@ function App() {
           </div>
         </div>
       </section>
-      <div className={'absolute bottom-6 left-6'}>
-        <img src={'/Milo.png'} alt={'My Cat Milo'} className={'h-56 w-auto'}/>
+      <div className={'fixed bottom-4 left-4 md:bottom-6 md:left-6 z-50'}>
+        <img
+            src={'/Milo.png'}
+            alt={'My Cat Milo'}
+            className={'h-16 w-auto md:h-56 transition-all duration-300'}
+        />
       </div>
     </div>
   )

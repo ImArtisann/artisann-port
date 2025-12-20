@@ -16,7 +16,7 @@ export const workExperiences: WorkExperience[] = [
         role: 'Software Engineer - Automation & Device Intelligence',
         technologies: ['TS', 'Java', 'Python'],
         description: 'Developed and maintained automation frameworks for device testing, improving efficiency and reducing manual testing efforts. Collaborated with telecom protocol teams to analyze signaling flows (SIP, VoLTE, IMS) identify defects and support fast releases.',
-        start: 'Jan 2025',
+        start: '2025',
         end: 'Present'
     },
     {
@@ -25,7 +25,7 @@ export const workExperiences: WorkExperience[] = [
         role: 'Contractor',
         technologies: ['OCR', 'Blockchain'],
         description: 'Supported the Attorney general in complex cases assisting in computer forensics and blockchain analysis.',
-        start: 'Sept 2025',
+        start: '2025',
         end: 'Present'
     },
     {
@@ -34,8 +34,8 @@ export const workExperiences: WorkExperience[] = [
         role: 'Systems Engineer',
         technologies: ['ADB', 'Mobile Testing'],
         description: 'Managed global automation labs for perfecto. Supporting high-scale mobile testing environments.',
-        start: 'April 2021',
-        end: 'Jan 2025'
+        start: '2021',
+        end: '2025'
     }
 ]
 
