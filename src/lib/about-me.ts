@@ -20,15 +20,6 @@ export const workExperiences: WorkExperience[] = [
         end: 'Present'
     },
     {
-        logo: '/recon-logo.png',
-        company: 'Recon Forensics',
-        role: 'Contractor',
-        technologies: ['OCR', 'Blockchain'],
-        description: 'Supported the Attorney general in complex cases assisting in computer forensics and blockchain analysis.',
-        start: '2025',
-        end: 'Present'
-    },
-    {
         logo: '/perforce-logo.png',
         company: 'Perforce Software',
         role: 'Systems Engineer',
