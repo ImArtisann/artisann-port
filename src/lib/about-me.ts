@@ -20,6 +20,15 @@ export const workExperiences: WorkExperience[] = [
         end: 'Present'
     },
     {
+        logo: '/recon-logo.png',
+        company: 'Recon Forensics',
+        role: 'Contractor',
+        technologies: ['OCR', 'Blockchain'],
+        description: 'Supported the Attorney general in complex cases assisting in computer forensics and blockchain analysis.',
+        start: '2025',
+        end: '2026'
+    },
+    {
         logo: '/perforce-logo.png',
         company: 'Perforce Software',
         role: 'Systems Engineer',
@@ -35,7 +44,7 @@ type PersonalProject = {
     description: string,
     technologies: string[],
     link?: string,
-    badge?: 'soon' | 'deprecated'
+    badge?: 'soon' | 'sunsetted'
 }
 
 export const personalProjects: PersonalProject[] = [
@@ -55,13 +64,13 @@ export const personalProjects: PersonalProject[] = [
         name: 'Brigade',
         description: 'Multi-Wallet crypto trading platform. Executed over 160k+ in user trading volume across 8 decentralized protocols with real-time price feeds',
         technologies: ['Telegram', 'Solana', 'Node.js', 'Go'],
-        badge: 'deprecated'
+        badge: 'sunsetted'
     },
     {
         name: 'Twisted Fate',
         description: 'A fully automated virtual betting game/experience for League of Legends. Served over 10k+ users with persistent rank, rewards systems, and real-time match tracking.',
         technologies: ['RIOT API', 'Java', 'Discord'],
-        badge: 'deprecated'
+        badge: 'sunsetted'
     }
 ]
 
@@ -84,5 +93,11 @@ export const openSourceProjects: OpenSourceProject[] = [
         description: 'Package to easily subscribe to events that take place on pump.fun subscribe to new trades created or to new coins created',
         technologies: ['JS', 'Socket.IO'],
         link: 'https://github.com/ImArtisann/Pump.fun-Websocket'
-    }
+    },
+    {
+        name: 'Home Assistant - Webhook / Dashboard',
+        description: 'A webhook effect wrapper for Home Assistant that allows for easy integration with various services.',
+        technologies: ['TS', 'Effect'],
+        link: 'https://github.com/ImArtisann/home-assistant-dashboard'
+    },
 ]
