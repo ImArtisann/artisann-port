@@ -83,21 +83,15 @@ type OpenSourceProject = {
 
 export const openSourceProjects: OpenSourceProject[] = [
     {
-        name: 'Fillcut',
-        description: 'FillCut is a tool that automatically removes filler words, pauses, and coughs from video files.',
-        technologies: ['TS', 'Whisper', 'FFmpeg'],
-        link: 'https://github.com/ImArtisann/fillcut'
+        name: 'Confect Example',
+        description: 'A scaffolding demonstrating effect patterns + confect and integrating better-auth.',
+        technologies: ['TS', 'Effect-ts'],
+        link: 'https://github.com/ImArtisann/confect-example'
     },
     {
         name: 'Pump.fun Websocket',
         description: 'Package to easily subscribe to events that take place on pump.fun subscribe to new trades created or to new coins created',
         technologies: ['JS', 'Socket.IO'],
         link: 'https://github.com/ImArtisann/Pump.fun-Websocket'
-    },
-    {
-        name: 'Home Assistant - Webhook / Dashboard',
-        description: 'A webhook effect wrapper for Home Assistant that allows for easy integration with various services.',
-        technologies: ['TS', 'Effect'],
-        link: 'https://github.com/ImArtisann/home-assistant-dashboard'
-    },
+    }
 ]
