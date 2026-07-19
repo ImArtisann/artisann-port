@@ -1,0 +1,36 @@
+---
+import { portfolio } from "@/lib/about-me.ts";
+import { portfolioIds } from "./constants.ts";
+import ExperienceRecord from "./experience-record.astro";
+import SectionFooter from "./section-footer.astro";
+import SectionHeader from "./section-header.astro";
+import SectionShell from "./section-shell.astro";
+
+const [primaryExperience, ...secondaryExperiences] = portfolio.workExperiences;
+---
+
+<SectionShell id={portfolioIds.experience} accent="green">
+  <SectionHeader titleId={portfolioIds.experienceTitle} copy={portfolio.sectionCopy.experience} />
+  <div>
+    {
+      primaryExperience ? (
+        <div class="mt-8.25 flex min-w-0 flex-col border-t border-nightfall-border lg:mt-12.75 lg:flex-row lg:border-t-0">
+          <ExperienceRecord experience={primaryExperience} primary />
+          {secondaryExperiences.length > 0 ? (
+            <div class="flex min-w-0 flex-1 flex-col">
+              {secondaryExperiences.map((experience) => (
+                <ExperienceRecord experience={experience} />
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null
+    }
+    <SectionFooter
+      signature="ARTISANN / PROFESSIONAL EXPERIENCE"
+      prompt="EMAIL ↗"
+      promptHref={portfolio.contact.emailHref}
+      accent="violet"
+    />
+  </div>
+</SectionShell>

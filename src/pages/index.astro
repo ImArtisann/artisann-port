@@ -1,0 +1,29 @@
+---
+import { portfolioIds } from "@/components/portfolio/constants.ts";
+import ContactSection from "@/components/portfolio/contact-section.astro";
+import ExperienceSection from "@/components/portfolio/experience-section.astro";
+import Hero from "@/components/portfolio/hero.astro";
+import LandingFooter from "@/components/portfolio/landing-footer.astro";
+import OpenSourceSection from "@/components/portfolio/open-source-section.astro";
+import WorkSection from "@/components/portfolio/work-section.astro";
+import BaseLayout from "@/layouts/base-layout.astro";
+---
+
+<BaseLayout title="Artisann | Full Stack Developer">
+  <div class="mx-auto w-full max-w-360 bg-nightfall-bg">
+    <a
+      class="fixed -top-16 left-2 z-20 inline-flex min-h-11 items-center bg-nightfall-cyan px-3 py-2.5 font-mono text-xs font-bold text-nightfall-bg transition-[top] duration-180 ease-out focus-visible:top-2"
+      href="#main-content"
+    >
+      Skip to content
+    </a>
+    <Hero />
+    <main id={portfolioIds.main}>
+      <ExperienceSection />
+      <WorkSection />
+      <OpenSourceSection />
+      <ContactSection />
+    </main>
+    <LandingFooter />
+  </div>
+</BaseLayout>

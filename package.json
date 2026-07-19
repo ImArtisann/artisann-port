@@ -3,48 +3,38 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite dev --port 3000",
-    "build": "vite build",
-    "preview": "vite preview",
-    "test": "vitest run",
+    "dev": "alchemy dev",
+    "dev:site": "astro dev --port 3000",
+    "build": "astro build",
+    "preview": "astro preview --port 3000",
+    "check": "astro check && biome check",
     "format": "biome format",
     "lint": "biome lint",
-    "check": "biome check"
+    "plan": "alchemy plan",
+    "deploy": "alchemy deploy --stage prod",
+    "destroy": "alchemy destroy"
   },
   "dependencies": {
-    "@radix-ui/react-slot": "^1.2.4",
-    "@tailwindcss/vite": "^4.0.6",
-    "@tanstack/react-devtools": "^0.7.0",
-    "@tanstack/react-router": "^1.132.0",
-    "@tanstack/react-router-devtools": "^1.132.0",
-    "@tanstack/react-router-ssr-query": "^1.131.7",
-    "@tanstack/react-start": "^1.132.0",
-    "@tanstack/router-plugin": "^1.132.0",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
-    "lucide-react": "^0.544.0",
-    "nitro": "latest",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "tailwind-merge": "^3.0.2",
-    "tailwindcss": "^4.0.6",
-    "tw-animate-css": "^1.3.6",
-    "vite-tsconfig-paths": "^5.1.4"
+    "@effect/platform-node": "4.0.0-beta.99",
+    "@fontsource-variable/geist": "5.2.9",
+    "@fontsource-variable/geist-mono": "5.2.8",
+    "@tailwindcss/vite": "4.3.3",
+    "alchemy": "2.0.0-beta.63",
+    "astro": "7.1.1",
+    "effect": "4.0.0-beta.99",
+    "tailwindcss": "4.3.3"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.2.4",
-    "@tanstack/devtools-vite": "^0.3.11",
-    "@testing-library/dom": "^10.4.0",
-    "@testing-library/react": "^16.2.0",
+    "@astrojs/check": "0.9.9",
+    "@biomejs/biome": "2.5.4",
     "@types/node": "^22.10.2",
-    "@types/react": "^19.2.0",
-    "@types/react-dom": "^19.2.0",
-    "@vitejs/plugin-react": "^5.0.4",
-    "babel-plugin-react-compiler": "^1.0.0",
-    "jsdom": "^27.0.0",
     "typescript": "^5.7.2",
-    "vite": "^7.1.7",
-    "vitest": "^3.0.5",
-    "web-vitals": "^5.1.0"
+    "vite": "8.1.5"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "patchedDependencies": {
+    "alchemy@2.0.0-beta.63@2.0.0-beta.63": "patches/alchemy@2.0.0-beta.63.patch"
   }
 }

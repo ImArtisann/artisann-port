@@ -1,0 +1,41 @@
+---
+import type { portfolio } from "@/lib/about-me.ts";
+import ResponsiveCopy from "./responsive-copy.astro";
+import type { ResponsiveValue } from "./shared.ts";
+
+interface Props {
+  titleId: string;
+  copy: (typeof portfolio.sectionCopy)[keyof typeof portfolio.sectionCopy];
+  contextOverride?: ResponsiveValue;
+}
+
+const { titleId, copy, contextOverride } = Astro.props;
+---
+
+<header class="flex min-w-0 flex-col border-y border-nightfall-border pt-3.25 lg:pt-3.5">
+  <div
+    class="flex min-w-0 flex-wrap items-start justify-between gap-x-4 gap-y-2 font-mono text-[0.5625rem] leading-[1.35] font-[650] tracking-[0.05rem] tabular-nums lg:text-[0.625rem] lg:tracking-[0.0625rem]"
+  >
+    <span
+      class="min-w-0 wrap-break-word font-bold text-(--section-accent,var(--nightfall-cyan)) lg:text-[0.6875rem] lg:tracking-[0.075rem]"
+    >
+      <ResponsiveCopy value={copy.contextLeft} />
+    </span>
+    <span class="min-w-0 wrap-break-word text-right text-nightfall-muted">
+      <ResponsiveCopy value={contextOverride ?? copy.contextRight} />
+    </span>
+  </div>
+  <div class="mt-6 flex min-w-0 flex-col gap-5 pb-10 lg:flex-row lg:items-start lg:gap-10 lg:pb-12">
+    <h2
+      id={titleId}
+      class="min-w-0 flex-2 whitespace-pre-line wrap-break-word text-[2.25rem] leading-[0.96] font-[650] tracking-[-0.0417em] text-nightfall-text-bright text-balance lg:text-[clamp(3rem,5vw,4.5rem)] lg:tracking-[-0.04em]"
+    >
+      <ResponsiveCopy value={copy.headline} />
+    </h2>
+    <p
+      class="min-w-0 max-w-prose flex-1 wrap-break-word text-sm leading-[1.45] font-[450] text-nightfall-text text-pretty lg:text-[1.0625rem] lg:leading-normal"
+    >
+      <ResponsiveCopy value={copy.summary} />
+    </p>
+  </div>
+</header>

@@ -1,0 +1,46 @@
+diff --git a/lib/Cloudflare/Workers/WorkerProvider.js b/lib/Cloudflare/Workers/WorkerProvider.js
+index 320992f8eec3bd3319666ef8f793cc1700ff6c6e..3c5257f6c6809ef64b85e6fa9a387b93d72c97c1 100644
+--- a/lib/Cloudflare/Workers/WorkerProvider.js
++++ b/lib/Cloudflare/Workers/WorkerProvider.js
+@@ -1483,7 +1483,7 @@ export const LiveWorkerProvider = () => Provider.effect(Worker, Effect.gen(funct
+             if (assetsHash === undefined) {
+                 return true;
+             }
+-            return assetsHash !== output.hash?.assets;
++            return JSON.stringify(assetsHash) !== JSON.stringify(output.hash?.assets);
+         }
+         if (props.vite) {
+             const { hash } = yield* hashViteInput(props.vite.rootDir, props.vite.memo, Effect.succeed(output.hash?.additionalWorkspaces ?? []));
+@@ -1518,7 +1518,7 @@ export const LiveWorkerProvider = () => Provider.effect(Worker, Effect.gen(funct
+         if (assetsHash === undefined) {
+             return true;
+         }
+-        return assetsHash !== output.hash?.assets;
++        return JSON.stringify(assetsHash) !== JSON.stringify(output.hash?.assets);
+     });
+     return Worker.Provider.of({
+         stables: ["workerId", "workerName"],
+diff --git a/src/Cloudflare/Workers/WorkerProvider.ts b/src/Cloudflare/Workers/WorkerProvider.ts
+index 6ae1973c0463c1e103f2de857c1736b96ffe8624..ac5a3e0712f4ec945214cc09b35e971397de5bb5 100644
+--- a/src/Cloudflare/Workers/WorkerProvider.ts
++++ b/src/Cloudflare/Workers/WorkerProvider.ts
+@@ -2074,7 +2074,9 @@ export const LiveWorkerProvider = () =>
+           if (assetsHash === undefined) {
+             return true;
+           }
+-          return assetsHash !== output.hash?.assets;
++          return (
++            JSON.stringify(assetsHash) !== JSON.stringify(output.hash?.assets)
++          );
+         }
+         if (props.vite) {
+           const { hash } = yield* hashViteInput(
+@@ -2115,7 +2117,7 @@ export const LiveWorkerProvider = () =>
+         if (assetsHash === undefined) {
+           return true;
+         }
+-        return assetsHash !== output.hash?.assets;
++        return JSON.stringify(assetsHash) !== JSON.stringify(output.hash?.assets);
+       });
+ 
+       return Worker.Provider.of({
