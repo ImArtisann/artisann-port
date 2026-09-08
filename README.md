@@ -1,310 +1,163 @@
-Welcome to your new TanStack app! 
+# Artisann portfolio
 
-# Getting Started
+Static Astro portfolio in a Bun-workspaces monorepo, scaffolded with
+[`repo-int`](https://github.com/ImArtisann/repo-int): `config`, `astro`, `ui`
+with `--ui-base base`, and `assets`.
 
-To run this application:
+## Requirements
 
-```bash
-pnpm install
-pnpm start
-```
+- Bun 1.4.2 or newer.
+- Node.js 22.12 or newer; CI uses Node.js 24.
 
-# Building For Production
-
-To build this application for production:
+## Development
 
 ```bash
-pnpm build
+bun install
+bun run dev
 ```
 
-## Testing
-
-This project uses [Vitest](https://vitest.dev/) for testing. You can run the tests with:
+The Astro server starts on port 3000, or the next available port.
 
 ```bash
-pnpm test
+bun run check
+bun run test
+bun run build
+bun run preview
 ```
 
-## Styling
+`check` runs Vite+ formatting, lint, and type checks, followed by Astro's
+checker. `test` runs the generated Vitest configuration; no tests are currently
+defined. `build` generates the assets manifest and builds the static portfolio
+into `apps/web/dist`.
 
-This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.
+Use `bun run format` to format files and `bun run lint` to run lint
+independently. Lefthook installs the generated pre-commit checks during
+`bun install`.
 
+## Workspaces
 
-## Linting & Formatting
+| Path                         | Purpose                                                              |
+| ---------------------------- | -------------------------------------------------------------------- |
+| `apps/web`                   | Existing Astro website, portfolio content, styles, and public assets |
+| `packages/ui`                | Shared shadcn components using Base UI and the `base-nova` style     |
+| `packages/assets`            | R2 asset manifest, deployment, and upload tooling                    |
+| `packages/typescript-config` | Shared TypeScript configuration                                      |
+| `stacks/github.ts`           | Generated GitHub repository and deployment-secrets stack             |
+| `alchemy.run.ts`             | Existing portfolio Cloudflare deployment stack                       |
 
-This project uses [Biome](https://biomejs.dev/) for linting and formatting. The following scripts are available:
+Portfolio content remains in `apps/web/src/lib/about-me.ts`. Existing images,
+icons, and `robots.txt` remain under `apps/web/public` with unchanged URLs.
 
+The root uses repo-int's pinned TypeScript 7 compiler and Effect tooling.
+`apps/web` uses TypeScript 6 because `astro check` requires the JavaScript
+compiler API, which TypeScript 7 does not provide.
+
+## Shared UI
 
 ```bash
-pnpm lint
-pnpm format
-pnpm check
+bun x --bun shadcn@latest add input --cwd packages/ui
 ```
 
+Components are exported from `@repo/ui/components/*`; utilities, hooks, and the
+shared stylesheet are also exported by `@repo/ui`.
 
-## Shadcn
+The Astro app depends on `@repo/ui`, but retains its existing stylesheet and
+native Astro components. The shared theme is not imported into the portfolio, so
+it does not change the existing design. Rendering React-based Base UI components
+in Astro requires adding Astro's React integration first.
 
-Add components using the latest version of [Shadcn](https://ui.shadcn.com/).
+## Assets
+
+The generated assets package and `apps/web/src/components/AssetImage.astro` are
+installed. Existing portfolio images remain local; the R2 image directory starts
+empty, so development and builds do not require Cloudflare credentials.
+
+To use R2-hosted images:
+
+1. Copy `packages/assets/.env.example` to `packages/assets/.env` and configure
+   `ASSETS_HOST`, `ASSETS_ZONE_ID`, and the bucket settings.
+2. Add source images under `packages/assets/images`.
+3. Set the public values from `apps/web/.env.assets.example` in `apps/web/.env`.
+   Keep R2 credentials out of the app environment.
+4. Generate and verify the manifest, provision the bucket, then upload:
 
 ```bash
-pnpm dlx shadcn@latest add button
+bun run --cwd packages/assets generate
+bun run --cwd packages/assets verify
+bun run --cwd packages/assets upload:plan
+bun run --cwd packages/assets deploy
+bun run --cwd packages/assets upload
 ```
 
+Set the R2 S3 credentials in `packages/assets/.env` before uploading. Commit
+source images and the generated manifest. Leave image transformations disabled
+unless Cloudflare Image Transformations is enabled for the zone.
 
+## Portfolio deployment
 
-## Routing
-This project uses [TanStack Router](https://tanstack.com/router). The initial setup is a file based router. Which means that the routes are managed as files in `src/routes`.
-
-### Adding A Route
-
-To add a new route to your application just add another a new file in the `./src/routes` directory.
-
-TanStack will automatically generate the content of the route file for you.
-
-Now that you have two routes you can use a `Link` component to navigate between them.
-
-### Adding Links
-
-To use SPA (Single Page Application) navigation you will need to import the `Link` component from `@tanstack/react-router`.
-
-```tsx
-import { Link } from "@tanstack/react-router";
-```
-
-Then anywhere in your JSX you can use it like so:
-
-```tsx
-<Link to="/about">About</Link>
-```
-
-This will create a link that will navigate to the `/about` route.
-
-More information on the `Link` component can be found in the [Link documentation](https://tanstack.com/router/v1/docs/framework/react/api/router/linkComponent).
-
-### Using A Layout
-
-In the File Based Routing setup the layout is located in `src/routes/__root.tsx`. Anything you add to the root route will appear in all the routes. The route content will appear in the JSX where you use the `<Outlet />` component.
-
-Here is an example layout that includes a header:
-
-```tsx
-import { Outlet, createRootRoute } from '@tanstack/react-router'
-import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
-
-import { Link } from "@tanstack/react-router";
-
-export const Route = createRootRoute({
-  component: () => (
-    <>
-      <header>
-        <nav>
-          <Link to="/">Home</Link>
-          <Link to="/about">About</Link>
-        </nav>
-      </header>
-      <Outlet />
-      <TanStackRouterDevtools />
-    </>
-  ),
-})
-```
-
-The `<TanStackRouterDevtools />` component is not required so you can remove it if you don't want it in your layout.
-
-More information on layouts can be found in the [Layouts documentation](https://tanstack.com/router/latest/docs/framework/react/guide/routing-concepts#layouts).
-
-
-## Data Fetching
-
-There are multiple ways to fetch data in your application. You can use TanStack Query to fetch data from a server. But you can also use the `loader` functionality built into TanStack Router to load the data for a route before it's rendered.
-
-For example:
-
-```tsx
-const peopleRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/people",
-  loader: async () => {
-    const response = await fetch("https://swapi.dev/api/people");
-    return response.json() as Promise<{
-      results: {
-        name: string;
-      }[];
-    }>;
-  },
-  component: () => {
-    const data = peopleRoute.useLoaderData();
-    return (
-      <ul>
-        {data.results.map((person) => (
-          <li key={person.name}>{person.name}</li>
-        ))}
-      </ul>
-    );
-  },
-});
-```
-
-Loaders simplify your data fetching logic dramatically. Check out more information in the [Loader documentation](https://tanstack.com/router/latest/docs/framework/react/guide/data-loading#loader-parameters).
-
-### React-Query
-
-React-Query is an excellent addition or alternative to route loading and integrating it into you application is a breeze.
-
-First add your dependencies:
+The root stack retains the `ArtisannPortfolio` stack name and resource
+identifiers. It uses `Cloudflare.Website.Astro` and the matching
+`@alchemy.run/frontend-frameworks` integration to build `apps/web` and deploy
+static assets to Cloudflare Workers. The deployment adapter writes assets to
+`apps/web/dist/client`; ordinary `bun run build` still writes the standalone
+static site to `apps/web/dist`. Production serves `www.artisann.dev`; the apex
+`artisann.dev` redirects permanently to the www hostname while preserving paths
+and query strings. Non-production stages do not claim these domains.
 
 ```bash
-pnpm add @tanstack/react-query @tanstack/react-query-devtools
+bun run login
+bun run plan --stage prod --profile admin
+bun run deploy --profile admin
 ```
 
-Next we'll need to create a query client and provider. We recommend putting those in `main.tsx`.
+`login` runs the project-local Alchemy CLI against `stacks/github.ts` with the
+`admin` profile and `--configure`, so both Cloudflare and GitHub authentication
+providers are explicitly configured. Complete both providers' authentication
+prompts. Choose stored credentials to enter a replacement token, or environment
+variables to use credentials from the repository's `.env`.
 
-```tsx
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+An environment-backed profile reads `CLOUDFLARE_API_TOKEN` from the current
+environment or `.env`; its profile name does not select a separate token.
+Ordinary `alchemy login` without `--configure` does not refresh environment
+credentials. If Cloudflare reports `Unauthorized: Invalid access token`, replace
+the rejected token in `.env` or run `bun run login` and configure valid stored
+credentials. Do not commit or paste tokens into logs or chat.
 
-// ...
+The required `@effect/platform-bun` and `@effect/platform-node` peers are
+installed at versions compatible with Alchemy's Effect release.
 
-const queryClient = new QueryClient();
+The deployment script explicitly selects `alchemy.run.ts` and the `prod` stage.
+Pass `--profile admin` for the profile configured above. In CI, provide
+`CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` and run
+`bun run deploy --yes` without a local profile.
 
-// ...
+Authentication and the required Cloudflare permissions must be configured before
+planning or deploying. Review the production plan before applying it, especially
+after an Alchemy upgrade. The redirect resource owns the zone's
+`http_request_dynamic_redirect` phase; preserve any unrelated rules before
+changing that phase.
 
-if (!rootElement.innerHTML) {
-  const root = ReactDOM.createRoot(rootElement);
-
-  root.render(
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>
-  );
-}
-```
-
-You can also add TanStack Query Devtools to the root route (optional).
-
-```tsx
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-
-const rootRoute = createRootRoute({
-  component: () => (
-    <>
-      <Outlet />
-      <ReactQueryDevtools buttonPosition="top-right" />
-      <TanStackRouterDevtools />
-    </>
-  ),
-});
-```
-
-Now you can use `useQuery` to fetch your data.
-
-```tsx
-import { useQuery } from "@tanstack/react-query";
-
-import "./App.css";
-
-function App() {
-  const { data } = useQuery({
-    queryKey: ["people"],
-    queryFn: () =>
-      fetch("https://swapi.dev/api/people")
-        .then((res) => res.json())
-        .then((data) => data.results as { name: string }[]),
-    initialData: [],
-  });
-
-  return (
-    <div>
-      <ul>
-        {data.map((person) => (
-          <li key={person.name}>{person.name}</li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-export default App;
-```
-
-You can find out everything you need to know on how to use React-Query in the [React-Query documentation](https://tanstack.com/query/latest/docs/framework/react/overview).
-
-## State Management
-
-Another common requirement for React applications is state management. There are many options for state management in React. TanStack Store provides a great starting point for your project.
-
-First you need to add TanStack Store as a dependency:
+The generated GitHub stack is separate:
 
 ```bash
-pnpm add @tanstack/store
+bun run login
+bun run deploy:github
 ```
 
-Now let's create a simple counter in the `src/App.tsx` file as a demonstration.
+This provisions the repository settings and deployment secrets defined in
+`stacks/github.ts`. The account token includes the existing account permissions
+plus zone permissions scoped to `artisann.dev`: zone lookup, DNS updates,
+Workers routes, and dynamic URL redirects. The admin Cloudflare credential must
+have **Account API Tokens Write** and be allowed to grant these permissions.
+Cloudflare also requires **Super Administrator** permission on the account to
+create or update account-owned tokens. Adding token-management permission to the
+deployment token being created does not authorize the admin credential that
+creates it.
 
-```tsx
-import { useStore } from "@tanstack/react-store";
-import { Store } from "@tanstack/store";
-import "./App.css";
+The GitHub credential needs access to manage this repository and its Actions
+secrets. Fine-grained tokens need repository access and **Secrets: Read and
+write**. Both secret resources depend on the repository output, so Alchemy waits
+for repository creation before requesting its secret-encryption key.
 
-const countStore = new Store(0);
-
-function App() {
-  const count = useStore(countStore);
-  return (
-    <div>
-      <button onClick={() => countStore.setState((n) => n + 1)}>
-        Increment - {count}
-      </button>
-    </div>
-  );
-}
-
-export default App;
-```
-
-One of the many nice features of TanStack Store is the ability to derive state from other state. That derived state will update when the base state updates.
-
-Let's check this out by doubling the count using derived state.
-
-```tsx
-import { useStore } from "@tanstack/react-store";
-import { Store, Derived } from "@tanstack/store";
-import "./App.css";
-
-const countStore = new Store(0);
-
-const doubledStore = new Derived({
-  fn: () => countStore.state * 2,
-  deps: [countStore],
-});
-doubledStore.mount();
-
-function App() {
-  const count = useStore(countStore);
-  const doubledCount = useStore(doubledStore);
-
-  return (
-    <div>
-      <button onClick={() => countStore.setState((n) => n + 1)}>
-        Increment - {count}
-      </button>
-      <div>Doubled - {doubledCount}</div>
-    </div>
-  );
-}
-
-export default App;
-```
-
-We use the `Derived` class to create a new store that is derived from another store. The `Derived` class has a `mount` method that will start the derived store updating.
-
-Once we've created the derived store we can use it in the `App` component just like we would any other store using the `useStore` hook.
-
-You can find out everything you need to know on how to use TanStack Store in the [TanStack Store documentation](https://tanstack.com/store/latest).
-
-# Demo files
-
-Files prefixed with `demo` can be safely deleted. They are there to provide a starting point for you to play around with the features you've installed.
-
-# Learn More
-
-You can learn more about all of the offerings from TanStack in the [TanStack documentation](https://tanstack.com).
+The GitHub stack is not required to build or run the portfolio locally. Neither
+login nor installing dependencies deploys the website; `bun run deploy` does.

@@ -1,0 +1,205 @@
+---
+import { portfolio } from "@/lib/about-me.ts";
+import { portfolioIds } from "./constants.ts";
+import PortfolioLinkText from "./portfolio-link-text.astro";
+import ResponsiveCopy from "./responsive-copy.astro";
+import { accentTextClasses, type LinkValue } from "./shared.ts";
+---
+
+<header class="relative min-h-svh bg-nightfall-bg">
+  <span
+    class="absolute inset-y-0 left-0 z-10 w-1 bg-nightfall-violet"
+    aria-hidden="true"
+  ></span>
+  <div
+    class="relative z-0 mx-auto flex min-h-svh w-full max-w-360 flex-col px-5 pt-4 sm:px-8 lg:px-18 lg:pt-10"
+  >
+    <nav
+      class="flex min-h-11 flex-wrap items-center justify-between gap-x-3 gap-y-2"
+      aria-label="Primary navigation"
+    >
+      <a
+        class="flex min-h-11 min-w-0 items-center gap-3 no-underline lg:gap-4.5"
+        href="#top"
+        aria-label="Artisann, page top"
+      >
+        <span
+          class="font-mono text-[15px] font-extrabold tracking-[0.075em] text-nightfall-text-bright lg:text-[17px] lg:tracking-[0.094em]"
+          aria-hidden="true"
+        >
+          {portfolio.profile.monogram}
+        </span>
+        <span
+          class="min-w-0 wrap-break-word font-mono text-[8px] font-[650] tracking-[0.056em] text-nightfall-muted lg:text-xs lg:tracking-[0.069em]"
+        >
+          <ResponsiveCopy value={portfolio.profile.role} />
+        </span>
+      </a>
+      <div class="flex min-w-0 flex-wrap items-center gap-x-0.75 gap-y-1 lg:gap-x-5">
+        {
+          portfolio.profile.links.map((link) => (
+            <PortfolioLinkText
+              link={link}
+              className="inline-flex min-h-11 min-w-11 items-center justify-center font-mono text-[9px] font-bold tracking-[0.038em] text-nightfall-text no-underline transition-colors duration-180 ease-out hover:text-nightfall-cyan lg:px-0.5 lg:font-sans lg:text-sm lg:font-semibold lg:tracking-normal"
+            />
+          ))
+        }
+      </div>
+    </nav>
+
+    <div class="mt-11 min-w-0 lg:mt-15">
+      <h1
+        id={portfolioIds.top}
+        class="hero-enter hero-enter--name wrap-break-word font-sans text-[clamp(4rem,8vw,6rem)] font-[650] leading-[0.9] tracking-[-0.04em] text-nightfall-text-bright"
+      >
+        {portfolio.profile.name}
+      </h1>
+      <p
+        class="hero-enter hero-enter--location mt-4.5 wrap-break-word font-mono text-[9px] font-[650] tracking-[0.056em] text-nightfall-muted lg:mt-3 lg:text-[11px] lg:tracking-[0.069em]"
+      >
+        {portfolio.profile.location}
+      </p>
+    </div>
+
+    <div class="mt-4 flex min-h-32 flex-1 items-end justify-end sm:min-h-40 lg:mt-6 lg:min-h-0">
+      <img
+        src="/Cats.png"
+        width="1090"
+        height="928"
+        alt="Pixel art portrait of Artisann’s two cats"
+        class="h-auto w-36 max-w-full [image-rendering:pixelated] sm:w-44 lg:w-72 xl:w-80"
+        loading="eager"
+        decoding="async"
+      />
+    </div>
+
+    <div class="mt-auto flex w-full flex-wrap border-y border-nightfall-border">
+      <nav
+        class="min-w-0 basis-full border-b border-nightfall-border px-3.5 py-4.5 sm:basis-1/2 sm:border-r lg:basis-1/4 lg:border-b-0 lg:px-6 lg:py-6"
+        aria-label="Connect"
+      >
+        <div class="hero-enter hero-enter--directory hero-enter--directory-1 min-w-0">
+          <h2
+            class={`font-mono text-[8px] font-[750] tracking-[0.069em] lg:text-[10px] lg:tracking-[0.081em] ${accentTextClasses.violet}`}
+          >
+            CONNECT
+          </h2>
+          <div class="mt-3.25 flex min-w-0 flex-col gap-1.75 lg:mt-4.5 lg:gap-2.25">
+            {
+              portfolio.profile.links.map((link) => {
+                const directoryLink: LinkValue = {
+                  ...link,
+                  desktopLabel:
+                    link.id === "github"
+                      ? "github.com/ImArtisann ↗"
+                      : link.id === "x"
+                        ? "x.com/IArtisann ↗"
+                        : "Email me ↗",
+                  mobileLabel:
+                    link.id === "github"
+                      ? "GitHub ↗"
+                      : link.id === "x"
+                        ? "X / Twitter ↗"
+                        : "Email ↗",
+                };
+
+                return (
+                  <PortfolioLinkText
+                    link={directoryLink}
+                    className="flex min-h-11 min-w-0 items-center wrap-break-word text-xs font-semibold leading-tight text-nightfall-text no-underline transition-colors duration-180 ease-out hover:text-nightfall-cyan lg:text-[15px]"
+                  />
+                );
+              })
+            }
+          </div>
+        </div>
+      </nav>
+
+      <nav
+        class="min-w-0 basis-full border-b border-nightfall-border px-3.5 py-4.5 sm:basis-1/2 sm:border-b sm:border-r-0 lg:basis-1/4 lg:border-b-0 lg:border-r lg:px-6 lg:py-6"
+        aria-label="Selected work"
+      >
+        <div class="hero-enter hero-enter--directory hero-enter--directory-2 min-w-0">
+          <h2
+            class={`font-mono text-[8px] font-[750] tracking-[0.069em] lg:text-[10px] lg:tracking-[0.081em] ${accentTextClasses.cyan}`}
+          >
+            SELECTED WORK
+          </h2>
+          <div class="mt-3.25 flex min-w-0 flex-col gap-1.75 lg:mt-4.5 lg:gap-2.25">
+            {
+              portfolio.profile.selectedWork.map((link) => (
+                <PortfolioLinkText
+                  link={link}
+                  className="flex min-h-11 min-w-0 items-center wrap-break-word text-xs font-semibold leading-tight text-nightfall-text no-underline transition-colors duration-180 ease-out hover:text-nightfall-cyan lg:text-[15px]"
+                />
+              ))
+            }
+          </div>
+        </div>
+      </nav>
+
+      <nav
+        class="min-w-0 basis-full border-b border-nightfall-border px-3.5 py-4.5 sm:basis-1/2 sm:border-r sm:border-b-0 lg:basis-1/4 lg:border-b-0 lg:px-6 lg:py-6"
+        aria-label="Experience"
+      >
+        <div class="hero-enter hero-enter--directory hero-enter--directory-3 min-w-0">
+          <h2
+            class={`font-mono text-[8px] font-[750] tracking-[0.069em] lg:text-[10px] lg:tracking-[0.081em] ${accentTextClasses.green}`}
+          >
+            EXPERIENCE
+          </h2>
+          <div class="mt-3.25 flex min-w-0 flex-col gap-1.75 lg:mt-4.5 lg:gap-2.25">
+            {
+              portfolio.workExperiences.map((experience) => (
+                <a
+                  class="flex min-h-11 min-w-0 items-center wrap-break-word text-xs font-semibold leading-tight text-nightfall-text no-underline transition-colors duration-180 ease-out hover:text-nightfall-cyan lg:text-[15px]"
+                  href="#experience"
+                >
+                  <span class="lg:hidden">
+                    {experience.company.replace(" Forensics", "").replace(" Software", "")} ·{" "}
+                    {experience.role.replace(
+                      "Software Engineer — Automation & Device Intelligence",
+                      "Engineer",
+                    )}
+                  </span>
+                  <span class="hidden lg:inline">
+                    {experience.company.replace(" Forensics", "").replace(" Software", "")} —{" "}
+                    {experience.role.replace(
+                      "Software Engineer — Automation & Device Intelligence",
+                      "Software Engineer",
+                    )}
+                  </span>
+                </a>
+              ))
+            }
+          </div>
+        </div>
+      </nav>
+
+      <section
+        class="min-w-0 basis-full px-3.5 py-4.5 sm:basis-1/2 lg:basis-1/4 lg:px-6 lg:py-6"
+        aria-labelledby={portfolioIds.focus}
+      >
+        <div class="hero-enter hero-enter--directory hero-enter--directory-4 min-w-0">
+          <h2
+            id={portfolioIds.focus}
+            class={`font-mono text-[8px] font-[750] tracking-[0.069em] lg:text-[10px] lg:tracking-[0.081em] ${accentTextClasses.peach}`}
+          >
+            CURRENT FOCUS
+          </h2>
+          <div class="mt-3.25 flex min-w-0 flex-col gap-1.75 lg:mt-4.5 lg:gap-2.25">
+            {
+              portfolio.profile.currentFocus.map((focus) => (
+                <span
+                  class="flex min-h-11 min-w-0 items-center wrap-break-word text-xs font-semibold leading-tight text-nightfall-text lg:text-[15px]"
+                >
+                  {focus}
+                </span>
+              ))
+            }
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</header>

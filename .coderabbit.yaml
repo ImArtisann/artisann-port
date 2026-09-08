@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+language: en-US
+early_access: false
+
+reviews:
+    profile: assertive
+    high_level_summary: true
+    review_status: true
+    auto_review:
+        enabled: true
+        auto_incremental_review: true
+        drafts: false
+    path_filters:
+        - "!bun.lock"
+        - "!**/dist/**"
+        - "!**/.output/**"
+        - "!**/.alchemy/**"
+        - "!**/.wrangler/**"
+        - "!tools/oxlint/**"
+        - "!packages/assets/src/manifest.gen.ts"
+        - "!packages/assets/.alchemy/**"
+        - "!apps/web/.astro/**"
+        - "!apps/web/dist/**"
+        - "!apps/web/.alchemy/**"
+
+chat:
+    auto_reply: true

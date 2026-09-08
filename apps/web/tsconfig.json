@@ -1,0 +1,15 @@
+{
+    "extends": ["@repo/typescript-config/base.json", "astro/tsconfigs/strict"],
+    "include": [".astro/types.d.ts", "**/*"],
+    "exclude": ["dist", "node_modules"],
+    "compilerOptions": {
+        "allowImportingTsExtensions": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "noFallthroughCasesInSwitch": true,
+        "noUncheckedSideEffectImports": true,
+        "paths": {
+            "@/*": ["./src/*"]
+        }
+    }
+}

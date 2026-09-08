@@ -1,0 +1,64 @@
+---
+import type { ComponentProps } from "astro/types";
+import { Image } from "@unpic/astro";
+import { Image as OriginalImage } from "@unpic/astro/base";
+import type { AssetPath } from "@repo/assets/manifest";
+import { ASSET_IMAGE_OPERATIONS, assetImageOptions } from "@repo/assets/config";
+import { assetBreakpoints, assetDimensions, assetUrl } from "@repo/assets/urls";
+
+type Props = Omit<
+    ComponentProps<typeof Image>,
+    | "src"
+    | "width"
+    | "height"
+    | "aspectRatio"
+    | "layout"
+    | "cdn"
+    | "fallback"
+    | "operations"
+    | "options"
+    | "breakpoints"
+    | "alt"
+> & {
+    asset: AssetPath;
+    alt: string;
+    width?: number;
+};
+
+const { asset, width, alt, ...props } = Astro.props;
+const host = import.meta.env.PUBLIC_ASSETS_HOST;
+if (!host) throw new Error("Set PUBLIC_ASSETS_HOST in the app's .env to your R2 custom domain.");
+const dimensions = assetDimensions(asset);
+const displayWidth = width ?? dimensions.width;
+const src = assetUrl(asset, `https://${host}`);
+const height = Math.round((displayWidth * dimensions.height) / dimensions.width);
+const transform = import.meta.env.PUBLIC_ASSETS_TRANSFORM === "true";
+---
+
+{
+    transform ? (
+        <Image
+            {...props}
+            alt={alt}
+            src={src}
+            width={displayWidth}
+            height={height}
+            layout="constrained"
+            cdn="cloudflare"
+            options={assetImageOptions(host)}
+            operations={ASSET_IMAGE_OPERATIONS}
+            breakpoints={assetBreakpoints(asset)}
+        />
+    ) : (
+        <OriginalImage
+            {...props}
+            alt={alt}
+            src={src}
+            width={displayWidth}
+            height={height}
+            layout="constrained"
+            transformer={(url: string | URL) => String(url)}
+            breakpoints={[]}
+        />
+    )
+}

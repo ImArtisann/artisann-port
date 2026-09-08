@@ -1,0 +1,28 @@
+{
+    "name": "@repo/assets",
+    "version": "0.0.0",
+    "private": true,
+    "type": "module",
+    "exports": {
+        "./config": "./src/config.ts",
+        "./manifest": "./src/manifest.gen.ts",
+        "./urls": "./src/urls.ts"
+    },
+    "scripts": {
+        "build": "bun run scripts/generate-manifest.ts",
+        "generate": "bun run scripts/generate-manifest.ts",
+        "verify": "bun run scripts/generate-manifest.ts --check",
+        "upload": "bun run generate && bun run scripts/upload.ts",
+        "upload:plan": "bun run scripts/upload.ts --plan",
+        "deploy": "alchemy deploy",
+        "destroy": "alchemy destroy"
+    },
+    "devDependencies": {
+        "@repo/typescript-config": "workspace:*",
+        "@types/bun": "catalog:",
+        "alchemy": "catalog:",
+        "aws4fetch": "catalog:",
+        "effect": "catalog:",
+        "image-size": "catalog:"
+    }
+}

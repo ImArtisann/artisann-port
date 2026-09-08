@@ -1,0 +1,10 @@
+{
+    "extends": "@repo/typescript-config/base.json",
+    "compilerOptions": {
+        "lib": ["ESNext", "DOM", "DOM.Iterable"],
+        "jsx": "react-jsx",
+        "types": ["bun"],
+        "paths": { "@repo/ui/*": ["./src/*"] }
+    },
+    "include": ["src/**/*.ts", "src/**/*.tsx"]
+}
