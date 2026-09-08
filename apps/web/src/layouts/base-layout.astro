@@ -1,18 +1,52 @@
 ---
 import "@/styles.css";
+import { DEFAULT_ASSETS_HOST } from "@artisann-port/assets/config";
+import { assetDimensions, assetUrl, requireAssetPath } from "@artisann-port/assets/urls";
 
 interface Props {
   title: string;
 }
 
 const { title } = Astro.props;
+const description = "Artisann — a developer and automation architect in Dallas. Projects, open source, and a little about me.";
+const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
+const socialAsset = requireAssetPath("opengraph/site.png");
+const socialImage = assetUrl(socialAsset, `https://${import.meta.env.PUBLIC_ASSETS_HOST || DEFAULT_ASSETS_HOST}`);
+const socialDimensions = assetDimensions(socialAsset);
+const socialImageAlt = "Artisann — developer and automation architect in Dallas, with two pixel-art cats on a dark background.";
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalUrl} />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Artisann" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl.href} />
+    <meta property="og:image" content={socialImage} />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content={String(socialDimensions.width)} />
+    <meta property="og:image:height" content={String(socialDimensions.height)} />
+    <meta property="og:image:alt" content={socialImageAlt} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={socialImage} />
+    <meta name="twitter:image:alt" content={socialImageAlt} />
+    <meta name="theme-color" content="#111214" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <script is:inline>
+      try {
+        const dark = localStorage.getItem("theme") !== "light";
+        document.documentElement.classList.toggle("dark", dark);
+        document.querySelector('meta[name="theme-color"]')?.setAttribute("content", dark ? "#111214" : "#F5F6F7");
+      } catch {}
+    </script>
     <title>{title}</title>
   </head>
   <body>

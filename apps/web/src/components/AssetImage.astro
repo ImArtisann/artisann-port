@@ -2,9 +2,9 @@
 import type { ComponentProps } from "astro/types";
 import { Image } from "@unpic/astro";
 import { Image as OriginalImage } from "@unpic/astro/base";
-import type { AssetPath } from "@repo/assets/manifest";
-import { ASSET_IMAGE_OPERATIONS, assetImageOptions } from "@repo/assets/config";
-import { assetBreakpoints, assetDimensions, assetUrl } from "@repo/assets/urls";
+import type { AssetPath } from "@artisann-port/assets/manifest";
+import { ASSET_IMAGE_OPERATIONS, DEFAULT_ASSETS_HOST, assetImageOptions } from "@artisann-port/assets/config";
+import { assetBreakpoints, assetDimensions, assetUrl } from "@artisann-port/assets/urls";
 
 type Props = Omit<
     ComponentProps<typeof Image>,
@@ -26,8 +26,7 @@ type Props = Omit<
 };
 
 const { asset, width, alt, ...props } = Astro.props;
-const host = import.meta.env.PUBLIC_ASSETS_HOST;
-if (!host) throw new Error("Set PUBLIC_ASSETS_HOST in the app's .env to your R2 custom domain.");
+const host = import.meta.env.PUBLIC_ASSETS_HOST || DEFAULT_ASSETS_HOST;
 const dimensions = assetDimensions(asset);
 const displayWidth = width ?? dimensions.width;
 const src = assetUrl(asset, `https://${host}`);

@@ -15,12 +15,19 @@ count.txt
 todos.json
 .idea
 /.idea/
-PRODUCT.md
-DESIGN.md
+/.impeccable/*
+/.omp/*
+!/.omp/mcp.json
 
 # zvec-grep local index (keep shared plugin settings)
 /.zvec-grep/*
 !/.zvec-grep/config.json
+
+# Local planning and design material
+/PERSONAL_DISCORD_BOT_PLAN.md
+/DESIGN.md
+/PRODUCT.md
+/tools/design-files/
 
 # repo-int managed ignores
 node_modules/

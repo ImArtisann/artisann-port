@@ -1,5 +1,5 @@
 {
-    "name": "@repo/ui",
+    "name": "@artisann-port/ui",
     "version": "0.0.0",
     "private": true,
     "type": "module",
@@ -10,18 +10,19 @@
         "./lib/*": "./src/lib/*.ts"
     },
     "dependencies": {
+        "@base-ui/react": "catalog:",
         "@fontsource-variable/geist": "catalog:",
+        "@hugeicons-pro/core-solid-rounded": "^4.2.0",
+        "@hugeicons/react": "^1.1.9",
         "class-variance-authority": "catalog:",
         "cn": "catalog:",
-        "lucide-react": "catalog:",
-        "@base-ui/react": "catalog:",
         "react": "catalog:",
         "react-dom": "catalog:",
         "shadcn": "catalog:",
         "tw-animate-css": "catalog:"
     },
     "devDependencies": {
-        "@repo/typescript-config": "workspace:*",
+        "@artisann-port/typescript-config": "workspace:*",
         "@types/react": "catalog:",
         "@types/react-dom": "catalog:",
         "tailwindcss": "catalog:"

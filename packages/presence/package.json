@@ -1,0 +1,30 @@
+{
+    "name": "@artisann-port/presence",
+    "version": "0.0.0",
+    "private": true,
+    "type": "module",
+    "exports": {
+        "./config": "./src/config.ts",
+        "./schema": "./src/schema.ts",
+        "./github-schema": "./src/github-schema.ts",
+        "./projects": "./src/projects.ts",
+        "./lanyard": "./src/lanyard.ts",
+        "./store": "./src/store.ts",
+        "./presence": "./src/presence.ts",
+        "./worker": "./src/worker.ts"
+    },
+    "scripts": {
+        "seed": "bun run scripts/seed.ts",
+        "deploy": "alchemy deploy",
+        "destroy": "alchemy destroy"
+    },
+    "devDependencies": {
+        "@artisann-port/typescript-config": "workspace:*",
+        "@types/bun": "catalog:",
+        "alchemy": "catalog:",
+        "effect": "catalog:"
+    },
+    "dependencies": {
+        "entities": "^8.1.0"
+    }
+}

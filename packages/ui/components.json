@@ -9,13 +9,13 @@
         "baseColor": "neutral",
         "cssVariables": true
     },
-    "iconLibrary": "lucide",
+    "iconLibrary": "hugeicons",
     "aliases": {
-        "components": "@repo/ui/components",
-        "ui": "@repo/ui/components",
-        "hooks": "@repo/ui/hooks",
-        "lib": "@repo/ui/lib",
-        "utils": "@repo/ui/lib/utils"
+        "components": "@artisann-port/ui/components",
+        "ui": "@artisann-port/ui/components",
+        "hooks": "@artisann-port/ui/hooks",
+        "lib": "@artisann-port/ui/lib",
+        "utils": "@artisann-port/ui/lib/utils"
     },
     "rtl": false,
     "menuColor": "default",

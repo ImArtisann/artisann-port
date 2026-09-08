@@ -1,5 +1,5 @@
 {
-    "name": "@repo/assets",
+    "name": "@artisann-port/assets",
     "version": "0.0.0",
     "private": true,
     "type": "module",
@@ -18,7 +18,7 @@
         "destroy": "alchemy destroy"
     },
     "devDependencies": {
-        "@repo/typescript-config": "workspace:*",
+        "@artisann-port/typescript-config": "workspace:*",
         "@types/bun": "catalog:",
         "alchemy": "catalog:",
         "aws4fetch": "catalog:",
