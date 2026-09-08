@@ -161,3 +161,31 @@ for repository creation before requesting its secret-encryption key.
 
 The GitHub stack is not required to build or run the portfolio locally. Neither
 login nor installing dependencies deploys the website; `bun run deploy` does.
+
+### Automatic production deployment
+
+`.github/workflows/deploy.yml` follows the
+[Alchemy CI/CD tutorial](https://alchemy.run/cloudflare/tutorial/part-5.md) and
+waits for the existing `CI` workflow to complete successfully on a push to
+`main` in this repository.
+
+The workflow:
+
+- Checks out the exact commit that passed CI.
+- Skips that commit if `main` has already advanced.
+- Uses the Bun version declared in `package.json`, Node.js 24, and a frozen
+  lockfile, matching CI.
+- Runs `bun run deploy --yes` with the repository's `CLOUDFLARE_API_TOKEN` and
+  `CLOUDFLARE_ACCOUNT_ID` secrets.
+- Serializes production deployments without interrupting an active Alchemy
+  deployment.
+
+Cloudflare secrets are available only to the deployment step, not dependency
+installation. Pull-request CI runs, failed or cancelled runs, other branches,
+and runs from other repositories cannot trigger production deployment. The
+workflow does not provision PR previews or destroy infrastructure.
+
+Provision the two repository secrets with `bun run deploy:github` before using
+the workflow. Do not upload the privileged admin token; use the scoped
+deployment token produced by the GitHub stack. Commit and push the workflow
+files to `main` to activate automatic deployment.

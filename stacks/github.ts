@@ -10,7 +10,7 @@ const OWNER = "ImArtisann";
 const REPOSITORY = "artisann-port";
 
 /**
- * One-shot stack for https://github.com/ImArtisann/artisann-portfolio: converges the
+ * One-shot stack for https://github.com/ImArtisann/artisann-port: converges the
  * repository settings, mints a scoped Cloudflare deployment token, and stores it
  * as GitHub Actions secrets. Deploy with `bun run deploy:github` after
  * `bun run login`.

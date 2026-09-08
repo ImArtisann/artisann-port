@@ -1,0 +1,68 @@
+name: Deploy Cloudflare
+
+on:
+    workflow_run:
+        workflows: [CI]
+        types: [completed]
+        branches: [main]
+
+permissions:
+    contents: read
+
+jobs:
+    deploy:
+        if: >-
+            github.event.workflow_run.conclusion == 'success' &&
+            github.event.workflow_run.event == 'push' &&
+            github.event.workflow_run.head_branch == 'main' &&
+            github.event.workflow_run.head_repository.full_name == github.repository
+        runs-on: ubuntu-latest
+        timeout-minutes: 30
+        concurrency:
+            group: cloudflare-production
+            cancel-in-progress: false
+        env:
+            DEPLOY_SHA: ${{ github.event.workflow_run.head_sha }}
+        steps:
+            - name: Skip superseded commits
+              id: current
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: |
+                  latest_sha="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')"
+                  if [ "$DEPLOY_SHA" = "$latest_sha" ]; then
+                      echo "deploy=true" >> "$GITHUB_OUTPUT"
+                  else
+                      echo "deploy=false" >> "$GITHUB_OUTPUT"
+                      echo "Skipped superseded commit $DEPLOY_SHA; main is $latest_sha." >> "$GITHUB_STEP_SUMMARY"
+                  fi
+
+            - name: Check out the commit that passed CI
+              if: steps.current.outputs.deploy == 'true'
+              uses: actions/checkout@v6
+              with:
+                  ref: ${{ github.event.workflow_run.head_sha }}
+                  persist-credentials: false
+
+            - name: Set up Bun
+              if: steps.current.outputs.deploy == 'true'
+              uses: oven-sh/setup-bun@v2
+              with:
+                  bun-version-file: package.json
+
+            - name: Set up Node.js
+              if: steps.current.outputs.deploy == 'true'
+              uses: actions/setup-node@v6
+              with:
+                  node-version: 24
+
+            - name: Install dependencies
+              if: steps.current.outputs.deploy == 'true'
+              run: bun install --frozen-lockfile
+
+            - name: Deploy production website
+              if: steps.current.outputs.deploy == 'true'
+              run: bun run deploy --yes
+              env:
+                  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+                  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
