@@ -19,6 +19,10 @@ PRODUCT.md
 DESIGN.md
 landing.pen
 
+# zvec-grep local index (keep shared plugin settings)
+/.zvec-grep/*
+!/.zvec-grep/config.json
+
 # repo-int managed ignores
 node_modules/
 .bun/
