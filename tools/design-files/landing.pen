@@ -1,0 +1,2747 @@
+{
+  "version": "2.17",
+  "children": [
+    {
+      "type": "frame",
+      "id": "EBtCW",
+      "x": 0,
+      "y": 0,
+      "name": "Artisann · Desktop",
+      "clip": true,
+      "width": 1440,
+      "height": 1120,
+      "fill": "$background",
+      "layout": "vertical",
+      "gap": 28,
+      "padding": [
+        36,
+        64,
+        28,
+        64
+      ],
+      "children": [
+        {
+          "type": "frame",
+          "id": "sVsj2",
+          "name": "Site navigation",
+          "width": "fill_container",
+          "height": 48,
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "vuHsj",
+              "name": "Wordmark",
+              "fill": "$foreground",
+              "content": "artisann.",
+              "fontFamily": "Manrope",
+              "fontSize": 29,
+              "fontWeight": "800",
+              "letterSpacing": -1
+            },
+            {
+              "type": "frame",
+              "id": "FdBlu",
+              "name": "Navigation links",
+              "gap": 32,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "rTGqz",
+                  "name": "Home link",
+                  "fill": "$primary",
+                  "content": "Home",
+                  "fontFamily": "Manrope",
+                  "fontSize": 14,
+                  "fontWeight": "650"
+                },
+                {
+                  "type": "text",
+                  "id": "QF6MG",
+                  "name": "Work link",
+                  "fill": "$muted-foreground",
+                  "content": "Work",
+                  "fontFamily": "Manrope",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "Ibvyr",
+                  "name": "Contact link",
+                  "fill": "$muted-foreground",
+                  "content": "Say hello",
+                  "fontFamily": "Manrope",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "icon",
+                  "id": "h9Dmu6",
+                  "name": "Theme toggle",
+                  "width": 18,
+                  "height": 18,
+                  "icon": "moon",
+                  "library": "lucide",
+                  "fill": "$muted-foreground"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "Ymayf",
+          "name": "Personal sidebar and bento grid",
+          "width": "fill_container",
+          "gap": 32,
+          "children": [
+            {
+              "type": "frame",
+              "id": "bypsb",
+              "name": "About me",
+              "width": 280,
+              "height": 916,
+              "layout": "vertical",
+              "gap": 26,
+              "padding": [
+                20,
+                18,
+                20,
+                0
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Nzo3A",
+                  "name": "Milo avatar",
+                  "width": 76,
+                  "height": 76,
+                  "fill": "$secondary",
+                  "cornerRadius": 20,
+                  "padding": 8,
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "id": "EartL",
+                      "name": "Existing Milo artwork",
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "../../apps/web/public/Milo.png",
+                        "mode": "fit"
+                      },
+                      "width": "fill_container",
+                      "height": "fill_container"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "jl8zW",
+                  "name": "Personal introduction",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "oE5Mt",
+                      "name": "Greeting",
+                      "fill": "$foreground",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Hey, I’m Artisann.",
+                      "lineHeight": 1.2,
+                      "fontFamily": "Manrope",
+                      "fontSize": 30,
+                      "fontWeight": "650",
+                      "letterSpacing": -0.8
+                    },
+                    {
+                      "type": "text",
+                      "id": "XAoax",
+                      "name": "About copy",
+                      "fill": "$muted-foreground",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "A developer & automation architect in Dallas.",
+                      "lineHeight": 1.65,
+                      "fontFamily": "Manrope",
+                      "fontSize": 16,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "rectangle",
+                  "id": "S1Hled",
+                  "name": "About separator",
+                  "fill": "$border",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "frame",
+                  "id": "I9vA2S",
+                  "name": "A little about me",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 18,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "yATAz",
+                      "name": "About section heading",
+                      "fill": "$foreground",
+                      "content": "A little about me",
+                      "fontFamily": "Manrope",
+                      "fontSize": 14,
+                      "fontWeight": "650"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "LQ7G2",
+                      "name": "Developer tooling & real-time systems",
+                      "width": "fill_container",
+                      "gap": 12,
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "r2SPkN",
+                          "name": "Developer tooling & real-time systems icon",
+                          "width": 18,
+                          "height": 18,
+                          "icon": "code",
+                          "library": "lucide",
+                          "fill": "$primary"
+                        },
+                        {
+                          "type": "text",
+                          "id": "p9Zky",
+                          "name": "Developer tooling & real-time systems copy",
+                          "fill": "$muted-foreground",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Developer tooling & real-time systems",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Manrope",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "hBTP5",
+                      "name": "Cat person, obviously.",
+                      "width": "fill_container",
+                      "gap": 12,
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "U0ueS",
+                          "name": "Cat person, obviously. icon",
+                          "width": 18,
+                          "height": 18,
+                          "icon": "heart",
+                          "library": "lucide",
+                          "fill": "$primary"
+                        },
+                        {
+                          "type": "text",
+                          "id": "k4HEPM",
+                          "name": "Cat person, obviously. copy",
+                          "fill": "$muted-foreground",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Cat person, obviously.",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Manrope",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "GJkYl",
+                      "name": "Usually listening to something",
+                      "width": "fill_container",
+                      "gap": 12,
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "uCrhn",
+                          "name": "Usually listening to something icon",
+                          "width": 18,
+                          "height": 18,
+                          "icon": "headphones",
+                          "library": "lucide",
+                          "fill": "$primary"
+                        },
+                        {
+                          "type": "text",
+                          "id": "C2U9G",
+                          "name": "Usually listening to something copy",
+                          "fill": "$muted-foreground",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Usually listening to something",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Manrope",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "uTybL",
+                  "name": "Sidebar breathing room",
+                  "width": "fill_container",
+                  "height": "fill_container"
+                },
+                {
+                  "type": "frame",
+                  "id": "WmcPm",
+                  "name": "Personal contact",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "UOLvp",
+                      "name": "Contact heading",
+                      "fill": "$foreground",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Good things start with a hello.",
+                      "lineHeight": 1.4,
+                      "fontFamily": "Manrope",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "scVgq",
+                      "name": "Email",
+                      "fill": "$primary",
+                      "content": "hello@artisann.dev",
+                      "fontFamily": "Manrope",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "QSk5y",
+                      "name": "Contact aside",
+                      "fill": "$muted-foreground",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Have a project, a question, or a cat photo? My inbox is open.",
+                      "lineHeight": 1.6,
+                      "fontFamily": "Manrope",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "qPr2v",
+              "name": "Bento grid",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 16,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "UDaWE",
+                  "name": "Status weather and location",
+                  "width": "fill_container",
+                  "height": 300,
+                  "gap": 16,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Z6oQa",
+                      "name": "Live information",
+                      "width": 280,
+                      "height": "fill_container",
+                      "layout": "vertical",
+                      "gap": 16,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "v9z3H",
+                          "name": "Status",
+                          "clip": true,
+                          "width": "fill_container",
+                          "height": 142,
+                          "fill": "$card",
+                          "cornerRadius": 16,
+                          "stroke": "$border",
+                          "strokeWidth": 1,
+                          "layout": "vertical",
+                          "gap": 16,
+                          "padding": 22,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "UU7k3",
+                              "name": "Status heading",
+                              "gap": 9,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "br1Mp",
+                                  "name": "Status icon",
+                                  "width": 16,
+                                  "height": 16,
+                                  "icon": "radio",
+                                  "library": "lucide",
+                                  "fill": "$muted-foreground"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "dFwig",
+                                  "name": "Status label",
+                                  "fill": "$muted-foreground",
+                                  "content": "Status",
+                                  "fontFamily": "Manrope",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "tIKWM",
+                              "name": "Offline state",
+                              "gap": 10,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "ellipse",
+                                  "id": "DGmX1",
+                                  "name": "Offline dot",
+                                  "fill": "$muted-foreground",
+                                  "width": 8,
+                                  "height": 8
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "eKPO8",
+                                  "name": "Status value",
+                                  "fill": "$foreground",
+                                  "content": "Offline",
+                                  "fontFamily": "Manrope",
+                                  "fontSize": 22,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "d9XYp",
+                              "name": "Status detail",
+                              "fill": "$muted-foreground",
+                              "content": "Away from the keyboard",
+                              "fontFamily": "Manrope",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "T34qoC",
+                          "name": "Weather",
+                          "clip": true,
+                          "width": "fill_container",
+                          "height": 142,
+                          "fill": "$card",
+                          "cornerRadius": 16,
+                          "stroke": "$border",
+                          "strokeWidth": 1,
+                          "layout": "vertical",
+                          "gap": 16,
+                          "padding": 22,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "b4huyD",
+                              "name": "Weather heading",
+                              "width": "fill_container",
+                              "justifyContent": "space_between",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "Hm9Wx",
+                                  "name": "Weather label",
+                                  "fill": "$muted-foreground",
+                                  "content": "Weather in Dallas",
+                                  "fontFamily": "Manrope",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "OV7hB",
+                                  "name": "Weather cloud",
+                                  "width": 20,
+                                  "height": 20,
+                                  "icon": "cloud-sun",
+                                  "library": "lucide",
+                                  "fill": "$primary"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "om4o2",
+                              "name": "Weather temperature",
+                              "gap": 12,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "cqYjs",
+                                  "name": "Temperature unavailable",
+                                  "fill": "$foreground",
+                                  "content": "—°",
+                                  "fontFamily": "Manrope",
+                                  "fontSize": 34,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "C0B1zj",
+                                  "name": "Weather waiting",
+                                  "fill": "$muted-foreground",
+                                  "content": "Waiting for weather",
+                                  "fontFamily": "Manrope",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "z9HSLn",
+                      "name": "Location",
+                      "clip": true,
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": "$card",
+                      "cornerRadius": 16,
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "layout": "none",
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "id": "ebmVY",
+                          "x": 0,
+                          "y": 0,
+                          "name": "Dallas skyline photograph",
+                          "metadata": {
+                            "type": "unsplash",
+                            "username": "dhalseth",
+                            "link": "https://unsplash.com/@dhalseth",
+                            "author": "Daniel Halseth"
+                          },
+                          "fill": {
+                            "type": "image",
+                            "enabled": true,
+                            "url": "https://images.unsplash.com/photo-1567393217173-337ccd8900f4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NDM0ODN8MHwxfHJhbmRvbXx8fHx8fHx8fDE3ODg4MzIzNDd8&ixlib=rb-4.1.0&q=80&w=1080",
+                            "mode": "fill"
+                          },
+                          "width": 704,
+                          "height": 300
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "CcHoo",
+                          "x": 0,
+                          "y": 0,
+                          "name": "Location image scrim",
+                          "fill": {
+                            "type": "gradient",
+                            "gradientType": "linear",
+                            "enabled": true,
+                            "rotation": 0,
+                            "size": {
+                              "height": 1
+                            },
+                            "colors": [
+                              {
+                                "color": "#0A0A0AF2",
+                                "position": 0
+                              },
+                              {
+                                "color": "#0A0A0A10",
+                                "position": 1
+                              }
+                            ]
+                          },
+                          "width": 704,
+                          "height": 300
+                        },
+                        {
+                          "type": "frame",
+                          "id": "NL4uo",
+                          "x": 24,
+                          "y": 205,
+                          "name": "Dallas location label",
+                          "width": 360,
+                          "layout": "vertical",
+                          "gap": 8,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "qZDAF",
+                              "name": "City",
+                              "fill": "$foreground",
+                              "content": "Dallas, Texas",
+                              "fontFamily": "Manrope",
+                              "fontSize": 29,
+                              "fontWeight": "650",
+                              "letterSpacing": -0.7
+                            },
+                            {
+                              "type": "frame",
+                              "id": "dndWy",
+                              "name": "Local detail",
+                              "gap": 8,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "SsyaI",
+                                  "name": "Location pin",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "map-pin",
+                                  "library": "lucide",
+                                  "fill": "$primary"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "TmmRy",
+                                  "name": "Local timezone",
+                                  "fill": "$primary",
+                                  "content": "Based here · Central Time",
+                                  "fontFamily": "Manrope",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "VnYUS",
+                  "name": "Music and cat gallery",
+                  "width": "fill_container",
+                  "height": 342,
+                  "gap": 16,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Nx080",
+                      "name": "Currently listening",
+                      "clip": true,
+                      "width": 280,
+                      "height": "fill_container",
+                      "fill": "$card",
+                      "cornerRadius": 16,
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "gap": 16,
+                      "padding": 24,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "OTCBw",
+                          "name": "Listening heading",
+                          "width": "fill_container",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "o1kUy",
+                              "name": "Listening icon",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "audio-lines",
+                              "library": "lucide",
+                              "fill": "$muted-foreground"
+                            },
+                            {
+                              "type": "text",
+                              "id": "vubno",
+                              "name": "Listening label",
+                              "fill": "$muted-foreground",
+                              "content": "Currently listening",
+                              "fontFamily": "Manrope",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "y8eqy",
+                          "name": "No track artwork",
+                          "width": 140,
+                          "height": 140,
+                          "fill": "$secondary",
+                          "cornerRadius": 12,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "ccg9y",
+                              "name": "Music note",
+                              "width": 48,
+                              "height": 48,
+                              "icon": "music-2",
+                              "library": "lucide",
+                              "fill": "$primary"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "AJJLs",
+                          "name": "Listening idle state",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 7,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "C9djB",
+                              "name": "No active track",
+                              "fill": "$foreground",
+                              "content": "Between songs",
+                              "fontFamily": "Manrope",
+                              "fontSize": 20,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "V63NIO",
+                              "name": "Listening source",
+                              "fill": "$muted-foreground",
+                              "content": "YouTube Music",
+                              "fontFamily": "Manrope",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "lMB7x",
+                          "name": "Open music link",
+                          "width": "fill_container",
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "xidGE",
+                              "name": "Music action",
+                              "fill": "$primary",
+                              "content": "Open YouTube Music",
+                              "fontFamily": "Manrope",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "icon",
+                              "id": "C0ndJ",
+                              "name": "Music external arrow",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "arrow-up-right",
+                              "library": "lucide",
+                              "fill": "$primary"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "I8ss7",
+                      "name": "Cat gallery",
+                      "clip": true,
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": "$card",
+                      "cornerRadius": 16,
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "gap": 16,
+                      "padding": 24,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "ab7zE",
+                          "name": "Gallery header",
+                          "width": "fill_container",
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "MkS8M",
+                              "name": "Cat gallery title",
+                              "fill": "$foreground",
+                              "content": "The real stars of this website",
+                              "fontFamily": "Manrope",
+                              "fontSize": 19,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "i8ua7w",
+                              "name": "Gallery arrows",
+                              "gap": 12,
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "Gs6jC",
+                                  "name": "Previous photo",
+                                  "width": 20,
+                                  "height": 20,
+                                  "icon": "chevron-left",
+                                  "library": "lucide",
+                                  "fill": "$muted-foreground"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "emgZL",
+                                  "name": "Next photo",
+                                  "width": 20,
+                                  "height": 20,
+                                  "icon": "chevron-right",
+                                  "library": "lucide",
+                                  "fill": "$foreground"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "nRAEp",
+                          "name": "Replaceable cat photo stage",
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "fill": "$secondary",
+                          "cornerRadius": 10,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "rectangle",
+                              "id": "C5eJxe",
+                              "name": "Cat gallery preview · existing artwork",
+                              "fill": {
+                                "type": "image",
+                                "enabled": true,
+                                "url": "../../apps/web/public/Cats.png",
+                                "mode": "fit"
+                              },
+                              "width": 264,
+                              "height": 214
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "s4CbAN",
+                          "name": "Gallery caption and pagination",
+                          "width": "fill_container",
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "OYZSq",
+                              "name": "Cat gallery caption",
+                              "fill": "$muted-foreground",
+                              "content": "My cats, in pixels. Photos coming soon.",
+                              "fontFamily": "Manrope",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "t49DA",
+                              "name": "Photo pagination",
+                              "gap": 6,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 3,
+                                  "id": "rU87z",
+                                  "name": "Gallery page 1",
+                                  "fill": "$primary",
+                                  "width": 18,
+                                  "height": 5
+                                },
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 3,
+                                  "id": "tk9uQ",
+                                  "name": "Gallery page 2",
+                                  "fill": "$ring",
+                                  "width": 5,
+                                  "height": 5
+                                },
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 3,
+                                  "id": "hxz6i",
+                                  "name": "Gallery page 3",
+                                  "fill": "$ring",
+                                  "width": 5,
+                                  "height": 5
+                                },
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 3,
+                                  "id": "M2ZBD",
+                                  "name": "Gallery page 4",
+                                  "fill": "$ring",
+                                  "width": 5,
+                                  "height": 5
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "d8Kb4o",
+                  "name": "Tools and socials",
+                  "width": "fill_container",
+                  "height": 242,
+                  "gap": 16,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "kSuL0",
+                      "name": "What I use",
+                      "clip": true,
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": "$card",
+                      "cornerRadius": 16,
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "gap": 16,
+                      "padding": 24,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "TiXRn",
+                          "name": "Uses heading",
+                          "width": "fill_container",
+                          "justifyContent": "space_between",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "npL1c",
+                              "name": "Uses title",
+                              "fill": "$foreground",
+                              "content": "What I use",
+                              "fontFamily": "Manrope",
+                              "fontSize": 20,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "icon",
+                              "id": "ryr6D",
+                              "name": "Uses arrow",
+                              "width": 18,
+                              "height": 18,
+                              "icon": "arrow-up-right",
+                              "library": "lucide",
+                              "fill": "$muted-foreground"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "G147Ds",
+                          "name": "Uses description",
+                          "fill": "$muted-foreground",
+                          "content": "Tools I keep coming back to.",
+                          "fontFamily": "Manrope",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "t43g0",
+                          "name": "Daily tools",
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "gap": 24,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "z9fOPI",
+                              "name": "Zed tool",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 8,
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "Rt6fF",
+                                  "name": "Zed icon",
+                                  "width": 26,
+                                  "height": 26,
+                                  "icon": "square-terminal",
+                                  "library": "lucide",
+                                  "fill": "$primary"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "MCSKa",
+                                  "name": "Zed name",
+                                  "fill": "$foreground",
+                                  "content": "Zed",
+                                  "fontFamily": "Manrope",
+                                  "fontSize": 16,
+                                  "fontWeight": "650"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "g9Bnur",
+                                  "name": "Zed description",
+                                  "fill": "$muted-foreground",
+                                  "content": "Editor",
+                                  "fontFamily": "Manrope",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "lR06M",
+                              "name": "Effect tool",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 8,
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "o8aU3",
+                                  "name": "Effect icon",
+                                  "width": 26,
+                                  "height": 26,
+                                  "icon": "workflow",
+                                  "library": "lucide",
+                                  "fill": "$primary"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "LFPDl",
+                                  "name": "Effect name",
+                                  "fill": "$foreground",
+                                  "content": "Effect",
+                                  "fontFamily": "Manrope",
+                                  "fontSize": 16,
+                                  "fontWeight": "650"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "GebC1",
+                                  "name": "Effect description",
+                                  "fill": "$muted-foreground",
+                                  "content": "TypeScript",
+                                  "fontFamily": "Manrope",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "czcAS",
+                              "name": "Herdr tool",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 8,
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "mIwzJ",
+                                  "name": "Herdr icon",
+                                  "width": 26,
+                                  "height": 26,
+                                  "icon": "panels-top-left",
+                                  "library": "lucide",
+                                  "fill": "$primary"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "Grslk",
+                                  "name": "Herdr name",
+                                  "fill": "$foreground",
+                                  "content": "Herdr",
+                                  "fontFamily": "Manrope",
+                                  "fontSize": 16,
+                                  "fontWeight": "650"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "i74muL",
+                                  "name": "Herdr description",
+                                  "fill": "$muted-foreground",
+                                  "content": "Workspaces",
+                                  "fontFamily": "Manrope",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "amKqA",
+                      "name": "Socials",
+                      "clip": true,
+                      "width": 320,
+                      "height": "fill_container",
+                      "fill": "$card",
+                      "cornerRadius": 16,
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "gap": 16,
+                      "padding": 24,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "I67Kud",
+                          "name": "Social heading",
+                          "fill": "$foreground",
+                          "content": "Elsewhere on the internet",
+                          "fontFamily": "Manrope",
+                          "fontSize": 17,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "S5z6AR",
+                          "name": "GitHub social link",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "SDyAb",
+                              "name": "GitHub social icon",
+                              "width": 18,
+                              "height": 18,
+                              "icon": "github",
+                              "library": "lucide",
+                              "fill": "$primary"
+                            },
+                            {
+                              "type": "text",
+                              "id": "aifWM",
+                              "name": "GitHub social text",
+                              "fill": "$foreground",
+                              "content": "GitHub",
+                              "fontFamily": "Manrope",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "OfZxX",
+                              "name": "GitHub flexible spacing",
+                              "width": "fill_container",
+                              "height": 1
+                            },
+                            {
+                              "type": "icon",
+                              "id": "BKxGv",
+                              "name": "GitHub external icon",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "arrow-up-right",
+                              "library": "lucide",
+                              "fill": "$muted-foreground"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "RUibi",
+                          "name": "X / Twitter social link",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "d3MRf",
+                              "name": "X / Twitter social icon",
+                              "width": 18,
+                              "height": 18,
+                              "icon": "at-sign",
+                              "library": "lucide",
+                              "fill": "$primary"
+                            },
+                            {
+                              "type": "text",
+                              "id": "ZYTxG",
+                              "name": "X / Twitter social text",
+                              "fill": "$foreground",
+                              "content": "X / Twitter",
+                              "fontFamily": "Manrope",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "kAkG1",
+                              "name": "X / Twitter flexible spacing",
+                              "width": "fill_container",
+                              "height": 1
+                            },
+                            {
+                              "type": "icon",
+                              "id": "G343iG",
+                              "name": "X / Twitter external icon",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "arrow-up-right",
+                              "library": "lucide",
+                              "fill": "$muted-foreground"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "E9gR5",
+                          "name": "Email social link",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "ikzNs",
+                              "name": "Email social icon",
+                              "width": 18,
+                              "height": 18,
+                              "icon": "mail",
+                              "library": "lucide",
+                              "fill": "$primary"
+                            },
+                            {
+                              "type": "text",
+                              "id": "NCsXn",
+                              "name": "Email social text",
+                              "fill": "$foreground",
+                              "content": "Email",
+                              "fontFamily": "Manrope",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "reLys",
+                              "name": "Email flexible spacing",
+                              "width": "fill_container",
+                              "height": 1
+                            },
+                            {
+                              "type": "icon",
+                              "id": "Lkhjy",
+                              "name": "Email external icon",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "arrow-up-right",
+                              "library": "lucide",
+                              "fill": "$muted-foreground"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "DbAdR",
+          "name": "Footer",
+          "width": "fill_container",
+          "padding": [
+            10,
+            0,
+            0,
+            0
+          ],
+          "justifyContent": "space_between",
+          "children": [
+            {
+              "type": "text",
+              "id": "Mlqwx",
+              "name": "Footer signature",
+              "fill": "$muted-foreground",
+              "content": "A small corner of the internet, made mine.",
+              "fontFamily": "Manrope",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "NS4j2",
+              "name": "Footer location",
+              "fill": "$muted-foreground",
+              "content": "Artisann · Dallas, TX",
+              "fontFamily": "Manrope",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "O7pKdN",
+      "x": 1536,
+      "y": 0,
+      "name": "Artisann · Mobile",
+      "clip": true,
+      "width": 390,
+      "fill": "$background",
+      "layout": "vertical",
+      "gap": 16,
+      "padding": [
+        24,
+        20
+      ],
+      "children": [
+        {
+          "type": "frame",
+          "id": "EmSG4",
+          "name": "Site navigation",
+          "width": "fill_container",
+          "height": 48,
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "JeO48",
+              "name": "Wordmark",
+              "fill": "$foreground",
+              "content": "artisann.",
+              "fontFamily": "Manrope",
+              "fontSize": 25,
+              "fontWeight": "800",
+              "letterSpacing": -1
+            },
+            {
+              "type": "frame",
+              "id": "o5z12c",
+              "name": "Navigation links",
+              "gap": 16,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "M7GPv",
+                  "x": 0,
+                  "y": 0,
+                  "name": "Home link",
+                  "enabled": false,
+                  "fill": "$primary",
+                  "content": "Home",
+                  "fontFamily": "Manrope",
+                  "fontSize": 14,
+                  "fontWeight": "650"
+                },
+                {
+                  "type": "text",
+                  "id": "RRdeB",
+                  "x": 70,
+                  "y": 0,
+                  "name": "Work link",
+                  "enabled": false,
+                  "fill": "$muted-foreground",
+                  "content": "Work",
+                  "fontFamily": "Manrope",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "UdB4O",
+                  "name": "Contact link",
+                  "fill": "$muted-foreground",
+                  "content": "Say hello",
+                  "fontFamily": "Manrope",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "icon",
+                  "id": "CpaEQ",
+                  "name": "Theme toggle",
+                  "width": 18,
+                  "height": 18,
+                  "icon": "moon",
+                  "library": "lucide",
+                  "fill": "$muted-foreground"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "NutPO",
+          "name": "About me",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 22,
+          "padding": [
+            16,
+            0
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "ad602",
+              "name": "Milo avatar",
+              "width": 76,
+              "height": 76,
+              "fill": "$secondary",
+              "cornerRadius": 20,
+              "padding": 8,
+              "children": [
+                {
+                  "type": "rectangle",
+                  "id": "ZnTyb",
+                  "name": "Existing Milo artwork",
+                  "fill": {
+                    "type": "image",
+                    "enabled": true,
+                    "url": "../../apps/web/public/Milo.png",
+                    "mode": "fit"
+                  },
+                  "width": "fill_container",
+                  "height": "fill_container"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "GSVsX",
+              "name": "Personal introduction",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Z3MPJ1",
+                  "name": "Greeting",
+                  "fill": "$foreground",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Hey, I’m Artisann.",
+                  "lineHeight": 1.2,
+                  "fontFamily": "Manrope",
+                  "fontSize": 30,
+                  "fontWeight": "650",
+                  "letterSpacing": -0.8
+                },
+                {
+                  "type": "text",
+                  "id": "rD10M",
+                  "name": "About copy",
+                  "fill": "$muted-foreground",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "A developer & automation architect in Dallas.",
+                  "lineHeight": 1.65,
+                  "fontFamily": "Manrope",
+                  "fontSize": 16,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "rectangle",
+              "id": "ZHH1K",
+              "x": 0,
+              "y": 262,
+              "name": "About separator",
+              "enabled": false,
+              "fill": "$border",
+              "width": "fill_container(350)",
+              "height": 1
+            },
+            {
+              "type": "frame",
+              "id": "GFQn5",
+              "x": 0,
+              "y": 285,
+              "name": "A little about me",
+              "enabled": false,
+              "width": "fill_container(350)",
+              "layout": "vertical",
+              "gap": 18,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "s6ueiJ",
+                  "name": "About section heading",
+                  "fill": "$foreground",
+                  "content": "A little about me",
+                  "fontFamily": "Manrope",
+                  "fontSize": 14,
+                  "fontWeight": "650"
+                },
+                {
+                  "type": "frame",
+                  "id": "vj8qN",
+                  "name": "Developer tooling & real-time systems",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "YSrgE",
+                      "name": "Developer tooling & real-time systems icon",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "code",
+                      "library": "lucide",
+                      "fill": "$primary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "R5yseW",
+                      "name": "Developer tooling & real-time systems copy",
+                      "fill": "$muted-foreground",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Developer tooling & real-time systems",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Manrope",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "BdjYS",
+                  "name": "Cat person, obviously.",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "FXVCo",
+                      "name": "Cat person, obviously. icon",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "heart",
+                      "library": "lucide",
+                      "fill": "$primary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "otizq",
+                      "name": "Cat person, obviously. copy",
+                      "fill": "$muted-foreground",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Cat person, obviously.",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Manrope",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "m8L79",
+                  "name": "Usually listening to something",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "S29RMG",
+                      "name": "Usually listening to something icon",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "headphones",
+                      "library": "lucide",
+                      "fill": "$primary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "QhmLX",
+                      "name": "Usually listening to something copy",
+                      "fill": "$muted-foreground",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Usually listening to something",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Manrope",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "AsDMA",
+              "x": 0,
+              "y": 443,
+              "name": "Sidebar breathing room",
+              "enabled": false,
+              "width": "fill_container(350)",
+              "height": 0
+            },
+            {
+              "type": "frame",
+              "id": "m4Zen",
+              "x": 0,
+              "y": 465,
+              "name": "Personal contact",
+              "enabled": false,
+              "width": "fill_container(350)",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "DSZBD",
+                  "name": "Contact heading",
+                  "fill": "$foreground",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Good things start with a hello.",
+                  "lineHeight": 1.4,
+                  "fontFamily": "Manrope",
+                  "fontSize": 18,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "qEs5b",
+                  "name": "Email",
+                  "fill": "$primary",
+                  "content": "hello@artisann.dev",
+                  "fontFamily": "Manrope",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "f8yfhe",
+                  "name": "Contact aside",
+                  "fill": "$muted-foreground",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Have a project, a question, or a cat photo? My inbox is open.",
+                  "lineHeight": 1.6,
+                  "fontFamily": "Manrope",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "y4beCT",
+          "name": "Mobile status and weather",
+          "width": "fill_container",
+          "height": 154,
+          "gap": 12,
+          "children": [
+            {
+              "type": "frame",
+              "id": "mgGnw",
+              "name": "Status",
+              "clip": true,
+              "width": "fill_container",
+              "height": "fill_container",
+              "fill": "$card",
+              "cornerRadius": 16,
+              "stroke": "$border",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "gap": 14,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "bsibj",
+                  "name": "Status heading",
+                  "gap": 9,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "E0Wi4",
+                      "name": "Status icon",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "radio",
+                      "library": "lucide",
+                      "fill": "$muted-foreground"
+                    },
+                    {
+                      "type": "text",
+                      "id": "aNcs4",
+                      "name": "Status label",
+                      "fill": "$muted-foreground",
+                      "content": "Status",
+                      "fontFamily": "Manrope",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ryItN",
+                  "name": "Offline state",
+                  "gap": 10,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "id": "YHwSh",
+                      "name": "Offline dot",
+                      "fill": "$muted-foreground",
+                      "width": 8,
+                      "height": 8
+                    },
+                    {
+                      "type": "text",
+                      "id": "OYmn0",
+                      "name": "Status value",
+                      "fill": "$foreground",
+                      "content": "Offline",
+                      "fontFamily": "Manrope",
+                      "fontSize": 22,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "ytFKB",
+                  "name": "Status detail",
+                  "fill": "$muted-foreground",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Away from the keyboard",
+                  "fontFamily": "Manrope",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "fYdWL",
+              "name": "Weather",
+              "clip": true,
+              "width": "fill_container",
+              "height": "fill_container",
+              "fill": "$card",
+              "cornerRadius": 16,
+              "stroke": "$border",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "gap": 12,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "u98K8",
+                  "name": "Weather heading",
+                  "width": "fill_container",
+                  "justifyContent": "space_between",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "e45w9z",
+                      "name": "Weather label",
+                      "fill": "$muted-foreground",
+                      "content": "Dallas weather",
+                      "fontFamily": "Manrope",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "icon",
+                      "id": "TGBMW",
+                      "name": "Weather cloud",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "cloud-sun",
+                      "library": "lucide",
+                      "fill": "$primary"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Wonjp",
+                  "name": "Weather temperature",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "yc8uU",
+                      "name": "Temperature unavailable",
+                      "fill": "$foreground",
+                      "content": "—°",
+                      "fontFamily": "Manrope",
+                      "fontSize": 34,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "text",
+                      "id": "mbaOK",
+                      "name": "Weather waiting",
+                      "fill": "$muted-foreground",
+                      "content": "Waiting for weather",
+                      "fontFamily": "Manrope",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "F70n5",
+          "name": "Location",
+          "clip": true,
+          "width": "fill_container",
+          "height": 232,
+          "fill": "$card",
+          "cornerRadius": 16,
+          "stroke": "$border",
+          "strokeWidth": 1,
+          "layout": "none",
+          "children": [
+            {
+              "type": "rectangle",
+              "id": "wrwRt",
+              "x": 0,
+              "y": 0,
+              "name": "Dallas skyline photograph",
+              "metadata": {
+                "type": "unsplash",
+                "username": "dhalseth",
+                "link": "https://unsplash.com/@dhalseth",
+                "author": "Daniel Halseth"
+              },
+              "fill": {
+                "type": "image",
+                "enabled": true,
+                "url": "https://images.unsplash.com/photo-1567393217173-337ccd8900f4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NDM0ODN8MHwxfHJhbmRvbXx8fHx8fHx8fDE3ODg4MzIzNDd8&ixlib=rb-4.1.0&q=80&w=1080",
+                "mode": "fill"
+              },
+              "width": 350,
+              "height": 232
+            },
+            {
+              "type": "rectangle",
+              "id": "RCEUo",
+              "x": 0,
+              "y": 0,
+              "name": "Location image scrim",
+              "fill": {
+                "type": "gradient",
+                "gradientType": "linear",
+                "enabled": true,
+                "rotation": 0,
+                "size": {
+                  "height": 1
+                },
+                "colors": [
+                  {
+                    "color": "#0A0A0AF2",
+                    "position": 0
+                  },
+                  {
+                    "color": "#0A0A0A10",
+                    "position": 1
+                  }
+                ]
+              },
+              "width": 350,
+              "height": 232
+            },
+            {
+              "type": "frame",
+              "id": "mPL6z",
+              "x": 20,
+              "y": 148,
+              "name": "Dallas location label",
+              "width": 310,
+              "layout": "vertical",
+              "gap": 8,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "wLdSL",
+                  "name": "City",
+                  "fill": "$foreground",
+                  "content": "Dallas, Texas",
+                  "fontFamily": "Manrope",
+                  "fontSize": 26,
+                  "fontWeight": "650",
+                  "letterSpacing": -0.7
+                },
+                {
+                  "type": "frame",
+                  "id": "k4Fpc",
+                  "name": "Local detail",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "c2So1R",
+                      "name": "Location pin",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "map-pin",
+                      "library": "lucide",
+                      "fill": "$primary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "cMDoI",
+                      "name": "Local timezone",
+                      "fill": "$primary",
+                      "content": "Based here · Central Time",
+                      "fontFamily": "Manrope",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "G4yNDw",
+          "name": "Currently listening",
+          "clip": true,
+          "width": "fill_container",
+          "height": 336,
+          "fill": "$card",
+          "cornerRadius": 16,
+          "stroke": "$border",
+          "strokeWidth": 1,
+          "layout": "vertical",
+          "gap": 16,
+          "padding": 22,
+          "children": [
+            {
+              "type": "frame",
+              "id": "ug8Fo",
+              "name": "Listening heading",
+              "width": "fill_container",
+              "gap": 8,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "U6m2O",
+                  "name": "Listening icon",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "audio-lines",
+                  "library": "lucide",
+                  "fill": "$muted-foreground"
+                },
+                {
+                  "type": "text",
+                  "id": "putEJ",
+                  "name": "Listening label",
+                  "fill": "$muted-foreground",
+                  "content": "Currently listening",
+                  "fontFamily": "Manrope",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "U72HV5",
+              "name": "No track artwork",
+              "width": 140,
+              "height": 140,
+              "fill": "$secondary",
+              "cornerRadius": 12,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "t82h1",
+                  "name": "Music note",
+                  "width": 48,
+                  "height": 48,
+                  "icon": "music-2",
+                  "library": "lucide",
+                  "fill": "$primary"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "mdCrj",
+              "name": "Listening idle state",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 7,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "G6A4y",
+                  "name": "No active track",
+                  "fill": "$foreground",
+                  "content": "Between songs",
+                  "fontFamily": "Manrope",
+                  "fontSize": 20,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "zuryn",
+                  "name": "Listening source",
+                  "fill": "$muted-foreground",
+                  "content": "YouTube Music",
+                  "fontFamily": "Manrope",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "ayEhS",
+              "name": "Open music link",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "LLBpq",
+                  "name": "Music action",
+                  "fill": "$primary",
+                  "content": "Open YouTube Music",
+                  "fontFamily": "Manrope",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "icon",
+                  "id": "qsWeF",
+                  "name": "Music external arrow",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "arrow-up-right",
+                  "library": "lucide",
+                  "fill": "$primary"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "Qxz4s",
+          "name": "Cat gallery",
+          "clip": true,
+          "width": "fill_container",
+          "height": 352,
+          "fill": "$card",
+          "cornerRadius": 16,
+          "stroke": "$border",
+          "strokeWidth": 1,
+          "layout": "vertical",
+          "gap": 16,
+          "padding": 20,
+          "children": [
+            {
+              "type": "frame",
+              "id": "y3NnLt",
+              "name": "Gallery header",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "m68GsX",
+                  "name": "Cat gallery title",
+                  "fill": "$foreground",
+                  "content": "Meet my cats",
+                  "fontFamily": "Manrope",
+                  "fontSize": 19,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "k2qJU",
+                  "name": "Gallery arrows",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "V9HQW",
+                      "name": "Previous photo",
+                      "width": 20,
+                      "height": 20,
+                      "icon": "chevron-left",
+                      "library": "lucide",
+                      "fill": "$muted-foreground"
+                    },
+                    {
+                      "type": "icon",
+                      "id": "K5dQxE",
+                      "name": "Next photo",
+                      "width": 20,
+                      "height": 20,
+                      "icon": "chevron-right",
+                      "library": "lucide",
+                      "fill": "$foreground"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "V0dfix",
+              "name": "Replaceable cat photo stage",
+              "width": "fill_container",
+              "height": "fill_container",
+              "fill": "$secondary",
+              "cornerRadius": 10,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "id": "ADN6z",
+                  "name": "Cat gallery preview · existing artwork",
+                  "fill": {
+                    "type": "image",
+                    "enabled": true,
+                    "url": "../../apps/web/public/Cats.png",
+                    "mode": "fit"
+                  },
+                  "width": 264,
+                  "height": 214
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "XKg2H",
+              "name": "Gallery caption and pagination",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "SbQgR",
+                  "name": "Cat gallery caption",
+                  "fill": "$muted-foreground",
+                  "content": "Photos coming soon.",
+                  "fontFamily": "Manrope",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "AcWd2",
+                  "name": "Photo pagination",
+                  "gap": 6,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 3,
+                      "id": "Kb57Q",
+                      "name": "Gallery page 1",
+                      "fill": "$primary",
+                      "width": 18,
+                      "height": 5
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 3,
+                      "id": "RKIMN",
+                      "name": "Gallery page 2",
+                      "fill": "$ring",
+                      "width": 5,
+                      "height": 5
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 3,
+                      "id": "s4BNx",
+                      "name": "Gallery page 3",
+                      "fill": "$ring",
+                      "width": 5,
+                      "height": 5
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 3,
+                      "id": "hy4wL",
+                      "name": "Gallery page 4",
+                      "fill": "$ring",
+                      "width": 5,
+                      "height": 5
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "C9A46Q",
+          "name": "What I use",
+          "clip": true,
+          "width": "fill_container",
+          "height": 226,
+          "fill": "$card",
+          "cornerRadius": 16,
+          "stroke": "$border",
+          "strokeWidth": 1,
+          "layout": "vertical",
+          "gap": 16,
+          "padding": 20,
+          "children": [
+            {
+              "type": "frame",
+              "id": "X6erx1",
+              "name": "Uses heading",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "c5z03",
+                  "name": "Uses title",
+                  "fill": "$foreground",
+                  "content": "What I use",
+                  "fontFamily": "Manrope",
+                  "fontSize": 20,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "icon",
+                  "id": "T326IT",
+                  "name": "Uses arrow",
+                  "width": 18,
+                  "height": 18,
+                  "icon": "arrow-up-right",
+                  "library": "lucide",
+                  "fill": "$muted-foreground"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "mqeki",
+              "name": "Uses description",
+              "fill": "$muted-foreground",
+              "content": "Tools I keep coming back to.",
+              "fontFamily": "Manrope",
+              "fontSize": 13,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "h7QbZ7",
+              "name": "Daily tools",
+              "width": "fill_container",
+              "height": "fill_container",
+              "gap": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Ea8pk",
+                  "name": "Zed tool",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "V6ZGI",
+                      "name": "Zed icon",
+                      "width": 26,
+                      "height": 26,
+                      "icon": "square-terminal",
+                      "library": "lucide",
+                      "fill": "$primary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Y9KVUn",
+                      "name": "Zed name",
+                      "fill": "$foreground",
+                      "content": "Zed",
+                      "fontFamily": "Manrope",
+                      "fontSize": 16,
+                      "fontWeight": "650"
+                    },
+                    {
+                      "type": "text",
+                      "id": "fqXej",
+                      "name": "Zed description",
+                      "fill": "$muted-foreground",
+                      "content": "Editor",
+                      "fontFamily": "Manrope",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "LHpQP",
+                  "name": "Effect tool",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "e1w30",
+                      "name": "Effect icon",
+                      "width": 26,
+                      "height": 26,
+                      "icon": "workflow",
+                      "library": "lucide",
+                      "fill": "$primary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "oc4je",
+                      "name": "Effect name",
+                      "fill": "$foreground",
+                      "content": "Effect",
+                      "fontFamily": "Manrope",
+                      "fontSize": 16,
+                      "fontWeight": "650"
+                    },
+                    {
+                      "type": "text",
+                      "id": "TIz3x",
+                      "name": "Effect description",
+                      "fill": "$muted-foreground",
+                      "content": "TypeScript",
+                      "fontFamily": "Manrope",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Lv7dv",
+                  "name": "Herdr tool",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "WcX2e",
+                      "name": "Herdr icon",
+                      "width": 26,
+                      "height": 26,
+                      "icon": "panels-top-left",
+                      "library": "lucide",
+                      "fill": "$primary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "LihsH",
+                      "name": "Herdr name",
+                      "fill": "$foreground",
+                      "content": "Herdr",
+                      "fontFamily": "Manrope",
+                      "fontSize": 16,
+                      "fontWeight": "650"
+                    },
+                    {
+                      "type": "text",
+                      "id": "pWQSO",
+                      "name": "Herdr description",
+                      "fill": "$muted-foreground",
+                      "content": "Workspaces",
+                      "fontFamily": "Manrope",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "Kmkzr",
+          "name": "Socials",
+          "clip": true,
+          "width": "fill_container",
+          "height": 242,
+          "fill": "$card",
+          "cornerRadius": 16,
+          "stroke": "$border",
+          "strokeWidth": 1,
+          "layout": "vertical",
+          "gap": 24,
+          "padding": 22,
+          "children": [
+            {
+              "type": "text",
+              "id": "CP7Cu",
+              "name": "Social heading",
+              "fill": "$foreground",
+              "content": "Elsewhere on the internet",
+              "fontFamily": "Manrope",
+              "fontSize": 17,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "DJn5r",
+              "name": "GitHub social link",
+              "width": "fill_container",
+              "gap": 10,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "lqfEs",
+                  "name": "GitHub social icon",
+                  "width": 18,
+                  "height": 18,
+                  "icon": "github",
+                  "library": "lucide",
+                  "fill": "$primary"
+                },
+                {
+                  "type": "text",
+                  "id": "f5R4Cd",
+                  "name": "GitHub social text",
+                  "fill": "$foreground",
+                  "content": "GitHub",
+                  "fontFamily": "Manrope",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "wfKBP",
+                  "name": "GitHub flexible spacing",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "icon",
+                  "id": "z7wN0F",
+                  "name": "GitHub external icon",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "arrow-up-right",
+                  "library": "lucide",
+                  "fill": "$muted-foreground"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "sVHwH",
+              "name": "X / Twitter social link",
+              "width": "fill_container",
+              "gap": 10,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "VG1rK",
+                  "name": "X / Twitter social icon",
+                  "width": 18,
+                  "height": 18,
+                  "icon": "at-sign",
+                  "library": "lucide",
+                  "fill": "$primary"
+                },
+                {
+                  "type": "text",
+                  "id": "Us4oP",
+                  "name": "X / Twitter social text",
+                  "fill": "$foreground",
+                  "content": "X / Twitter",
+                  "fontFamily": "Manrope",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "FZ4Oe",
+                  "name": "X / Twitter flexible spacing",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "icon",
+                  "id": "d5S75",
+                  "name": "X / Twitter external icon",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "arrow-up-right",
+                  "library": "lucide",
+                  "fill": "$muted-foreground"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "MLi0V",
+              "name": "Email social link",
+              "width": "fill_container",
+              "gap": 10,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "C5pO9p",
+                  "name": "Email social icon",
+                  "width": 18,
+                  "height": 18,
+                  "icon": "mail",
+                  "library": "lucide",
+                  "fill": "$primary"
+                },
+                {
+                  "type": "text",
+                  "id": "uLGPy",
+                  "name": "Email social text",
+                  "fill": "$foreground",
+                  "content": "Email",
+                  "fontFamily": "Manrope",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "ymLZM",
+                  "name": "Email flexible spacing",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "icon",
+                  "id": "xFY75",
+                  "name": "Email external icon",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "arrow-up-right",
+                  "library": "lucide",
+                  "fill": "$muted-foreground"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "L7SXcc",
+          "name": "Personal contact",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 12,
+          "padding": [
+            20,
+            0,
+            12,
+            0
+          ],
+          "children": [
+            {
+              "type": "text",
+              "id": "Cl98l",
+              "name": "Contact heading",
+              "fill": "$foreground",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Good things start with a hello.",
+              "lineHeight": 1.4,
+              "fontFamily": "Manrope",
+              "fontSize": 18,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "FZr8e",
+              "name": "Email",
+              "fill": "$primary",
+              "content": "hello@artisann.dev",
+              "fontFamily": "Manrope",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "TIGRt",
+              "name": "Contact aside",
+              "fill": "$muted-foreground",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Have a project, a question, or a cat photo? My inbox is open.",
+              "lineHeight": 1.6,
+              "fontFamily": "Manrope",
+              "fontSize": 13,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "g80dj",
+          "name": "Mobile footer",
+          "fill": "$muted-foreground",
+          "content": "Artisann · Dallas, TX",
+          "fontFamily": "Manrope",
+          "fontSize": 12,
+          "fontWeight": "normal"
+        }
+      ]
+    }
+  ],
+  "variables": {
+    "border": {
+      "type": "color",
+      "value": "#FFFFFF1A"
+    },
+    "background": {
+      "type": "color",
+      "value": "#0A0A0A"
+    },
+    "foreground": {
+      "type": "color",
+      "value": "#FAFAFA"
+    },
+    "card": {
+      "type": "color",
+      "value": "#171717"
+    },
+    "primary": {
+      "type": "color",
+      "value": "#E5E5E5"
+    },
+    "secondary": {
+      "type": "color",
+      "value": "#262626"
+    },
+    "muted-foreground": {
+      "type": "color",
+      "value": "#A1A1A1"
+    },
+    "ring": {
+      "type": "color",
+      "value": "#737373"
+    }
+  },
+  "fileToken": "f597a9b5-9597-42f7-bab7-89edc3a7b9cc"
+}

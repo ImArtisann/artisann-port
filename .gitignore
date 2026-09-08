@@ -17,7 +17,6 @@ todos.json
 /.idea/
 PRODUCT.md
 DESIGN.md
-landing.pen
 
 # zvec-grep local index (keep shared plugin settings)
 /.zvec-grep/*
