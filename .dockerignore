@@ -1,0 +1,66 @@
+# Build context for apps/discord/Dockerfile (context root = repository root).
+# Everything listed here is excluded from the context, so it can never reach an
+# image layer. Secrets are excluded first and unconditionally.
+
+# Secrets and local credentials — never in the build context
+**/.env*
+**/.envrc
+**/.dev.vars*
+**/.npmrc
+.alchemy
+.wrangler
+.git
+
+# Version control and CI metadata
+.gitignore
+.github
+.gitattributes
+
+# Host dependency trees and caches (installed inside the image instead)
+**/node_modules
+.bun
+.cache
+.parcel-cache
+.turbo
+.nx
+**/*.tsbuildinfo
+
+# Build and test outputs from the host (rebuilt inside the image)
+**/dist
+**/dist-ssr
+**/build
+**/out
+**/.output
+**/.astro
+**/coverage
+**/*.lcov
+**/playwright-report
+**/test-results
+storybook-static
+**/*.tgz
+
+# Logs and scratch files
+**/*.log
+**/.temp
+report.*.json
+count.txt
+todos.json
+
+# Editor, OS and local tooling state
+.idea
+.vscode
+**/.DS_Store
+Thumbs.db
+.impeccable
+.omp
+.zvec-grep
+lefthook-local.yaml
+lefthook-local.yml
+
+# Local planning and design material
+PERSONAL_DISCORD_BOT_PLAN.md
+DESIGN.md
+PRODUCT.md
+tools/design-files
+Dockerfile
+compose.yaml

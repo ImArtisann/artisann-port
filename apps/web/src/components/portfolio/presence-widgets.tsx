@@ -10,11 +10,11 @@ import { cn } from "@artisann-port/ui/lib/utils";
 import { ArrowUpRight01Icon, MusicNote02Icon } from "@hugeicons-pro/core-solid-rounded";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useState } from "react";
+import { SharedAtomRegistry } from "@/lib/atom-registry";
 import { usePresence } from "@/lib/presence-client";
 
 interface StatusCopy {
     readonly label: string;
-    readonly description: string;
     readonly dot: string;
     /**
      * A live reading already names a real presence state, so the design hides its description and
@@ -27,25 +27,21 @@ interface StatusCopy {
 const STATUS_COPY = {
     online: {
         label: "Online",
-        description: "Around and building",
         dot: "bg-foreground",
         live: true,
     },
     idle: {
         label: "Idle",
-        description: "Stepped away for a moment",
         dot: "bg-muted-foreground",
         live: true,
     },
     dnd: {
         label: "Do not disturb",
-        description: "Heads down, focused",
         dot: "bg-destructive",
         live: true,
     },
     offline: {
         label: "Offline",
-        description: "Away from the keyboard",
         dot: "bg-muted-foreground",
         live: true,
     },
@@ -53,21 +49,18 @@ const STATUS_COPY = {
 
 const CONNECTING_COPY: StatusCopy = {
     label: "Connecting",
-    description: "Checking my presence",
     dot: "bg-muted-foreground/40",
     live: false,
 };
 
 const UNREACHABLE_COPY: StatusCopy = {
     label: "Status unavailable",
-    description: "Can’t reach my presence feed right now",
     dot: "bg-muted-foreground/40",
     live: false,
 };
 
 const STALE_COPY: StatusCopy = {
     label: "Status unavailable",
-    description: "Waiting on a fresh presence reading",
     dot: "bg-muted-foreground/40",
     live: false,
 };
@@ -118,11 +111,11 @@ const displaySongTitle = (title: string) => {
 };
 
 export interface PresenceStatusProps {
-    /** Overrides the shared presence endpoint; every island on one endpoint shares a single poll. */
+    /** Overrides the shared WebSocket endpoint; every island on one endpoint shares one socket. */
     readonly endpoint?: string;
 }
 
-export function PresenceStatus({ endpoint }: PresenceStatusProps) {
+function PresenceStatusContent({ endpoint }: PresenceStatusProps) {
     const { snapshot, settled, failed } = usePresence(endpoint);
     const copy = statusCopy(snapshot, settled, failed);
 
@@ -150,20 +143,25 @@ export function PresenceStatus({ endpoint }: PresenceStatusProps) {
                     />
                     {copy.label}
                 </p>
-                <p className={cn("text-caption text-muted-foreground", copy.live && "sr-only")}>
-                    {copy.description}
-                </p>
             </CardContent>
         </Card>
     );
 }
 
+export function PresenceStatus(props: PresenceStatusProps) {
+    return (
+        <SharedAtomRegistry>
+            <PresenceStatusContent {...props} />
+        </SharedAtomRegistry>
+    );
+}
+
 export interface MusicStatusProps {
-    /** Overrides the shared presence endpoint; every island on one endpoint shares a single poll. */
+    /** Overrides the shared WebSocket endpoint; every island on one endpoint shares one socket. */
     readonly endpoint?: string;
 }
 
-export function MusicStatus({ endpoint }: MusicStatusProps) {
+function MusicStatusContent({ endpoint }: MusicStatusProps) {
     const { snapshot, settled, failed } = usePresence(endpoint);
     const [brokenArtwork, setBrokenArtwork] = useState<string | null>(null);
 
@@ -239,5 +237,13 @@ export function MusicStatus({ endpoint }: MusicStatusProps) {
                 </div>
             </CardContent>
         </Card>
+    );
+}
+
+export function MusicStatus(props: MusicStatusProps) {
+    return (
+        <SharedAtomRegistry>
+            <MusicStatusContent {...props} />
+        </SharedAtomRegistry>
     );
 }

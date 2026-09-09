@@ -3,11 +3,14 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "dev": "bun run --cwd apps/web dev",
+        "dev": "vp run dev:all",
+        "dev:presence": "PORTFOLIO_DEV_API_ONLY=true bun --no-env-file tools/dev.ts",
+        "discord": "bun --no-env-file --env-file=.env.discord apps/discord/src/main.ts",
         "preview": "bun run --cwd apps/web preview",
         "login": "alchemy login stacks/github.ts --profile admin --configure",
         "plan": "alchemy plan alchemy.run.ts",
-        "deploy": "alchemy deploy alchemy.run.ts --stage prod",
+        "deploy": "vp run deploy:all",
+        "deploy:website": "alchemy deploy alchemy.run.ts --stage prod",
         "destroy": "alchemy destroy",
         "check": "bun run --cwd apps/web check && vp check",
         "format": "vp fmt",
@@ -65,5 +68,8 @@
         "lefthook": "catalog:",
         "typescript": "7.0.2",
         "vite-plus": "0.3.0"
+    },
+    "patchedDependencies": {
+        "@distilled.cloud/core@1.0.0-rc.8": "patches/@distilled.cloud%2Fcore@1.0.0-rc.8.patch"
     }
 }

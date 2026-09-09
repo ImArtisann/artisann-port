@@ -1,4 +1,8 @@
+import * as Clock from "effect/Clock";
+import * as Context from "effect/Context";
+import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
 import * as Redacted from "effect/Redacted";
 import * as Schema from "effect/Schema";
 import * as HttpClient from "effect/unstable/http/HttpClient";
@@ -6,6 +10,7 @@ import * as HttpClientRequest from "effect/unstable/http/HttpClientRequest";
 import * as HttpClientResponse from "effect/unstable/http/HttpClientResponse";
 import { ContributionCalendar, GithubSnapshot } from "./github-schema.ts";
 import type { PresenceKvBinding } from "./store.ts";
+import { ApiUnavailable } from "./api-errors.ts";
 
 const CACHE_KEY = "github-contributions";
 const MAX_AGE_MS = 2 * 60 * 60 * 1000;
@@ -55,21 +60,48 @@ export const readGithub = Effect.fn("Github.read")(function* (namespace: Presenc
     });
     if (document === null) return null;
     const snapshot = yield* decodeDocument(document);
+    const now = yield* Clock.currentTimeMillis;
     return {
         year: snapshot.year,
         calendar: snapshot.calendar,
         updatedAt: snapshot.updatedAt,
-        stale: Date.now() - Date.parse(snapshot.updatedAt) > MAX_AGE_MS,
+        stale: now - Date.parse(snapshot.updatedAt) > MAX_AGE_MS,
     } satisfies GithubSnapshot;
 });
+
+export class GithubBinding extends Context.Service<GithubBinding, PresenceKvBinding>()(
+    "Github.Binding",
+) {}
+
+export class GithubService extends Context.Service<
+    GithubService,
+    { readonly get: Effect.Effect<GithubSnapshot, ApiUnavailable> }
+>()("Github.Service") {}
+
+/** Read the cached calendar without exposing persistence or decoder failures. */
+export const GithubLive = Layer.effect(
+    GithubService,
+    Effect.gen(function* () {
+        const namespace = yield* GithubBinding;
+        const get = readGithub(namespace).pipe(
+            Effect.mapError(() => new ApiUnavailable({ operation: "github.get" })),
+            Effect.filterOrFail(
+                (snapshot) => snapshot !== null,
+                () => new ApiUnavailable({ operation: "github.get" }),
+            ),
+            Effect.withSpan("GithubService.get"),
+        );
+        return GithubService.of({ get });
+    }),
+);
 
 /** GraphQL errors never replace the last successfully cached calendar. */
 export const refreshGithub = Effect.fn("Github.refresh")(function* (
     namespace: PresenceKvBinding,
     token: Redacted.Redacted<string>,
 ) {
-    const now = new Date();
-    const year = now.getUTCFullYear();
+    const now = yield* DateTime.now;
+    const year = DateTime.getPartUtc(now, "year");
     const request = HttpClientRequest.post("https://api.github.com/graphql", {
         headers: {
             authorization: `Bearer ${Redacted.value(token)}`,
@@ -101,7 +133,7 @@ export const refreshGithub = Effect.fn("Github.refresh")(function* (
     const snapshot: GithubSnapshot = {
         year,
         calendar: result.data.user.contributionsCollection.contributionCalendar,
-        updatedAt: now.toISOString(),
+        updatedAt: DateTime.formatIso(now),
         stale: false,
     };
     const document = yield* encodeDocument(snapshot);

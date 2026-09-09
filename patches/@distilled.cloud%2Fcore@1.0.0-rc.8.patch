@@ -1,0 +1,68 @@
+diff --git a/lib/protocol-http.js b/lib/protocol-http.js
+index 2f916d4321d062f13fd05871c9a5cf7dfcdedd98..40f7bfe9ad61d20d02bef9cf1a028791e8c92113 100644
+--- a/lib/protocol-http.js
++++ b/lib/protocol-http.js
+@@ -459,20 +459,21 @@ export const buildRequest = ({ input, inputAst, baseUrl, headers: baseHeaders, m
+         // preserialized payload (string / bytes) sent verbatim under that
+         // media type (e.g. application/x-ndjson for Vectorize
+         // insert/upsert); otherwise it's JSON.
++        const contentType = request.headers["content-type"] ?? http.bodyMediaType;
+         if (rawBody instanceof Blob || rawBody instanceof ArrayBuffer) {
+             // Honor the declared media type (e.g. application/x-ndjson for
+             // Vectorize insert/upsert) — without it the server may fall back to
+             // JSON parsing. When no bodyMediaType is modeled the header is left
+             // untouched (a modeled Content-Type header member rides alongside).
+-            request = request.pipe(HttpClientRequest.setBody(HttpBody.raw(rawBody, { contentType: http.bodyMediaType })));
++            request = request.pipe(HttpClientRequest.setBody(HttpBody.raw(rawBody, { contentType })));
+         }
+         else if (rawBody instanceof Uint8Array) {
+-            request = request.pipe(HttpClientRequest.setBody(HttpBody.uint8Array(rawBody, http.bodyMediaType)));
++            request = request.pipe(HttpClientRequest.setBody(HttpBody.uint8Array(rawBody, contentType)));
+         }
+         else if (http.bodyMediaType) {
+             request = request.pipe(HttpClientRequest.setBody(typeof rawBody === "string"
+-                ? HttpBody.text(rawBody, http.bodyMediaType)
+-                : HttpBody.uint8Array(rawBody, http.bodyMediaType)));
++                ? HttpBody.text(rawBody, contentType)
++                : HttpBody.uint8Array(rawBody, contentType)));
+         }
+         else {
+             request = request.pipe(HttpClientRequest.bodyJsonUnsafe(rawBody));
+diff --git a/src/protocol-http.ts b/src/protocol-http.ts
+index 14b21696f97a6dcd6ac748cbd3322ea92a38f564..7a5347b872aec5f479aaf21bed1997567b74bf17 100644
+--- a/src/protocol-http.ts
++++ b/src/protocol-http.ts
+@@ -588,6 +588,7 @@ export const buildRequest = ({
+     // preserialized payload (string / bytes) sent verbatim under that
+     // media type (e.g. application/x-ndjson for Vectorize
+     // insert/upsert); otherwise it's JSON.
++    const contentType = request.headers["content-type"] ?? http.bodyMediaType;
+     if (rawBody instanceof Blob || rawBody instanceof ArrayBuffer) {
+       // Honor the declared media type (e.g. application/x-ndjson for
+       // Vectorize insert/upsert) — without it the server may fall back to
+@@ -595,21 +596,21 @@ export const buildRequest = ({
+       // untouched (a modeled Content-Type header member rides alongside).
+       request = request.pipe(
+         HttpClientRequest.setBody(
+-          HttpBody.raw(rawBody, { contentType: http.bodyMediaType }),
++          HttpBody.raw(rawBody, { contentType }),
+         ),
+       );
+     } else if (rawBody instanceof Uint8Array) {
+       request = request.pipe(
+         HttpClientRequest.setBody(
+-          HttpBody.uint8Array(rawBody, http.bodyMediaType),
++          HttpBody.uint8Array(rawBody, contentType),
+         ),
+       );
+     } else if (http.bodyMediaType) {
+       request = request.pipe(
+         HttpClientRequest.setBody(
+           typeof rawBody === "string"
+-            ? HttpBody.text(rawBody, http.bodyMediaType)
+-            : HttpBody.uint8Array(rawBody as Uint8Array, http.bodyMediaType),
++            ? HttpBody.text(rawBody, contentType)
++            : HttpBody.uint8Array(rawBody as Uint8Array, contentType),
+         ),
+       );
+     } else {

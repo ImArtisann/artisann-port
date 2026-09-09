@@ -7,8 +7,15 @@
  * content hash, which makes uploads immutable and re-uploads idempotent.
  */
 import { imageSize } from "image-size";
-import { join, sep } from "node:path";
+import * as Effect from "effect/Effect";
+import * as Path from "effect/Path";
+import * as Schema from "effect/Schema";
+import * as Stream from "effect/Stream";
 import { ASSET_CONTENT_TYPES, ASSET_SOURCE_DIRECTORY, type AssetEntry } from "./config.ts";
+
+export class AssetError extends Schema.TaggedError<AssetError>()("AssetError", {
+    message: Schema.String,
+}) {}
 
 export interface CollectedAsset extends AssetEntry {
     /** Absolute path of the source file on disk. */
@@ -34,51 +41,74 @@ export function hashedKey(path: string, data: Uint8Array): string {
 /**
  * Every image under `images/`, sorted by path so the generated manifest and the
  * upload order are deterministic. The scaffold starts with an empty directory.
+ *
+ * Bun.Glob stays the scan boundary so collection keeps `onlyFiles`, no dotfiles,
+ * and no symlink follow — Effect `FileSystem.glob` does not offer that set.
  */
-export async function collectAssets(): Promise<CollectedAsset[]> {
-    const paths: string[] = [];
-    for await (const relativePath of new Bun.Glob("**/*").scan({
-        cwd: sourceDirectory,
-        onlyFiles: true,
-        dot: false,
-        followSymlinks: false,
-    })) {
-        paths.push(relativePath.split(sep).join("/"));
-    }
+export const collectAssets = Effect.gen(function* () {
+    const paths = yield* Path.Path;
+    const relativePaths = yield* Stream.fromAsyncIterable(
+        new Bun.Glob("**/*").scan({
+            cwd: sourceDirectory,
+            onlyFiles: true,
+            dot: false,
+            followSymlinks: false,
+        }),
+        (cause) =>
+            new AssetError({
+                message: cause instanceof Error ? cause.message : String(cause),
+            }),
+    ).pipe(
+        Stream.map((relativePath) => relativePath.split(paths.sep).join("/")),
+        Stream.runCollect,
+    );
 
-    const collected: CollectedAsset[] = [];
-    for (const path of paths.toSorted()) {
-        const extension = path.slice(path.lastIndexOf(".")).toLowerCase();
-        if (!Object.hasOwn(ASSET_CONTENT_TYPES, extension)) {
-            throw new Error(
-                `Unsupported asset images/${path}: accepted extensions are ${Object.keys(
-                    ASSET_CONTENT_TYPES,
-                ).join(", ")}`,
-            );
-        }
-        // SAFETY: the own-key check above narrows extension to a declared key.
-        const contentType = ASSET_CONTENT_TYPES[extension as keyof typeof ASSET_CONTENT_TYPES];
+    return yield* Effect.forEach(relativePaths.toSorted(), (path) =>
+        Effect.gen(function* () {
+            const extension = path.slice(path.lastIndexOf(".")).toLowerCase();
+            if (!Object.hasOwn(ASSET_CONTENT_TYPES, extension)) {
+                return yield* new AssetError({
+                    message: `Unsupported asset images/${path}: accepted extensions are ${Object.keys(
+                        ASSET_CONTENT_TYPES,
+                    ).join(", ")}`,
+                });
+            }
+            // SAFETY: the own-key check above narrows extension to a declared key.
+            const contentType = ASSET_CONTENT_TYPES[extension as keyof typeof ASSET_CONTENT_TYPES];
 
-        const file = join(sourceDirectory, path);
-        const data = await Bun.file(file).bytes();
-        const { width, height, orientation } = imageSize(data);
-        if (!(width > 0 && height > 0)) {
-            throw new Error(`Image images/${path} must have positive intrinsic dimensions.`);
-        }
-        // EXIF orientations 5-8 rotate a quarter turn, so the displayed image is
-        // the stored one transposed.
-        const transposed = orientation !== undefined && orientation >= 5 && orientation <= 8;
+            const file = paths.join(sourceDirectory, path);
+            const data = yield* Effect.tryPromise({
+                try: () => Bun.file(file).bytes(),
+                catch: (cause) =>
+                    new AssetError({
+                        message: cause instanceof Error ? cause.message : String(cause),
+                    }),
+            });
+            const { width, height, orientation } = yield* Effect.try({
+                try: () => imageSize(data),
+                catch: (cause) =>
+                    new AssetError({
+                        message: cause instanceof Error ? cause.message : String(cause),
+                    }),
+            });
+            if (!(width > 0 && height > 0)) {
+                return yield* new AssetError({
+                    message: `Image images/${path} must have positive intrinsic dimensions.`,
+                });
+            }
+            // EXIF orientations 5-8 rotate a quarter turn, so the displayed image is
+            // the stored one transposed.
+            const transposed = orientation !== undefined && orientation >= 5 && orientation <= 8;
 
-        collected.push({
-            path,
-            key: hashedKey(path, data),
-            file,
-            contentType,
-            width: transposed ? height : width,
-            height: transposed ? width : height,
-            bytes: data.byteLength,
-        });
-    }
-
-    return collected;
-}
+            return {
+                path,
+                key: hashedKey(path, data),
+                file,
+                contentType,
+                width: transposed ? height : width,
+                height: transposed ? width : height,
+                bytes: data.byteLength,
+            } satisfies CollectedAsset;
+        }),
+    );
+});

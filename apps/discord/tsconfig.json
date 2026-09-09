@@ -1,0 +1,5 @@
+{
+    "extends": "@artisann-port/typescript-config/base.json",
+    "compilerOptions": { "types": ["bun"] },
+    "include": ["src/**/*.ts", "__tests__/**/*.ts"]
+}

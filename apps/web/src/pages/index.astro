@@ -1,90 +1,33 @@
 ---
 import {
-    ArrowLeft01Icon,
-    ArrowRight01Icon,
-    BirthdayCakeIcon,
-    CatIcon,
-    Dumbbell01Icon,
-    GithubIcon,
-    HeadphonesIcon,
-    ImagesIcon,
-    Mail01Icon,
-    NewTwitterIcon,
-} from "@hugeicons-pro/core-solid-rounded";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Button } from "@artisann-port/ui/components/button";
-import {
     Card,
-    CardContent,
-    CardFooter,
     CardHeader,
     CardTitle,
 } from "@artisann-port/ui/components/card";
-import {
-    Empty,
-    EmptyDescription,
-    EmptyHeader,
-    EmptyMedia,
-} from "@artisann-port/ui/components/empty";
 import { requireAssetPath } from "@artisann-port/assets/urls";
-import { DEPLOYED_PROJECTS } from "@artisann-port/presence/projects";
 import AssetImage from "@/components/AssetImage.astro";
+import { loadSiteContent } from "@/lib/site-content";
+import { PersonalRecords } from "@/components/portfolio/personal-records";
+import { DeployedApps } from "@/components/portfolio/deployed-apps";
+import { OpenSourceList } from "@/components/portfolio/open-source-list";
+import { SocialLinks } from "@/components/portfolio/social-links";
+import { Uses } from "@/components/portfolio/uses";
+import { PersonalFacts } from "@/components/portfolio/personal-facts";
+import { WorkExperience } from "@/components/portfolio/work-experience";
+import { PhotoGallery } from "@/components/portfolio/photo-gallery";
 import { ThemeToggle } from "@/components/portfolio/theme-toggle";
-import { ProjectPreview } from "@/components/portfolio/project-preview";
 import { MusicStatus, PresenceStatus } from "@/components/portfolio/presence-widgets";
 import { VisitorNotes } from "@/components/portfolio/visitor-notes";
 import { WeatherWidget } from "@/components/portfolio/weather-widget";
 import { GithubActivity } from "@/components/portfolio/github-activity";
 import BaseLayout from "@/layouts/base-layout.astro";
 
-const project = DEPLOYED_PROJECTS[0];
-const projectHost = new URL(project.href).hostname.replace(/^www\./, "");
+const content = await loadSiteContent();
+
 const profilePicture = requireAssetPath("portfolio/profile-picture.jpg");
 const pixelCats = requireAssetPath("portfolio/cats.webp");
 
-const facts = [
-    { icon: BirthdayCakeIcon, label: "27 years old" },
-    { icon: CatIcon, label: "2 cats" },
-    { icon: HeadphonesIcon, label: "EDM fan" },
-    { icon: Dumbbell01Icon, label: "Powerlifter, for fun" },
-];
-const records = [
-    { label: "Bench", value: 325 },
-    { label: "Squat", value: 485 },
-    { label: "Deadlift", value: 525 },
-];
-const openSource = [
-    {
-        name: "Zed Herdr",
-        href: "https://github.com/ImArtisann/zed-herdr",
-        description: "Keep workspaces in sync.",
-    },
-    {
-        name: "Herdr workspace launcher",
-        href: "https://github.com/ImArtisann/herdr-workspace-launcher",
-        description: "A keyboard-first directory picker.",
-    },
-];
-const experience = [
-    { company: "Verizon", years: "2025 — Present", title: "Software Engineer" },
-    { company: "Recon Forensics", years: "2025 — 2026", title: "Contractor" },
-    { company: "Perforce Software", years: "2021 — 2025", title: "Systems Engineer" },
-];
-const socials = [
-    { icon: GithubIcon, label: "GitHub", href: "https://github.com/ImArtisann" },
-    { icon: NewTwitterIcon, label: "X", href: "https://x.com/IArtisann" },
-    { icon: Mail01Icon, label: "Email", href: "mailto:hello@artisann.dev" },
-];
-const software = ["Herdr", "Fresh editor", "Zen", "Pen.dev", "Ghostty"];
-const hardware = ["MacBook Pro M4", "MSI MAG401QR monitor", "Kanto YU2"];
-const languages = ["Java", "JS / TS", "Go", "Python"];
-
 const navLink = "flex h-11 items-center px-1.5 text-sm leading-[1.5] lg:h-auto lg:px-0";
-const usesColumn = "flex min-w-0 flex-col gap-2";
-const usesHeading = "text-subheading font-semibold";
-const usesList = "flex flex-col gap-2 text-base";
-const dotActive = "h-1.25 w-4.5 rounded-xl bg-foreground";
-const dotIdle = "size-1.25 rounded-xl bg-muted-foreground";
 ---
 
 <BaseLayout title="Artisann | Developer & Automation Architect">
@@ -163,51 +106,19 @@ const dotIdle = "size-1.25 rounded-xl bg-muted-foreground";
                     class="flex flex-col gap-2"
                 >
                     <h2 id="about-heading" class="text-heading font-semibold">A little about me</h2>
-                    <ul class="flex flex-col gap-2 text-label text-muted-foreground">
-                        {
-                            facts.map(({ icon, label }) => (
-                                <li class="flex items-center gap-2.5">
-                                    <HugeiconsIcon
-                                        icon={icon}
-                                        size={17}
-                                        className="shrink-0"
-                                        aria-hidden="true"
-                                    />
-                                    <span>{label}</span>
-                                </li>
-                            ))
-                        }
-                    </ul>
+                    <PersonalFacts initial={content} client:load />
                     <div class="flex flex-col gap-1.5 pt-2 pl-7">
                         <h3 class="text-aside text-muted-foreground">Personal records</h3>
-                        <dl class="flex flex-col gap-1.5">
-                            {
-                                records.map(({ label, value }) => (
-                                    <div class="flex justify-between gap-3">
-                                        <dt class="text-aside text-muted-foreground">{label}</dt>
-                                        <dd class="text-label font-semibold tabular-nums">
-                                            {value}
-                                        </dd>
-                                    </div>
-                                ))
-                            }
-                        </dl>
+                        <PersonalRecords initial={content} client:load />
                     </div>
                 </section>
 
-                <Empty
+                <PhotoGallery
+                    tag="life"
+                    layout="sidebar-desktop"
                     data-design-node="B2q4fP"
-                    className="h-85 max-h-110 flex-none gap-2 p-4 max-lg:hidden"
-                >
-                    <EmptyHeader>
-                        <EmptyMedia>
-                            <HugeiconsIcon icon={ImagesIcon} size={26} aria-hidden="true" />
-                        </EmptyMedia>
-                        <EmptyDescription className="text-aside">
-                            A few moments from my life
-                        </EmptyDescription>
-                    </EmptyHeader>
-                </Empty>
+                    client:load
+                />
             </aside>
 
             <Card
@@ -216,26 +127,7 @@ const dotIdle = "size-1.25 rounded-xl bg-muted-foreground";
                 data-design-node="LWPRy"
                 className="gap-3 lg:col-span-2 lg:col-start-2 lg:row-start-1"
             >
-                <CardHeader className="sr-only">
-                    <CardTitle>
-                        <h2 id="deployed-apps-heading">Deployed apps</h2>
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <ProjectPreview project={project} client:visible />
-                </CardContent>
-                <CardContent className="flex flex-col gap-2">
-                    <h3 class="text-project font-semibold">{project.name}</h3>
-                    <p class="text-label text-muted-foreground">{project.description}</p>
-                </CardContent>
-                <CardFooter>
-                    <a
-                        href={project.href}
-                        class="flex h-11 items-center text-caption font-medium text-primary lg:h-auto"
-                    >
-                        {projectHost} ↗
-                    </a>
-                </CardFooter>
+                <DeployedApps initial={content} client:load />
             </Card>
 
             <div
@@ -244,7 +136,7 @@ const dotIdle = "size-1.25 rounded-xl bg-muted-foreground";
                 class="flex min-w-0 flex-col gap-6 lg:col-start-2 lg:row-start-3 lg:gap-4"
             >
                 <MusicStatus client:load />
-                <VisitorNotes client:load />
+                <VisitorNotes initial={content} client:load />
             </div>
 
             <Card
@@ -252,23 +144,7 @@ const dotIdle = "size-1.25 rounded-xl bg-muted-foreground";
                 data-design-node="lTwEH"
                 className="lg:col-span-2 lg:col-start-2 lg:row-start-2 lg:min-h-64"
             >
-                <CardHeader className="sr-only">
-                    <CardTitle>
-                        <h2 id="open-source-heading">Open source</h2>
-                    </CardTitle>
-                </CardHeader>
-                {
-                    openSource.map(({ name, href, description }) => (
-                        <CardContent className="flex flex-col gap-2">
-                            <h3>
-                                <a href={href} class="text-base font-medium text-primary">
-                                    {name} ↗
-                                </a>
-                            </h3>
-                            <p class="text-caption text-muted-foreground">{description}</p>
-                        </CardContent>
-                    ))
-                }
+                <OpenSourceList initial={content} client:load />
             </Card>
 
             <Card
@@ -276,48 +152,7 @@ const dotIdle = "size-1.25 rounded-xl bg-muted-foreground";
                 data-design-node="S3g7P"
                 className="gap-3 lg:col-start-4 lg:row-start-1"
             >
-                <CardHeader className="sr-only">
-                    <CardTitle>
-                        <h2 id="cats-heading">The real stars</h2>
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <Empty className="aspect-4/5 max-h-110 flex-none gap-3">
-                        <EmptyMedia>
-                            <HugeiconsIcon icon={ImagesIcon} size={32} aria-hidden="true" />
-                        </EmptyMedia>
-                        <EmptyDescription>Cat photos go here</EmptyDescription>
-                    </Empty>
-                </CardContent>
-                <CardFooter className="justify-between gap-3">
-                    <p class="sr-only">A slideshow of my cats</p>
-                    <span aria-hidden="true" class="flex items-center gap-1.5">
-                        <span class={dotActive}></span>
-                        <span class={dotIdle}></span>
-                        <span class={dotIdle}></span>
-                        <span class={dotIdle}></span>
-                    </span>
-                    <div class="flex items-center gap-1 lg:gap-3">
-                        <Button
-                            variant="ghost"
-                            size="icon-gallery"
-                            disabled
-                            aria-label="Previous cat photo"
-                            className="text-muted-foreground"
-                        >
-                            <HugeiconsIcon icon={ArrowLeft01Icon} aria-hidden="true" />
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="icon-gallery"
-                            disabled
-                            aria-label="Next cat photo"
-                            className="text-muted-foreground"
-                        >
-                            <HugeiconsIcon icon={ArrowRight01Icon} aria-hidden="true" />
-                        </Button>
-                    </div>
-                </CardFooter>
+                <PhotoGallery tag="cats" layout="card" client:load />
             </Card>
 
             <div
@@ -328,48 +163,20 @@ const dotIdle = "size-1.25 rounded-xl bg-muted-foreground";
                 <GithubActivity client:load />
             </div>
 
-            <Empty
+            <PhotoGallery
+                tag="life"
+                layout="sidebar-mobile"
                 data-portfolio-section="personal-photos"
                 data-design-node="P9RRLh"
-                className="aspect-4/5 max-h-110 flex-none gap-2 p-4 lg:hidden"
-            >
-                <EmptyHeader>
-                    <EmptyMedia>
-                        <HugeiconsIcon icon={ImagesIcon} size={26} aria-hidden="true" />
-                    </EmptyMedia>
-                    <EmptyDescription>A few moments from my life</EmptyDescription>
-                </EmptyHeader>
-            </Empty>
+                client:load
+            />
 
             <Card
                 data-portfolio-section="uses"
                 data-design-node="s6ZG2G"
                 className="lg:col-span-3 lg:col-start-2 lg:row-start-4"
             >
-                <CardHeader className="sr-only">
-                    <CardTitle>
-                        <h2 id="uses-heading">What I use</h2>
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="grid grid-cols-2 gap-x-5 gap-y-6 lg:grid-cols-3 lg:gap-x-8">
-                    <section class:list={[usesColumn, "lg:col-start-1"]}>
-                        <h3 class={usesHeading}>Software</h3>
-                        <ul class={usesList}>{software.map((item) => <li>{item}</li>)}</ul>
-                    </section>
-                    <section
-                        class:list={[
-                            usesColumn,
-                            "col-span-2 row-start-2 lg:col-span-1 lg:col-start-2 lg:row-start-1",
-                        ]}
-                    >
-                        <h3 class={usesHeading}>Hardware</h3>
-                        <ul class={usesList}>{hardware.map((item) => <li>{item}</li>)}</ul>
-                    </section>
-                    <section class:list={[usesColumn, "col-start-2 lg:col-start-3 lg:row-start-1"]}>
-                        <h3 class={usesHeading}>Languages</h3>
-                        <ul class={usesList}>{languages.map((item) => <li>{item}</li>)}</ul>
-                    </section>
-                </CardContent>
+                <Uses initial={content} client:load />
             </Card>
 
             <div
@@ -388,25 +195,7 @@ const dotIdle = "size-1.25 rounded-xl bg-muted-foreground";
                             <h2 id="experience-heading">Work experience</h2>
                         </CardTitle>
                     </CardHeader>
-                    <CardContent>
-                        <ul class="flex flex-col gap-3">
-                            {
-                                experience.map(({ company, years, title }) => (
-                                    <li class="flex flex-col gap-0.5">
-                                        <div class="flex items-center justify-between gap-3">
-                                            <h3 class="min-w-0 text-label leading-[1.375rem] font-semibold lg:leading-5">
-                                                {company}
-                                            </h3>
-                                            <p class="shrink-0 text-caption text-right text-muted-foreground">
-                                                {years}
-                                            </p>
-                                        </div>
-                                        <p class="text-caption text-muted-foreground">{title}</p>
-                                    </li>
-                                ))
-                            }
-                        </ul>
-                    </CardContent>
+                    <WorkExperience initial={content} client:load />
                 </Card>
 
                 <Card
@@ -420,28 +209,7 @@ const dotIdle = "size-1.25 rounded-xl bg-muted-foreground";
                             <h2 id="socials-heading">Elsewhere</h2>
                         </CardTitle>
                     </CardHeader>
-                    <CardContent>
-                        <ul class="flex h-11 items-center gap-3 lg:h-10">
-                            {
-                                socials.map(({ icon, label, href }) => (
-                                    <li class="h-full min-w-0 flex-1">
-                                        <a
-                                            href={href}
-                                            class="flex h-full items-center gap-2 text-label leading-[1.375rem] font-medium text-primary lg:leading-5"
-                                        >
-                                            <HugeiconsIcon
-                                                icon={icon}
-                                                size={16}
-                                                className="shrink-0"
-                                                aria-hidden="true"
-                                            />
-                                            <span class="truncate">{label}</span>
-                                        </a>
-                                    </li>
-                                ))
-                            }
-                        </ul>
-                    </CardContent>
+                    <SocialLinks initial={content} client:load />
                 </Card>
             </div>
 

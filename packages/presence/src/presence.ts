@@ -1,28 +1,19 @@
 /**
  * The presence logic, independent of any transport.
  *
- * Two operations, with opposite responsibilities:
- *
- * - {@link refreshPresence} is the only writer. The cron calls it once a
- *   minute; it fetches Lanyard, merges the result with what is already stored,
- *   and writes. Every failure path leaves the stored snapshot untouched, so a
- *   Lanyard outage or a Discord client going offline can never erase the last
- *   song.
- * - {@link readPresence} never writes. It decodes the stored snapshot and
- *   applies the freshness window, so the request path is free of races and of
- *   KV's one-write-per-second-per-key limit no matter how many visitors arrive.
+ * {@link mergePresence} and {@link withFreshness} are pure: the bot calls
+ * them with a presence it decoded from the Discord Gateway and the snapshot
+ * it loaded from storage, and writes the result itself. Every failure path in
+ * the bot leaves the stored snapshot untouched, so a Gateway outage or a
+ * Discord client going offline can never erase the last song.
  */
-import * as Effect from "effect/Effect";
-import * as Option from "effect/Option";
 import { PRESENCE_STALE_AFTER_MS } from "./config.ts";
-import { fetchLanyardPresence, findSongCandidate, presenceStatus } from "./lanyard.ts";
-import type { LanyardPresence } from "./lanyard.ts";
-import { UNINITIALIZED_SNAPSHOT, decodePresenceDocument } from "./schema.ts";
+import { findSongCandidate, presenceStatus } from "./activity.ts";
+import type { DiscordPresence } from "./activity.ts";
 import type { PresenceSnapshot } from "./schema.ts";
-import type { PresenceStore } from "./store.ts";
 
 /**
- * Merge a fresh Lanyard presence with the snapshot already stored.
+ * Merge a freshly observed presence with the snapshot already stored.
  *
  * A song Discord reports right now wins, paused included — a paused track is
  * the current track. With no valid YouTube Music activity the previously
@@ -32,7 +23,7 @@ import type { PresenceStore } from "./store.ts";
  */
 export function mergePresence(
     previous: PresenceSnapshot | null,
-    presence: LanyardPresence,
+    presence: DiscordPresence,
     observedAt: Date,
 ): PresenceSnapshot {
     const candidate = findSongCandidate(presence);
@@ -51,7 +42,7 @@ export function mergePresence(
  *
  * A stale snapshot keeps its song — that is the whole point of storing it —
  * but loses its status and its live playback state. The reader can then never
- * present a status the cron stopped confirming as if it were live.
+ * present a status the bot stopped confirming as if it were live.
  */
 export function withFreshness(snapshot: PresenceSnapshot, now: Date): PresenceSnapshot {
     const updatedAt = snapshot.updatedAt === null ? null : Date.parse(snapshot.updatedAt);
@@ -68,49 +59,3 @@ export function withFreshness(snapshot: PresenceSnapshot, now: Date): PresenceSn
         stale: true,
     };
 }
-
-/**
- * Decode the stored snapshot, or `null` when there is nothing usable there.
- *
- * A missing key is a cold start. A value that fails to decode is treated the
- * same way and logged: it is a document this build cannot honor, and the next
- * refresh is entitled to replace it. A *read failure* is not swallowed — it
- * propagates, because a writer that cannot see the stored song must not
- * overwrite it.
- */
-export const loadPresence = Effect.fn("Presence.load")(function* (store: PresenceStore) {
-    const document = yield* store.read;
-    if (Option.isNone(document)) return null;
-    return yield* decodePresenceDocument(document.value).pipe(
-        Effect.tapError((error) =>
-            Effect.logWarning("Presence: discarding undecodable stored snapshot", error),
-        ),
-        Effect.orElseSucceed(() => null),
-    );
-});
-
-/**
- * The public read: the stored snapshot with freshness applied, or the explicit
- * uninitialized snapshot before the first refresh has landed.
- */
-export const readPresence = Effect.fn("Presence.read")(function* (store: PresenceStore) {
-    const stored = yield* loadPresence(store);
-    if (stored === null) return UNINITIALIZED_SNAPSHOT;
-    return withFreshness(stored, new Date());
-});
-
-/**
- * The only regular writer. Fetches Lanyard, merges with the stored snapshot,
- * writes the result, and returns what is now authoritative.
- *
- * Fails with `LanyardError` when Lanyard is unavailable or rejects, and with
- * `PresenceStoreError` when storage does — in both cases without having
- * written anything, so the retained song survives.
- */
-export const refreshPresence = Effect.fn("Presence.refresh")(function* (store: PresenceStore) {
-    const previous = yield* loadPresence(store);
-    const presence = yield* fetchLanyardPresence().pipe(Effect.timeout("15 seconds"));
-    const snapshot = mergePresence(previous, presence, new Date());
-    yield* store.write(JSON.stringify(snapshot));
-    return snapshot;
-});

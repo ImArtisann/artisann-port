@@ -44,7 +44,7 @@ export const PresenceSong = Schema.Struct({
     artworkUrl: Schema.NullOr(HttpsUrl),
 });
 
-export interface PresenceSong extends Schema.Schema.Type<typeof PresenceSong> {}
+export type PresenceSong = typeof PresenceSong.Type;
 
 /** Everything the portfolio needs to render the online and music widgets. */
 export const PresenceSnapshot = Schema.Struct({
@@ -57,7 +57,7 @@ export const PresenceSnapshot = Schema.Struct({
     stale: Schema.Boolean,
 });
 
-export interface PresenceSnapshot extends Schema.Schema.Type<typeof PresenceSnapshot> {}
+export type PresenceSnapshot = typeof PresenceSnapshot.Type;
 
 /**
  * Effect decoder for a stored snapshot *document*: the JSON text as it lives

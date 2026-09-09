@@ -1,14 +1,13 @@
 /** @jsxImportSource react */
-import { GITHUB_CALENDAR_URL } from "@artisann-port/presence/config";
-import { GithubSnapshot } from "@artisann-port/presence/github-schema";
+import type { GithubSnapshot } from "@artisann-port/presence/github-schema";
 import { Card, CardContent } from "@artisann-port/ui/components/card";
 import { cn } from "@artisann-port/ui/lib/utils";
-import * as Effect from "effect/Effect";
-import * as Exit from "effect/Exit";
-import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
-import * as HttpClient from "effect/unstable/http/HttpClient";
-import * as HttpClientResponse from "effect/unstable/http/HttpClientResponse";
-import { useEffect, useState, type CSSProperties } from "react";
+import * as AsyncResult from "effect/unstable/reactivity/AsyncResult";
+import * as DateTime from "effect/DateTime";
+import { useAtomValue } from "@effect/atom-react";
+import type { CSSProperties } from "react";
+import { SharedAtomRegistry } from "@/lib/atom-registry";
+import { portfolioApiEndpoints, githubAtom } from "@/lib/rpc-client";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const FIRST_HALF_MONTHS = MONTHS.slice(0, 6);
@@ -46,14 +45,6 @@ const dateLabel = new Intl.DateTimeFormat("en-US", {
     year: "numeric",
     timeZone: "UTC",
 });
-
-const readCalendar = HttpClient.get(GITHUB_CALENDAR_URL).pipe(
-    Effect.flatMap(HttpClientResponse.filterStatusOk),
-    Effect.flatMap(HttpClientResponse.schemaBodyJson(GithubSnapshot)),
-    Effect.timeout("10 seconds"),
-    Effect.provideService(HttpClient.TracerPropagationEnabled, false),
-    Effect.provide(FetchHttpClient.layer),
-);
 
 /**
  * Splits the year at the first week that begins in July of the reported year, so the two
@@ -94,7 +85,10 @@ function WeekColumns({ weeks, updatedAt }: { weeks: CalendarWeeks; updatedAt: st
                         // Partial first and last weeks have no day here; the gap keeps the grid aligned.
                         if (!day) return <span key={weekday} className={CELL} />;
                         const future = day.date > today;
-                        const label = dateLabel.format(new Date(`${day.date}T12:00:00Z`));
+                        const label = DateTime.formatIntl(
+                            DateTime.makeUnsafe(`${day.date}T12:00:00Z`),
+                            dateLabel,
+                        );
                         return (
                             <span
                                 key={day.date}
@@ -130,33 +124,10 @@ function PlaceholderColumns({ weeks }: { weeks: number }) {
     );
 }
 
-export function GithubActivity() {
-    const [snapshot, setSnapshot] = useState<GithubSnapshot | null>(null);
-    const [failed, setFailed] = useState(false);
-
-    useEffect(() => {
-        let active = true;
-        let timer: number | undefined;
-        let request: AbortController | undefined;
-        const poll = async () => {
-            request = new AbortController();
-            const result = await Effect.runPromiseExit(readCalendar, { signal: request.signal });
-            if (!active) return;
-            if (Exit.isSuccess(result)) {
-                setSnapshot(result.value);
-                setFailed(false);
-            } else {
-                setFailed(true);
-            }
-            timer = window.setTimeout(() => void poll(), 900_000);
-        };
-        void poll();
-        return () => {
-            active = false;
-            window.clearTimeout(timer);
-            request?.abort();
-        };
-    }, []);
+function GithubActivityContent() {
+    const result = useAtomValue(githubAtom(portfolioApiEndpoints.rpcUrl));
+    const snapshot = AsyncResult.getOrElse(result, () => null);
+    const failed = AsyncResult.isFailure(result);
 
     const stale = failed || snapshot?.stale === true;
     const calendar =
@@ -170,17 +141,13 @@ export function GithubActivity() {
         snapshot === null ? null : snapshot.calendar.totalContributions.toLocaleString("en-US");
 
     return (
-        <Card role="region" aria-labelledby="activity-heading" className="gap-4">
+        <Card role="region" aria-label="GitHub activity" className="gap-4">
             <CardContent className="flex items-center justify-between gap-4 text-caption text-muted-foreground">
-                {/* One header row: the region keeps its accessible name without a visible title. */}
-                <h2 id="activity-heading" className="sr-only">
-                    A year of building
-                </h2>
                 <a href="https://github.com/ImArtisann" className="min-w-0">
                     ImArtisann on GitHub
                 </a>
                 <span className="shrink-0 tabular-nums">
-                    {snapshot?.year ?? new Date().getUTCFullYear()}
+                    {snapshot?.year ?? DateTime.getPartUtc(DateTime.nowUnsafe(), "year")}
                 </span>
             </CardContent>
             <CardContent className="hidden lg:block" aria-hidden="true">
@@ -218,5 +185,13 @@ export function GithubActivity() {
                 )}
             </CardContent>
         </Card>
+    );
+}
+
+export function GithubActivity() {
+    return (
+        <SharedAtomRegistry>
+            <GithubActivityContent />
+        </SharedAtomRegistry>
     );
 }

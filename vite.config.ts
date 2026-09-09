@@ -25,7 +25,20 @@ const ignorePatterns = [
 ];
 
 export default defineConfig({
-    run: { cache: true },
+    resolve: { tsconfigPaths: true },
+    oxc: { jsx: { runtime: "automatic", importSource: "react" } },
+    run: {
+        tasks: {
+            "dev:all": {
+                command: "bun --no-env-file tools/dev.ts",
+                cache: false,
+            },
+            "deploy:all": {
+                command: ["bun run deploy:presence --yes", "bun run deploy:website --yes"],
+                cache: false,
+            },
+        },
+    },
     test: { passWithNoTests: true },
     lint: {
         extends: [recommended],
@@ -65,6 +78,19 @@ export default defineConfig({
             "effect/prefer-option-from-nullable": "error",
             "effect/require-context-service-in-services": "error",
         },
+        overrides: [
+            {
+                files: ["**/__tests__/**/*.ts", "**/__tests__/**/*.tsx"],
+                rules: {
+                    // Vitest callbacks and native API fakes deliberately use Promises
+                    // and Dates; these are not application Effect workflows.
+                    "effecttsgo/async-function": "off",
+                    "effecttsgo/global-date": "off",
+                    // Controllable foreign-API fakes need externally resolved promises.
+                    "effecttsgo/new-promise": "off",
+                },
+            },
+        ],
         ignorePatterns,
     },
     fmt: {

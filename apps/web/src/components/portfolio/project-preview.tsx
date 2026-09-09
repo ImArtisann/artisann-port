@@ -1,5 +1,7 @@
 /** @jsxImportSource react */
-import { projectPreviewUrl, type DeployedProject } from "@artisann-port/presence/projects";
+import type { DeployedApp } from "@artisann-port/presence/content";
+import { projectPreviewUrl } from "@artisann-port/presence/projects";
+import { portfolioApiOrigin } from "@/lib/rpc-client";
 import { Button } from "@artisann-port/ui/components/button";
 import { Empty, EmptyHeader, EmptyMedia } from "@artisann-port/ui/components/empty";
 import { cn } from "@artisann-port/ui/lib/utils";
@@ -17,8 +19,8 @@ const PREVIEW_RATIO = "aspect-[1200/630]";
 
 type PreviewState = "loading" | "loaded" | "failed";
 
-export function ProjectPreview({ project }: { project: DeployedProject }) {
-    const src = projectPreviewUrl(project);
+export function ProjectPreview({ app }: { app: DeployedApp }) {
+    const src = projectPreviewUrl(app, portfolioApiOrigin);
     const [result, setResult] = useState<{ src: string; state: PreviewState } | null>(null);
     const state = result?.src === src ? result.state : "loading";
 
@@ -36,8 +38,8 @@ export function ProjectPreview({ project }: { project: DeployedProject }) {
     return (
         <div className="flex min-w-0 flex-col gap-3">
             <a
-                href={project.href}
-                aria-label={`Visit ${project.name}`}
+                href={app.url}
+                aria-label={`Visit ${app.name}`}
                 className={cn(
                     "relative block w-full overflow-hidden rounded-xl bg-muted",
                     PREVIEW_RATIO,
@@ -54,7 +56,7 @@ export function ProjectPreview({ project }: { project: DeployedProject }) {
                                 />
                             </EmptyMedia>
                             <p className="text-image-caption text-muted-foreground">
-                                Preview unavailable · Visit {project.name}
+                                Preview unavailable · Visit {app.name}
                             </p>
                         </EmptyHeader>
                     </Empty>
@@ -63,7 +65,7 @@ export function ProjectPreview({ project }: { project: DeployedProject }) {
                         <img
                             ref={adoptLoaded}
                             src={src}
-                            alt={`${project.name} Open Graph preview`}
+                            alt={`${app.name} Open Graph preview`}
                             width={1200}
                             height={630}
                             loading="lazy"
@@ -95,7 +97,7 @@ export function ProjectPreview({ project }: { project: DeployedProject }) {
                 )}
             </a>
             <div className="flex h-11 items-center justify-between gap-3 lg:h-9">
-                {/* One deployed project, so one slide marker: the row never implies images that do not exist. */}
+                {/* Each app has one website preview, so the row never implies a carousel. */}
                 <span className="flex items-center gap-1.5" aria-hidden="true">
                     <span className="h-1.25 w-4.5 rounded-full bg-foreground" />
                 </span>
@@ -104,7 +106,7 @@ export function ProjectPreview({ project }: { project: DeployedProject }) {
                         variant="ghost"
                         size="icon-carousel"
                         disabled
-                        aria-label="Previous project image"
+                        aria-label={`Previous ${app.name} project image`}
                     >
                         <HugeiconsIcon icon={ChevronLeftIcon} aria-hidden="true" />
                     </Button>
@@ -112,7 +114,7 @@ export function ProjectPreview({ project }: { project: DeployedProject }) {
                         variant="ghost"
                         size="icon-carousel"
                         disabled
-                        aria-label="Next project image"
+                        aria-label={`Next ${app.name} project image`}
                     >
                         <HugeiconsIcon icon={ChevronRightIcon} aria-hidden="true" />
                     </Button>
