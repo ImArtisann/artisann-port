@@ -11,7 +11,8 @@ const { title } = Astro.props;
 const description = "Artisann — a developer and automation architect in Dallas. Projects, open source, and a little about me.";
 const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
 const socialAsset = requireAssetPath("opengraph/site.png");
-const socialImage = assetUrl(socialAsset, `https://${assetHost(import.meta.env.PUBLIC_ASSETS_HOST || DEFAULT_ASSETS_HOST)}`);
+const socialHost = assetHost(import.meta.env.PUBLIC_ASSETS_HOST || "") || DEFAULT_ASSETS_HOST;
+const socialImage = assetUrl(socialAsset, `https://${socialHost}`);
 const socialDimensions = assetDimensions(socialAsset);
 const socialImageAlt = "Artisann — developer and automation architect in Dallas, with two pixel-art cats on a dark background.";
 ---

@@ -26,7 +26,9 @@ type Props = Omit<
 };
 
 const { asset, width, alt, ...props } = Astro.props;
-const host = assetHost(import.meta.env.PUBLIC_ASSETS_HOST || DEFAULT_ASSETS_HOST);
+// Normalize before falling back: a whitespace-only value normalizes to "" and
+// must not become an empty origin.
+const host = assetHost(import.meta.env.PUBLIC_ASSETS_HOST || "") || DEFAULT_ASSETS_HOST;
 const dimensions = assetDimensions(asset);
 const displayWidth = width ?? dimensions.width;
 const src = assetUrl(asset, `https://${host}`);
