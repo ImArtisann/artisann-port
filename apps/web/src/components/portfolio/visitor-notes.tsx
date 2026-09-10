@@ -185,7 +185,14 @@ function VisitorNotesContent({ initial }: { initial: SiteContent }) {
             try {
                 window.localStorage.setItem(LOCAL_NOTES_KEY, JSON.stringify(remaining));
             } catch {
-                // Storage may be blocked; the in-memory reduction still applies.
+                // Persistence failed, so the stored copy still names the
+                // reconciled ids. Drop it: a reload must not restore a note the
+                // server no longer has.
+                try {
+                    window.localStorage.removeItem(LOCAL_NOTES_KEY);
+                } catch {
+                    // Storage stays unavailable; the in-memory reduction applies.
+                }
             }
             return remaining;
         });
