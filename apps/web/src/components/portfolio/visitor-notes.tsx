@@ -172,6 +172,24 @@ function VisitorNotesContent({ initial }: { initial: SiteContent }) {
         ...localNotes.filter((localNote) => !notes.some((note) => note.id === localNote.id)),
         ...notes,
     ];
+    // An approved note becomes server-authoritative under the same id. Prune the
+    // local copy and persist the reduction: otherwise an owner deletion leaves no
+    // server note, and a reload would resurrect the stale local record.
+    useEffect(() => {
+        if (notes.length === 0) return;
+        setLocalNotes((previous) => {
+            const remaining = previous.filter(
+                (localNote) => !notes.some((note) => note.id === localNote.id),
+            );
+            if (remaining.length === previous.length) return previous;
+            try {
+                window.localStorage.setItem(LOCAL_NOTES_KEY, JSON.stringify(remaining));
+            } catch {
+                // Storage may be blocked; the in-memory reduction still applies.
+            }
+            return remaining;
+        });
+    }, [notes]);
     const submitNote = useAtomSet(NotesClient.mutation("notes.submit"), {
         mode: "promiseExit",
     });

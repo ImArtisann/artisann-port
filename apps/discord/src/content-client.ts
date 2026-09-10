@@ -153,6 +153,13 @@ export const BotContentClientLive: Layer.Layer<
                             message: "This note was already rejected.",
                         });
                     }
+                    if (result.outcome === "not-found") {
+                        // Deletion is final: the id is tombstoned, so a stale
+                        // review button can never republish the note.
+                        return yield* new ContentValidationError({
+                            message: "This note was deleted.",
+                        });
+                    }
                     if (
                         (result.outcome !== "approved" && result.outcome !== "already-approved") ||
                         result.state.publishedRevision < result.state.revision

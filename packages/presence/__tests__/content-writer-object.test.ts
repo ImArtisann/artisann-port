@@ -346,6 +346,25 @@ describe("ContentWriterController deletion", () => {
         expect(retried.state.publishedRevision).toBe(retried.state.revision);
         expect(JSON.parse(documents[CONTENT_KEY] ?? "null").notes).toEqual([]);
     });
+
+    it("keeps a deleted note deleted when a stale approval retries its id", async () => {
+        const documents = {
+            [CONTENT_KEY]: JSON.stringify({ ...DEFAULT_SITE_CONTENT, notes: [seedNote(1)] }),
+        };
+        const { instance } = writer(documents);
+
+        const deleted = successful(await post(instance, { action: "delete", id: noteId(1) }));
+        expect(deleted.outcome).toBe("deleted");
+        const revision = deleted.state.revision;
+
+        const retried = successful(await post(instance, approveAction(1)));
+
+        expect(retried.outcome).toBe("not-found");
+        expect(retried.state.revision).toBe(revision);
+        expect(retried.state.content.notes).toEqual([]);
+        expect(retried.state.publishedRevision).toBe(retried.state.revision);
+        expect(JSON.parse(documents[CONTENT_KEY] ?? "null").notes).toEqual([]);
+    });
 });
 
 describe("ContentWriterController rejection", () => {

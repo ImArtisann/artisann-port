@@ -57,6 +57,8 @@ import {
 const STATE_KEY = "state";
 const REJECTION_MARKER_PREFIX = "rejected:";
 const REJECTION_MARKER_TOMBSTONE = "rejected";
+const DELETED_MARKER_PREFIX = "deleted:";
+const DELETED_MARKER_TOMBSTONE = "deleted";
 const equivalentNotes = Schema.toEquivalence(SiteContent.fields.notes);
 
 /** The persisted form: the encoded document plus its projection bookkeeping. */
@@ -173,6 +175,17 @@ export class ContentWriterController {
                 // without mutating anything.
                 return yield* this.respond("already-rejected", stored);
             }
+            const deleted = yield* Effect.promise(() =>
+                this.doState.storage.get<{
+                    readonly id: string;
+                    readonly decision: string;
+                }>(DELETED_MARKER_PREFIX + action.id),
+            );
+            if (deleted !== undefined) {
+                // A deleted note is final: a stale or retried approval of its id
+                // must never append it back to the document.
+                return yield* this.respond("not-found", stored);
+            }
             const content = yield* this.decode(stored.document);
             const existing = content.notes.find((note) => note.id === action.id);
             if (existing !== undefined) {
@@ -234,7 +247,7 @@ export class ContentWriterController {
                 notes: content.notes.filter((note) => note.id !== action.id),
                 updatedAt: nextUpdatedAt(content.updatedAt, now),
             });
-            return yield* this.commit(
+            const result = yield* this.commit(
                 {
                     revision: stored.revision + 1,
                     publishedRevision: stored.publishedRevision,
@@ -243,6 +256,16 @@ export class ContentWriterController {
                 },
                 "deleted",
             );
+            // The tombstone records the deletion as final. It is written after
+            // the authority commit, so a failed commit never blocks a note that
+            // is still present. Persist only the decision — never the note text.
+            yield* Effect.promise(() =>
+                this.doState.storage.put(DELETED_MARKER_PREFIX + action.id, {
+                    id: action.id,
+                    decision: DELETED_MARKER_TOMBSTONE,
+                }),
+            );
+            return result;
         });
     }
 

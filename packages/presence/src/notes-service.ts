@@ -125,7 +125,9 @@ const verifyTurnstile = Effect.fn("Notes.verifyTurnstile")(function* (
         catch: () => "bad-website-origin" as const,
     });
     const client = yield* HttpClient.HttpClient;
-    const effectiveSecret = token === "XXXX.DUMMY.TOKEN.XXXX" ? DUMMY_SECRET_KEY : secret;
+    const local = isLocalOrigin(origin);
+    const dummy = local && token === "XXXX.DUMMY.TOKEN.XXXX";
+    const effectiveSecret = dummy ? DUMMY_SECRET_KEY : secret;
     const response = yield* client
         .post(SITEVERIFY_URL, {
             acceptJson: true,
@@ -137,7 +139,7 @@ const verifyTurnstile = Effect.fn("Notes.verifyTurnstile")(function* (
         Effect.flatMap(decodeTurnstileResponseDocument),
         Effect.mapError(() => "siteverify-shape" as const),
     );
-    if (result.success === true && result.metadata?.result_with_testing_key === true) {
+    if (dummy && result.success === true && result.metadata?.result_with_testing_key === true) {
         return true;
     }
     return (
