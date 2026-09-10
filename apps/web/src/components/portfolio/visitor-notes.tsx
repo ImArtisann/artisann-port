@@ -20,18 +20,13 @@ import {
     CardHeader,
     CardTitle,
 } from "@artisann-port/ui/components/card";
-import {
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from "@artisann-port/ui/components/dialog";
 import { Field, FieldGroup, FieldLabel } from "@artisann-port/ui/components/field";
 import { Input } from "@artisann-port/ui/components/input";
+import {
+    ResponsiveClose,
+    ResponsiveDialog,
+    ResponsiveDialogFooter,
+} from "@artisann-port/ui/components/responsive-dialog";
 import { Textarea } from "@artisann-port/ui/components/textarea";
 import { useAtomSet } from "@effect/atom-react";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -46,7 +41,15 @@ import {
     PlusSignIcon,
 } from "@hugeicons-pro/core-solid-rounded";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useEffect, useId, useLayoutEffect, useRef, useState, type ComponentRef } from "react";
+import {
+    useEffect,
+    useId,
+    useLayoutEffect,
+    useRef,
+    useState,
+    type ComponentRef,
+    type ReactNode,
+} from "react";
 import { SharedAtomRegistry } from "@/lib/atom-registry";
 import { useSiteContent } from "@/lib/content-client";
 import { NotesClient } from "@/lib/rpc-client";
@@ -120,39 +123,52 @@ function TurnstileChallenge({
 
         let widgetId: string | null = null;
         let destroyed = false;
+        let framesLeft = 240;
+
+        const isLocal =
+            window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
 
         const render = () => {
             if (widgetId !== null || window.turnstile === undefined) return;
-            const isLocal =
-                window.location.hostname === "localhost" ||
-                window.location.hostname === "127.0.0.1";
-            const effectiveSiteKey = isLocal ? "1x00000000000000000000AA" : siteKey;
-            widgetId = window.turnstile.render(container, {
-                sitekey: effectiveSiteKey,
-                action: TURNSTILE_ACTION,
-                callback: (token) => onToken(token),
-                "expired-callback": () => onToken(null),
-                "error-callback": () => onToken(null),
-            });
+            try {
+                widgetId = window.turnstile.render(container, {
+                    sitekey: isLocal ? "1x00000000000000000000AA" : siteKey,
+                    action: TURNSTILE_ACTION,
+                    callback: (token) => onToken(token),
+                    "expired-callback": () => onToken(null),
+                    "error-callback": () => onToken(null),
+                });
+            } catch {
+                // The challenge is third-party code: a failure must leave the
+                // composer mounted with submit disabled, never tear down the page.
+                onToken(null);
+                return;
+            }
             if (isLocal && widgetId) {
                 // Automatically acquire token for local development testing
                 onToken("XXXX.DUMMY.TOKEN.XXXX");
             }
         };
 
-        if (window.turnstile !== undefined && "ready" in window.turnstile) {
-            window.turnstile.ready(render);
-        } else {
-            const poll = () => {
-                if (destroyed) return;
-                if (window.turnstile !== undefined && "ready" in window.turnstile) {
-                    window.turnstile.ready(render);
-                } else {
-                    requestAnimationFrame(poll);
+        const tick = () => {
+            if (destroyed || widgetId !== null) return;
+            const api = window.turnstile;
+            if (api !== undefined) {
+                try {
+                    // `ready()` throws until api.js finishes initializing, so a
+                    // throw falls back to an immediate render attempt.
+                    api.ready(render);
+                } catch {
+                    render();
                 }
-            };
-            requestAnimationFrame(poll);
-        }
+            }
+            if (widgetId === null && framesLeft > 0) {
+                framesLeft -= 1;
+                requestAnimationFrame(tick);
+            }
+        };
+
+        tick();
 
         return () => {
             destroyed = true;
@@ -213,6 +229,7 @@ function VisitorNotesContent({ initial }: { initial: SiteContent }) {
     });
 
     const [selectedId, setSelectedId] = useState<string | null>(null);
+    const [composerOpen, setComposerOpen] = useState(false);
     const [direction, setDirection] = useState<1 | -1>(1);
     const reduceMotion = useReducedMotion();
     const activeNoteRef = useRef<HTMLDivElement>(null);
@@ -346,205 +363,215 @@ function VisitorNotesContent({ initial }: { initial: SiteContent }) {
         }
     };
 
+    const description = COMPOSER_ENABLED
+        ? "Your note will be public after approval. Please keep it kind."
+        : "Posting is not available yet.";
+
+    /**
+     * The notes card carries the trigger, so it is built per branch: a dialog
+     * trigger at `lg` and up, a drawer trigger below it. Base UI resolves both
+     * through the root they are rendered in.
+     */
+    const noteCard = (trigger: ReactNode) => (
+        <Card
+            variant="note"
+            role="region"
+            aria-labelledby={`${id}-heading`}
+            data-portfolio-section="visitor-notes"
+            className="relative min-h-52.25 gap-3 overflow-hidden"
+        >
+            <span
+                aria-hidden="true"
+                className="pointer-events-none absolute top-0 right-0 size-5 bg-note-fold [clip-path:polygon(0_0,100%_100%,0_100%)]"
+            />
+            <CardHeader className="flex flex-1 flex-col gap-2">
+                <CardTitle tone="heading">
+                    <h2 id={`${id}-heading`}>Leave a little note.</h2>
+                </CardTitle>
+                {active === undefined ? (
+                    <CardDescription>
+                        A thought, a hello, or something kind.
+                        <br />
+                        Be the first to leave one.
+                    </CardDescription>
+                ) : (
+                    // Plain text nodes only: notes are never interpreted as markup.
+                    <motion.div
+                        className="relative overflow-hidden"
+                        initial={false}
+                        animate={{ height: noteHeight }}
+                        transition={{ duration: reduceMotion ? 0 : 0.25, ease: "easeOut" }}
+                    >
+                        <AnimatePresence initial={false} mode="popLayout" custom={direction}>
+                            <motion.div
+                                key={active.id}
+                                ref={activeNoteRef}
+                                custom={direction}
+                                variants={reduceMotion ? reducedNoteVariants : noteVariants}
+                                initial="enter"
+                                animate="center"
+                                exit="exit"
+                                transition={{
+                                    duration: reduceMotion ? 0.1 : 0.25,
+                                    ease: "easeOut",
+                                }}
+                                className="flex flex-col gap-2 will-change-transform"
+                            >
+                                <p className="text-sm/5 whitespace-pre-line text-note-foreground">
+                                    {active.body}
+                                </p>
+                                <p className="text-sm/5 text-note-muted-foreground">
+                                    — {active.name ?? "Anonymous"}
+                                </p>
+                            </motion.div>
+                        </AnimatePresence>
+                    </motion.div>
+                )}
+            </CardHeader>
+            <CardFooter className="flex-wrap justify-between gap-2">
+                {trigger}
+                <div className="ml-auto flex gap-1" role="group" aria-label="Notes carousel">
+                    <Button
+                        variant="ghost"
+                        size="icon-carousel"
+                        className="size-11 lg:size-11"
+                        disabled={allNotes.length < 2}
+                        aria-label="Previous note"
+                        title={allNotes.length === 0 ? "No notes yet" : undefined}
+                        onClick={() => step(-1)}
+                    >
+                        <HugeiconsIcon icon={ChevronLeftIcon} aria-hidden="true" />
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="icon-carousel"
+                        className="size-11 lg:size-11"
+                        disabled={allNotes.length < 2}
+                        aria-label="Next note"
+                        title={allNotes.length === 0 ? "No notes yet" : undefined}
+                        onClick={() => step(1)}
+                    >
+                        <HugeiconsIcon icon={ChevronRightIcon} aria-hidden="true" />
+                    </Button>
+                </div>
+            </CardFooter>
+        </Card>
+    );
+
+    const composer = (
+        <form
+            className="flex flex-col gap-4"
+            onSubmit={(event) => {
+                event.preventDefault();
+                void submit();
+            }}
+        >
+            <FieldGroup>
+                <Field>
+                    <FieldLabel htmlFor={nameId}>Name (optional)</FieldLabel>
+                    <Input
+                        id={nameId}
+                        autoComplete="nickname"
+                        maxLength={NOTE_NAME_MAX}
+                        disabled={busy}
+                        placeholder="How should your note be signed?"
+                        value={name}
+                        onChange={(event) => {
+                            setName(event.target.value);
+                            editDraft();
+                        }}
+                    />
+                </Field>
+                <Field>
+                    <div className="flex items-center justify-between gap-3">
+                        <FieldLabel htmlFor={noteId}>Your note</FieldLabel>
+                        <span id={countId} className="text-sm text-muted-foreground">
+                            {note.length} / {NOTE_LIMIT}
+                        </span>
+                    </div>
+                    <Textarea
+                        id={noteId}
+                        className="h-33 resize-none"
+                        placeholder="Leave a thought or say hello…"
+                        maxLength={NOTE_LIMIT}
+                        disabled={busy}
+                        value={note}
+                        onChange={(event) => {
+                            setNote(event.target.value);
+                            editDraft();
+                        }}
+                        aria-describedby={`${countId} ${unavailableId}`}
+                    />
+                </Field>
+            </FieldGroup>
+            {COMPOSER_ENABLED && TURNSTILE_SITE_KEY !== undefined ? (
+                <TurnstileChallenge key={attempt} siteKey={TURNSTILE_SITE_KEY} onToken={setToken} />
+            ) : null}
+            <p role="status" aria-live="polite" className="text-sm/5 text-muted-foreground">
+                {feedback}
+            </p>
+            <ResponsiveDialogFooter>
+                {COMPOSER_ENABLED ? (
+                    <Button
+                        type="submit"
+                        variant="secondary"
+                        className="h-11 w-full"
+                        disabled={busy || invalid || submitState === "sent"}
+                    >
+                        {busy
+                            ? "Sending…"
+                            : submitState === "sent"
+                              ? "Sent for review."
+                              : "Post note"}
+                    </Button>
+                ) : (
+                    <Button
+                        type="button"
+                        variant="secondary"
+                        className="h-11 w-full"
+                        disabled
+                        aria-describedby={unavailableId}
+                    >
+                        Post note
+                    </Button>
+                )}
+            </ResponsiveDialogFooter>
+        </form>
+    );
+
     return (
-        <Dialog>
-            <Card
-                variant="note"
-                role="region"
-                aria-labelledby={`${id}-heading`}
-                data-portfolio-section="visitor-notes"
-                className="relative min-h-52.25 gap-3 overflow-hidden"
-            >
-                <span
-                    aria-hidden="true"
-                    className="pointer-events-none absolute top-0 right-0 size-5 bg-note-fold [clip-path:polygon(0_0,100%_100%,0_100%)]"
-                />
-                <CardHeader className="flex flex-1 flex-col gap-2">
-                    <CardTitle tone="heading">
-                        <h2 id={`${id}-heading`}>Leave a little note.</h2>
-                    </CardTitle>
-                    {active === undefined ? (
-                        <CardDescription>
-                            A thought, a hello, or something kind.
-                            <br />
-                            Be the first to leave one.
-                        </CardDescription>
-                    ) : (
-                        // Plain text nodes only: notes are never interpreted as markup.
-                        <motion.div
-                            className="relative overflow-hidden"
-                            initial={false}
-                            animate={{ height: noteHeight }}
-                            transition={{ duration: reduceMotion ? 0 : 0.25, ease: "easeOut" }}
-                        >
-                            <AnimatePresence initial={false} mode="popLayout" custom={direction}>
-                                <motion.div
-                                    key={active.id}
-                                    ref={activeNoteRef}
-                                    custom={direction}
-                                    variants={reduceMotion ? reducedNoteVariants : noteVariants}
-                                    initial="enter"
-                                    animate="center"
-                                    exit="exit"
-                                    transition={{
-                                        duration: reduceMotion ? 0.1 : 0.25,
-                                        ease: "easeOut",
-                                    }}
-                                    className="flex flex-col gap-2 will-change-transform"
-                                >
-                                    <p className="text-sm/5 whitespace-pre-line text-note-foreground">
-                                        {active.body}
-                                    </p>
-                                    <p className="text-sm/5 text-note-muted-foreground">
-                                        — {active.name ?? "Anonymous"}
-                                    </p>
-                                </motion.div>
-                            </AnimatePresence>
-                        </motion.div>
-                    )}
-                </CardHeader>
-                <CardFooter className="flex-wrap justify-between gap-2">
-                    <DialogTrigger render={<Button variant="ghost" className="h-11 gap-2 px-1" />}>
-                        <HugeiconsIcon
-                            icon={PlusSignIcon}
-                            data-icon="inline-start"
-                            aria-hidden="true"
-                        />
-                        Add a note
-                    </DialogTrigger>
-                    <div className="ml-auto flex gap-1" role="group" aria-label="Notes carousel">
-                        <Button
-                            variant="ghost"
-                            size="icon-carousel"
-                            className="size-11 lg:size-11"
-                            disabled={allNotes.length < 2}
-                            aria-label="Previous note"
-                            title={allNotes.length === 0 ? "No notes yet" : undefined}
-                            onClick={() => step(-1)}
-                        >
-                            <HugeiconsIcon icon={ChevronLeftIcon} aria-hidden="true" />
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="icon-carousel"
-                            className="size-11 lg:size-11"
-                            disabled={allNotes.length < 2}
-                            aria-label="Next note"
-                            title={allNotes.length === 0 ? "No notes yet" : undefined}
-                            onClick={() => step(1)}
-                        >
-                            <HugeiconsIcon icon={ChevronRightIcon} aria-hidden="true" />
-                        </Button>
-                    </div>
-                </CardFooter>
-            </Card>
-            <DialogContent showCloseButton={false} className="px-4 sm:px-6">
-                <DialogHeader>
-                    <div className="flex min-h-11 items-center justify-between gap-3">
-                        <DialogTitle>Add a note</DialogTitle>
-                        <DialogClose
-                            render={
-                                <Button
-                                    variant="ghost"
-                                    size="icon-carousel"
-                                    className="size-11 lg:size-11"
-                                    aria-label="Close note dialog"
-                                />
-                            }
-                        >
-                            <HugeiconsIcon icon={Cancel01Icon} aria-hidden="true" />
-                        </DialogClose>
-                    </div>
-                    <DialogDescription id={unavailableId}>
-                        {COMPOSER_ENABLED
-                            ? "Your note will be public after approval. Please keep it kind."
-                            : "Posting is not available yet."}
-                    </DialogDescription>
-                </DialogHeader>
-                <form
-                    className="flex flex-col gap-4"
-                    onSubmit={(event) => {
-                        event.preventDefault();
-                        void submit();
-                    }}
-                >
-                    <FieldGroup>
-                        <Field>
-                            <FieldLabel htmlFor={nameId}>Name (optional)</FieldLabel>
-                            <Input
-                                id={nameId}
-                                autoComplete="nickname"
-                                maxLength={NOTE_NAME_MAX}
-                                disabled={busy}
-                                placeholder="How should your note be signed?"
-                                value={name}
-                                onChange={(event) => {
-                                    setName(event.target.value);
-                                    editDraft();
-                                }}
-                            />
-                        </Field>
-                        <Field>
-                            <div className="flex items-center justify-between gap-3">
-                                <FieldLabel htmlFor={noteId}>Your note</FieldLabel>
-                                <span id={countId} className="text-sm text-muted-foreground">
-                                    {note.length} / {NOTE_LIMIT}
-                                </span>
-                            </div>
-                            <Textarea
-                                id={noteId}
-                                className="h-33 resize-none"
-                                placeholder="Leave a thought or say hello…"
-                                maxLength={NOTE_LIMIT}
-                                disabled={busy}
-                                value={note}
-                                onChange={(event) => {
-                                    setNote(event.target.value);
-                                    editDraft();
-                                }}
-                                aria-describedby={`${countId} ${unavailableId}`}
-                            />
-                        </Field>
-                    </FieldGroup>
-                    {COMPOSER_ENABLED && TURNSTILE_SITE_KEY !== undefined ? (
-                        <TurnstileChallenge
-                            key={attempt}
-                            siteKey={TURNSTILE_SITE_KEY}
-                            onToken={setToken}
-                        />
-                    ) : null}
-                    <p role="status" aria-live="polite" className="text-sm/5 text-muted-foreground">
-                        {feedback}
-                    </p>
-                    <DialogFooter>
-                        {COMPOSER_ENABLED ? (
-                            <Button
-                                type="submit"
-                                variant="secondary"
-                                className="h-11 w-full"
-                                disabled={busy || invalid || submitState === "sent"}
-                            >
-                                {busy
-                                    ? "Sending…"
-                                    : submitState === "sent"
-                                      ? "Sent for review."
-                                      : "Post note"}
-                            </Button>
-                        ) : (
-                            <Button
-                                type="button"
-                                variant="secondary"
-                                className="h-11 w-full"
-                                disabled
-                                aria-describedby={unavailableId}
-                            >
-                                Post note
-                            </Button>
-                        )}
-                    </DialogFooter>
-                </form>
-            </DialogContent>
-        </Dialog>
+        <ResponsiveDialog
+            open={composerOpen}
+            onOpenChange={setComposerOpen}
+            title="Add a note"
+            description={description}
+            className="px-4 sm:px-6"
+            trigger={
+                <Button variant="ghost" className="h-11 gap-2 px-1">
+                    <HugeiconsIcon
+                        icon={PlusSignIcon}
+                        data-icon="inline-start"
+                        aria-hidden="true"
+                    />
+                    Add a note
+                </Button>
+            }
+            triggerHost={(trigger) => noteCard(trigger)}
+            headerAction={
+                <ResponsiveClose>
+                    <Button
+                        variant="ghost"
+                        size="icon-carousel"
+                        className="size-11 lg:size-11"
+                        aria-label="Close note dialog"
+                    >
+                        <HugeiconsIcon icon={Cancel01Icon} aria-hidden="true" />
+                    </Button>
+                </ResponsiveClose>
+            }
+        >
+            {composer}
+        </ResponsiveDialog>
     );
 }
 
