@@ -255,15 +255,7 @@ export class ContentWriterController {
                     dirty: true,
                 },
                 "deleted",
-            );
-            // The tombstone records the deletion as final. It is written after
-            // the authority commit, so a failed commit never blocks a note that
-            // is still present. Persist only the decision — never the note text.
-            yield* Effect.promise(() =>
-                this.doState.storage.put(DELETED_MARKER_PREFIX + action.id, {
-                    id: action.id,
-                    decision: DELETED_MARKER_TOMBSTONE,
-                }),
+                { id: action.id },
             );
             return result;
         });
@@ -305,7 +297,11 @@ export class ContentWriterController {
      * The mutation is durable either way; only a confirmed mirror lets the
      * success outcome be claimed, otherwise the caller sees 503.
      */
-    private commit(next: StoredState, outcome: "updated" | "approved" | "deleted") {
+    private commit(
+        next: StoredState,
+        outcome: "updated" | "approved" | "deleted",
+        deletion?: { readonly id: string },
+    ) {
         return Effect.gen({ self: this }, function* () {
             // Arm recovery before committing authority: termination between the
             // durable write and the projection must not strand an approved note.
@@ -315,6 +311,17 @@ export class ContentWriterController {
                 yield* Effect.promise(() => this.doState.storage.setAlarm(due));
             }
             yield* this.persist(next);
+            if (deletion !== undefined) {
+                // Durable with the deletion itself, before any projection: a
+                // crash now leaves the id tombstoned rather than revivable.
+                // Only the decision is stored — never the note text.
+                yield* Effect.promise(() =>
+                    this.doState.storage.put(DELETED_MARKER_PREFIX + deletion.id, {
+                        id: deletion.id,
+                        decision: DELETED_MARKER_TOMBSTONE,
+                    }),
+                );
+            }
             yield* this.pump();
             const stored = yield* this.readStored();
             if (stored === undefined || stored.dirty) return error("unavailable");
