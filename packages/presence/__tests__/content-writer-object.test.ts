@@ -275,6 +275,79 @@ describe("ContentWriterController approval", () => {
     });
 });
 
+describe("ContentWriterController deletion", () => {
+    it("removes only the selected note, advances authority, and publishes the deletion", async () => {
+        const content = {
+            ...DEFAULT_SITE_CONTENT,
+            notes: [seedNote(1), seedNote(2), seedNote(3)],
+            updatedAt: "2099-01-01T00:00:00.000Z",
+        };
+        const documents = { [CONTENT_KEY]: JSON.stringify(content) };
+        const { instance, doState, kv } = writer(documents);
+        const before = await getState(instance);
+
+        const result = successful(await post(instance, { action: "delete", id: noteId(2) }));
+
+        expect(result.outcome).toBe("deleted");
+        expect(result.state.revision).toBe(before.revision + 1);
+        expect(result.state.publishedRevision).toBe(result.state.revision);
+        expect(result.state.content.notes).toEqual([seedNote(1), seedNote(3)]);
+        expect(result.state.content.updatedAt).toBe("2099-01-01T00:00:00.001Z");
+        expect(JSON.parse(documents[CONTENT_KEY] ?? "null")).toEqual(result.state.content);
+        expect(kv.puts).toEqual([CONTENT_KEY]);
+        const restarted = new ContentWriterController(doState, { PRESENCE_KV: kv });
+        expect(await getState(restarted)).toEqual(result.state);
+    });
+
+    it("returns not-found without changing authority or projecting when the id is absent", async () => {
+        const documents = {
+            [CONTENT_KEY]: JSON.stringify({ ...DEFAULT_SITE_CONTENT, notes: [seedNote(1)] }),
+        };
+        const { instance, kv } = writer(documents);
+        const before = await getState(instance);
+        const published = documents[CONTENT_KEY];
+
+        const result = successful(await post(instance, { action: "delete", id: noteId(2) }));
+
+        expect(result.outcome).toBe("not-found");
+        expect(result.state).toEqual(before);
+        expect(documents[CONTENT_KEY]).toBe(published);
+        expect(kv.puts).toEqual([]);
+    });
+
+    it("keeps deletion unconfirmed until the alarm publishes its durable removal", async () => {
+        const documents = {
+            [CONTENT_KEY]: JSON.stringify({ ...DEFAULT_SITE_CONTENT, notes: [seedNote(1)] }),
+        };
+        const kv = kvDouble(documents);
+        let healthy = false;
+        const instance = new ContentWriterController(memoryState(), {
+            PRESENCE_KV: {
+                get: (key) => kv.get(key),
+                put: (key, value) =>
+                    healthy ? kv.put(key, value) : Promise.reject(new Error("kv down")),
+            },
+        });
+
+        expect(await post(instance, { action: "delete", id: noteId(1) })).toEqual({
+            error: "unavailable",
+        });
+        expect((await getState(instance)).content.notes).toEqual([]);
+        expect(JSON.parse(documents[CONTENT_KEY] ?? "null").notes).toEqual([seedNote(1)]);
+        expect(await post(instance, { action: "delete", id: noteId(1) })).toEqual({
+            error: "unavailable",
+        });
+
+        healthy = true;
+        await instance.alarm();
+
+        const retried = successful(await post(instance, { action: "delete", id: noteId(1) }));
+        expect(retried.outcome).toBe("not-found");
+        expect(retried.state.publishedRevision).toBe(retried.state.revision);
+        expect(JSON.parse(documents[CONTENT_KEY] ?? "null").notes).toEqual([]);
+    });
+});
+
 describe("ContentWriterController rejection", () => {
     it("marks the id without touching content or KV, and stays final", async () => {
         const { kv, doState, instance } = writer({

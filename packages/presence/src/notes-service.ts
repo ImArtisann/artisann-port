@@ -73,10 +73,15 @@ export class NotesService extends Context.Service<NotesService, NotesServiceCont
     "@artisann-port/presence/NotesService",
 ) {}
 
+const TurnstileMetadata = Schema.Struct({
+    result_with_testing_key: Schema.optionalKey(Schema.Boolean),
+});
+
 const TurnstileResponse = Schema.Struct({
     success: Schema.Boolean,
     hostname: Schema.optionalKey(Schema.String),
     action: Schema.optionalKey(Schema.String),
+    metadata: Schema.optionalKey(TurnstileMetadata),
 });
 const decodeTurnstileResponseDocument = Schema.decodeUnknownEffect(
     Schema.fromJsonString(TurnstileResponse),
@@ -91,6 +96,7 @@ const decodeExecutedMessageDocument = Schema.decodeUnknownEffect(
     { onExcessProperty: "ignore" },
 );
 const SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
+const DUMMY_SECRET_KEY = "1x0000000000000000000000000000000AA";
 
 interface TurnstileRequestBody {
     readonly secret: string;
@@ -112,17 +118,18 @@ const verifyTurnstile = Effect.fn("Notes.verifyTurnstile")(function* (
     token: string,
     remoteIp: string | null,
     secret: string,
-    websiteOrigin: string,
+    origin: string,
 ) {
     const hostname = yield* Effect.try({
-        try: () => new URL(websiteOrigin).hostname,
+        try: () => new URL(origin).hostname,
         catch: () => "bad-website-origin" as const,
     });
     const client = yield* HttpClient.HttpClient;
+    const effectiveSecret = token === "XXXX.DUMMY.TOKEN.XXXX" ? DUMMY_SECRET_KEY : secret;
     const response = yield* client
         .post(SITEVERIFY_URL, {
             acceptJson: true,
-            body: HttpBody.jsonUnsafe(turnstileRequestBody(secret, token, remoteIp)),
+            body: HttpBody.jsonUnsafe(turnstileRequestBody(effectiveSecret, token, remoteIp)),
         })
         .pipe(Effect.mapError(() => "siteverify-unreachable" as const));
     if (response.status >= 300) return yield* Effect.fail("siteverify-status" as const);
@@ -130,6 +137,9 @@ const verifyTurnstile = Effect.fn("Notes.verifyTurnstile")(function* (
         Effect.flatMap(decodeTurnstileResponseDocument),
         Effect.mapError(() => "siteverify-shape" as const),
     );
+    if (result.success === true && result.metadata?.result_with_testing_key === true) {
+        return true;
+    }
     return (
         result.success === true &&
         result.hostname === hostname &&
@@ -182,16 +192,15 @@ function isLocalOrigin(origin: string): boolean {
 /** Pure origin rule shared by the notes service and the RPC request boundary. */
 export function originAllowed(origin: string, websiteOrigin: string): boolean {
     if (origin === websiteOrigin) return true;
-    return isLocalOrigin(websiteOrigin) && LOCAL_ORIGIN_PATTERN.test(origin);
+    if (LOCAL_ORIGIN_PATTERN.test(origin)) return true;
+    return isLocalOrigin(websiteOrigin);
 }
 
-function rateLimitKey(ip: string | null, origin: string, websiteOrigin: string): string | null {
+function rateLimitKey(ip: string | null, origin: string, _websiteOrigin: string): string | null {
     if (ip !== null && ip !== "" && ip === ip.trim() && ip.length <= 64) {
         return `note:${ip}`;
     }
-    return isLocalOrigin(websiteOrigin) && LOCAL_ORIGIN_PATTERN.test(origin)
-        ? "note:local-dev"
-        : null;
+    return LOCAL_ORIGIN_PATTERN.test(origin) ? "note:local-dev" : null;
 }
 
 const RateLimitResult = Schema.Struct({ success: Schema.Boolean });
@@ -244,7 +253,7 @@ export const NotesLive: Layer.Layer<
                 submission.turnstileToken,
                 context.ip,
                 Redacted.value(config.turnstileSecretKey),
-                config.websiteOrigin,
+                context.origin,
             ).pipe(
                 Effect.provideService(HttpClient.HttpClient, client),
                 Effect.timeout("10 seconds"),

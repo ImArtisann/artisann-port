@@ -2,6 +2,7 @@
 import {
     normalizeNoteName,
     normalizeNoteText,
+    VisitorNote,
     type SiteContent,
 } from "@artisann-port/presence/content";
 import {
@@ -34,7 +35,10 @@ import { Input } from "@artisann-port/ui/components/input";
 import { Textarea } from "@artisann-port/ui/components/textarea";
 import { useAtomSet } from "@effect/atom-react";
 import { HugeiconsIcon } from "@hugeicons/react";
+import * as DateTime from "effect/DateTime";
 import * as Exit from "effect/Exit";
+import * as Option from "effect/Option";
+import * as Schema from "effect/Schema";
 import {
     Cancel01Icon,
     ChevronLeftIcon,
@@ -47,6 +51,15 @@ import { useSiteContent } from "@/lib/content-client";
 import { NotesClient } from "@/lib/rpc-client";
 
 const NOTE_LIMIT = NOTE_BODY_MAX;
+const LOCAL_NOTES_KEY = "artisann:visitor-notes";
+const LocalNote = Schema.Struct({
+    id: VisitorNote.fields.id,
+    name: VisitorNote.fields.name,
+    body: VisitorNote.fields.body,
+    submittedAt: VisitorNote.fields.submittedAt,
+});
+type LocalNote = typeof LocalNote.Type;
+const decodeLocalNotes = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Array(LocalNote)));
 
 /**
  * The composer ships disabled until the owner publishes the Turnstile site key AND flips the
@@ -72,6 +85,7 @@ interface TurnstileApi {
         },
     ) => string;
     remove: (widgetId: string) => void;
+    ready: (callback: () => void) => void;
 }
 
 declare global {
@@ -79,9 +93,6 @@ declare global {
         turnstile?: TurnstileApi;
     }
 }
-
-const TURNSTILE_SCRIPT_URL =
-    "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
 
 function TurnstileChallenge({
     siteKey,
@@ -97,36 +108,43 @@ function TurnstileChallenge({
         if (container === null) return;
 
         let widgetId: string | null = null;
-        let script: HTMLScriptElement | null = null;
+        let destroyed = false;
 
         const render = () => {
             if (widgetId !== null || window.turnstile === undefined) return;
+            const isLocal =
+                window.location.hostname === "localhost" ||
+                window.location.hostname === "127.0.0.1";
+            const effectiveSiteKey = isLocal ? "1x00000000000000000000AA" : siteKey;
             widgetId = window.turnstile.render(container, {
-                sitekey: siteKey,
+                sitekey: effectiveSiteKey,
                 action: TURNSTILE_ACTION,
                 callback: (token) => onToken(token),
                 "expired-callback": () => onToken(null),
                 "error-callback": () => onToken(null),
             });
+            if (isLocal && widgetId) {
+                // Automatically acquire token for local development testing
+                onToken("XXXX.DUMMY.TOKEN.XXXX");
+            }
         };
 
-        if (window.turnstile !== undefined) {
-            render();
+        if (window.turnstile !== undefined && "ready" in window.turnstile) {
+            window.turnstile.ready(render);
         } else {
-            script = document.querySelector<HTMLScriptElement>(
-                `script[src="${TURNSTILE_SCRIPT_URL}"]`,
-            );
-            if (script === null) {
-                script = document.createElement("script");
-                script.src = TURNSTILE_SCRIPT_URL;
-                script.async = true;
-                document.head.append(script);
-            }
-            script.addEventListener("load", render);
+            const poll = () => {
+                if (destroyed) return;
+                if (window.turnstile !== undefined && "ready" in window.turnstile) {
+                    window.turnstile.ready(render);
+                } else {
+                    requestAnimationFrame(poll);
+                }
+            };
+            requestAnimationFrame(poll);
         }
 
         return () => {
-            script?.removeEventListener("load", render);
+            destroyed = true;
             if (widgetId !== null) window.turnstile?.remove(widgetId);
             onToken(null);
         };
@@ -139,6 +157,21 @@ function VisitorNotesContent({ initial }: { initial: SiteContent }) {
     const id = useId();
     const content = useSiteContent(initial);
     const notes = content.notes;
+    const [localNotes, setLocalNotes] = useState<readonly LocalNote[]>([]);
+    useEffect(() => {
+        try {
+            const stored = window.localStorage.getItem(LOCAL_NOTES_KEY);
+            if (stored === null) return;
+            const decoded = decodeLocalNotes(stored);
+            if (Option.isSome(decoded)) setLocalNotes(decoded.value);
+        } catch {
+            // Storage may be blocked; notes submitted this visit still appear immediately.
+        }
+    }, []);
+    const allNotes = [
+        ...localNotes.filter((localNote) => !notes.some((note) => note.id === localNote.id)),
+        ...notes,
+    ];
     const submitNote = useAtomSet(NotesClient.mutation("notes.submit"), {
         mode: "promiseExit",
     });
@@ -146,9 +179,9 @@ function VisitorNotesContent({ initial }: { initial: SiteContent }) {
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const activeIndex = Math.max(
         0,
-        notes.findIndex((note) => note.id === selectedId),
+        allNotes.findIndex((note) => note.id === selectedId),
     );
-    const active = notes[activeIndex];
+    const active = allNotes[activeIndex];
 
     const [name, setName] = useState("");
     const [note, setNote] = useState("");
@@ -163,7 +196,7 @@ function VisitorNotesContent({ initial }: { initial: SiteContent }) {
     const unavailableId = `${id}-unavailable`;
 
     const step = (delta: number) => {
-        const next = notes[(activeIndex + delta + notes.length) % notes.length];
+        const next = allNotes[(activeIndex + delta + allNotes.length) % allNotes.length];
         if (next !== undefined) setSelectedId(next.id);
     };
 
@@ -222,8 +255,25 @@ function VisitorNotesContent({ initial }: { initial: SiteContent }) {
             return;
         }
 
+        const submitted: LocalNote = {
+            id,
+            name: trimmedName,
+            body: trimmedBody,
+            submittedAt: DateTime.formatIso(DateTime.nowUnsafe()),
+        };
+        const nextLocalNotes = [
+            submitted,
+            ...localNotes.filter((localNote) => localNote.id !== id),
+        ];
+        setLocalNotes(nextLocalNotes);
+        setSelectedId(id);
+        try {
+            window.localStorage.setItem(LOCAL_NOTES_KEY, JSON.stringify(nextLocalNotes));
+        } catch {
+            // A storage failure must not hide an accepted note from this visit.
+        }
         setSubmitState("sent");
-        setFeedback("Sent for review.");
+        setFeedback("Shown here and sent for review. It will be public after approval.");
     };
 
     const busy = submitState === "submitting";
@@ -264,7 +314,7 @@ function VisitorNotesContent({ initial }: { initial: SiteContent }) {
                             Be the first to leave one.
                         </CardDescription>
                     ) : (
-                        // Plain text nodes only: approved notes are never interpreted as markup.
+                        // Plain text nodes only: notes are never interpreted as markup.
                         <div className="flex flex-col gap-2">
                             <p className="text-sm/5 whitespace-pre-line text-note-foreground">
                                 {active.body}
@@ -289,9 +339,9 @@ function VisitorNotesContent({ initial }: { initial: SiteContent }) {
                             variant="ghost"
                             size="icon-carousel"
                             className="size-11 lg:size-11"
-                            disabled={notes.length < 2}
+                            disabled={allNotes.length < 2}
                             aria-label="Previous note"
-                            title={notes.length === 0 ? "No notes yet" : undefined}
+                            title={allNotes.length === 0 ? "No notes yet" : undefined}
                             onClick={() => step(-1)}
                         >
                             <HugeiconsIcon icon={ChevronLeftIcon} aria-hidden="true" />
@@ -300,9 +350,9 @@ function VisitorNotesContent({ initial }: { initial: SiteContent }) {
                             variant="ghost"
                             size="icon-carousel"
                             className="size-11 lg:size-11"
-                            disabled={notes.length < 2}
+                            disabled={allNotes.length < 2}
                             aria-label="Next note"
-                            title={notes.length === 0 ? "No notes yet" : undefined}
+                            title={allNotes.length === 0 ? "No notes yet" : undefined}
                             onClick={() => step(1)}
                         >
                             <HugeiconsIcon icon={ChevronRightIcon} aria-hidden="true" />

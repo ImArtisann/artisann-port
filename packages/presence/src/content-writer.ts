@@ -68,8 +68,21 @@ export const RejectAction = Schema.Struct({
 
 export type RejectAction = typeof RejectAction.Type;
 
+/** Delete one approved visitor note from the document. */
+export const DeleteNoteAction = Schema.Struct({
+    action: Schema.Literal("delete"),
+    id: NoteId,
+});
+
+export type DeleteNoteAction = typeof DeleteNoteAction.Type;
+
 /** One typed authority mutation. */
-export const ContentWriterAction = Schema.Union([ReplaceAction, ApproveAction, RejectAction]);
+export const ContentWriterAction = Schema.Union([
+    ReplaceAction,
+    ApproveAction,
+    RejectAction,
+    DeleteNoteAction,
+]);
 
 export type ContentWriterAction = Schema.Schema.Type<typeof ContentWriterAction>;
 
@@ -79,6 +92,8 @@ export const ContentWriterOutcome = Schema.Literals([
     "already-approved",
     "rejected",
     "already-rejected",
+    "deleted",
+    "not-found",
 ]);
 
 export type ContentWriterOutcome = typeof ContentWriterOutcome.Type;

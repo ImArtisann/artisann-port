@@ -165,6 +165,16 @@ describe("visitor submission contract", () => {
         const review = noteReviewMessage(payload);
         expect(decodeNotePayload(review?.embeds[0]?.footer?.text ?? "")).toEqual(payload);
         expect(review?.allowed_mentions.parse).toEqual([]);
+        expect(review?.components[0]?.components).toEqual([
+            expect.objectContaining({
+                label: "Ok",
+                style: 3,
+            }),
+            expect.objectContaining({
+                label: "Delete",
+                style: 4,
+            }),
+        ]);
         expect(decodeNotePayload("note.v1:invalid-base64%")).toBeNull();
     });
 

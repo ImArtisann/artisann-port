@@ -69,6 +69,30 @@ describe("command extraction", () => {
         expect(stringOption(invocation, "missing")).toBeNull();
     });
 
+    it("extracts notes delete subcommand options", () => {
+        const notesInteractionData = {
+            id: "100000000000000009",
+            name: "notes",
+            type: Discord.ApplicationCommandType.CHAT,
+            options: [
+                {
+                    type: Discord.ApplicationCommandOptionType.SUB_COMMAND,
+                    name: "delete",
+                    options: [
+                        {
+                            type: Discord.ApplicationCommandOptionType.STRING,
+                            name: "id",
+                            value: "note123",
+                        },
+                    ],
+                },
+            ],
+        } satisfies Discord.APIChatInputApplicationCommandInteractionData;
+        const invocation = commandInvocation(notesInteractionData);
+        expect(invocation.path).toEqual(["delete"]);
+        expect(stringOption(invocation, "id")).toBe("note123");
+    });
+
     it("accepts only the two Discord attachment hosts and their attachment path", () => {
         expect(
             parseAttachmentUrl("https://cdn.discordapp.com/attachments/1/2/a.png"),

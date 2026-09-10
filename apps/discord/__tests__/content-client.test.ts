@@ -106,6 +106,67 @@ const updated = (revision: number, publishedRevision = revision): ContentWriterR
 });
 
 describe("BotContentClient RPC boundary", () => {
+    it.each(["deleted", "not-found"] as const)(
+        "returns %s after confirmed note deletion",
+        async (outcome) => {
+            const rpc = makeFakeRpc({
+                state: () => Effect.succeed(state()),
+                apply: () => Effect.succeed({ outcome, state: state(2) }),
+            });
+            const result = await runValue(
+                rpc,
+                Effect.gen(function* () {
+                    const client = yield* BotContentClient;
+                    return yield* client.deleteNote(approval.id);
+                }),
+            );
+            expect(result).toBe(outcome);
+        },
+    );
+
+    it.each(["deleted", "not-found"] as const)(
+        "refuses %s when publication remains unconfirmed",
+        async (outcome) => {
+            const rpc = makeFakeRpc({
+                state: () => Effect.succeed(state()),
+                apply: () => Effect.succeed({ outcome, state: state(2, 1) }),
+            });
+            const result = await runValue(
+                rpc,
+                Effect.result(
+                    Effect.gen(function* () {
+                        const client = yield* BotContentClient;
+                        return yield* client.deleteNote(approval.id);
+                    }),
+                ),
+            );
+            expect(result).toMatchObject({
+                _tag: "Failure",
+                failure: { operation: "deleteNote", status: 503, reason: "Unavailable" },
+            });
+        },
+    );
+
+    it("rejects an unexpected deletion outcome", async () => {
+        const rpc = makeFakeRpc({
+            state: () => Effect.succeed(state()),
+            apply: () => Effect.succeed(updated(2)),
+        });
+        const result = await runValue(
+            rpc,
+            Effect.result(
+                Effect.gen(function* () {
+                    const client = yield* BotContentClient;
+                    return yield* client.deleteNote(approval.id);
+                }),
+            ),
+        );
+        expect(result).toMatchObject({
+            _tag: "Failure",
+            failure: { operation: "deleteNote", status: 503, reason: "Unavailable" },
+        });
+    });
+
     it("retries only a typed CAS conflict and then returns the confirmed projection", async () => {
         let applyCount = 0;
         const rpc = makeFakeRpc({
@@ -253,5 +314,57 @@ describe("BotContentClient RPC boundary", () => {
             failure: { _tag: "Discord.ContentValidationError", message: "invalid" },
         });
         expect(rpc.calls.filter((call) => call !== "content.state")).toHaveLength(0);
+    });
+
+    it("deletes a note and returns deleted outcome on success", async () => {
+        const testNoteId = "b".repeat(32);
+        const rpc = makeFakeRpc({
+            state: () => Effect.succeed(state(1, 1)),
+            apply: (action) => {
+                expect(action).toEqual({ action: "delete", id: testNoteId });
+                return Effect.succeed({
+                    outcome: "deleted",
+                    state: state(2, 2),
+                });
+            },
+        });
+        const result = await Effect.runPromise(
+            run(
+                rpc,
+                Effect.gen(function* () {
+                    const client = yield* BotContentClient;
+                    return yield* client.deleteNote(testNoteId);
+                }),
+            ),
+        );
+        expect(result).toBe("deleted");
+        expect(rpc.calls).toContainEqual({
+            tag: "content.apply",
+            action: { action: "delete", id: testNoteId },
+        });
+    });
+
+    it("returns not-found outcome when note does not exist", async () => {
+        const testNoteId = "c".repeat(32);
+        const rpc = makeFakeRpc({
+            state: () => Effect.succeed(state(1, 1)),
+            apply: (action) => {
+                expect(action).toEqual({ action: "delete", id: testNoteId });
+                return Effect.succeed({
+                    outcome: "not-found",
+                    state: state(1, 1),
+                });
+            },
+        });
+        const result = await Effect.runPromise(
+            run(
+                rpc,
+                Effect.gen(function* () {
+                    const client = yield* BotContentClient;
+                    return yield* client.deleteNote(testNoteId);
+                }),
+            ),
+        );
+        expect(result).toBe("not-found");
     });
 });

@@ -48,6 +48,7 @@ import {
     type ContentWriterState,
     type ApproveAction,
     type ContentWriterEnv,
+    type DeleteNoteAction,
     type DurableObjectStateLike,
     type ReplaceAction,
 } from "./content-writer.ts";
@@ -126,6 +127,7 @@ export class ContentWriterController {
     private applyAction(action: ContentWriterAction) {
         if (action.action === "replace") return this.replace(action);
         if (action.action === "approve") return this.approve(action);
+        if (action.action === "delete") return this.deleteNote(action);
         return this.reject(action);
     }
 
@@ -217,6 +219,33 @@ export class ContentWriterController {
         });
     }
 
+    private deleteNote(action: DeleteNoteAction) {
+        return Effect.gen({ self: this }, function* () {
+            const stored = yield* this.ensureState();
+            const content = yield* this.decode(stored.document);
+            if (!content.notes.some((note) => note.id === action.id)) {
+                // A prior deletion may still be visible in the unconfirmed mirror.
+                if (stored.dirty) return error("unavailable");
+                return yield* this.respond("not-found", stored);
+            }
+            const now = yield* Clock.currentTimeMillis;
+            const document = yield* this.encode({
+                ...content,
+                notes: content.notes.filter((note) => note.id !== action.id),
+                updatedAt: nextUpdatedAt(content.updatedAt, now),
+            });
+            return yield* this.commit(
+                {
+                    revision: stored.revision + 1,
+                    publishedRevision: stored.publishedRevision,
+                    document,
+                    dirty: true,
+                },
+                "deleted",
+            );
+        });
+    }
+
     private reject(action: { action: "reject"; id: string }) {
         return Effect.gen({ self: this }, function* () {
             const stored = yield* this.ensureState();
@@ -253,7 +282,7 @@ export class ContentWriterController {
      * The mutation is durable either way; only a confirmed mirror lets the
      * success outcome be claimed, otherwise the caller sees 503.
      */
-    private commit(next: StoredState, outcome: "updated" | "approved") {
+    private commit(next: StoredState, outcome: "updated" | "approved" | "deleted") {
         return Effect.gen({ self: this }, function* () {
             // Arm recovery before committing authority: termination between the
             // durable write and the projection must not strand an approved note.

@@ -37,6 +37,7 @@ export interface BotContentClientService {
     readonly rejectNote: (
         id: string,
     ) => Effect.Effect<"rejected" | "already-rejected" | "already-approved", BotStorageError>;
+    readonly deleteNote: (id: string) => Effect.Effect<"deleted" | "not-found", BotStorageError>;
 }
 
 export class BotContentClient extends Context.Service<BotContentClient, BotContentClientService>()(
@@ -197,6 +198,31 @@ export const BotContentClientLive: Layer.Layer<
             );
         });
 
-        return BotContentClient.of({ loadContent, updateContent, approveNote, rejectNote });
+        const deleteNote = Effect.fn("BotContentClient.deleteNote")(function* (id: string) {
+            return yield* writePermit.withPermits(1)(
+                Effect.gen(function* () {
+                    const result = yield* apply("deleteNote", { action: "delete", id }, true);
+                    if (
+                        (result.outcome !== "deleted" && result.outcome !== "not-found") ||
+                        result.state.publishedRevision < result.state.revision
+                    ) {
+                        return yield* new BotStorageError({
+                            operation: "deleteNote",
+                            status: 503,
+                            reason: "Unavailable",
+                        });
+                    }
+                    return result.outcome;
+                }),
+            );
+        });
+
+        return BotContentClient.of({
+            loadContent,
+            updateContent,
+            approveNote,
+            rejectNote,
+            deleteNote,
+        });
     }),
 );
