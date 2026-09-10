@@ -13,7 +13,7 @@ function OpenSourceListContent({ initial }: { initial: SiteContent }) {
     const projects = content.openSource.slice(0, MAX_VISIBLE_PROJECTS);
 
     return (
-        <CardContent className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] lg:contain-size [&::-webkit-scrollbar]:hidden">
+        <CardContent className="lg:min-h-0 lg:flex-1 lg:contain-size lg:overflow-y-auto">
             {projects.length === 0 ? (
                 <p className="text-caption text-muted-foreground">Nothing here yet.</p>
             ) : (
