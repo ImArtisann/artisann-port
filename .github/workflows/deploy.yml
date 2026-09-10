@@ -75,5 +75,8 @@ jobs:
                   TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
                   DISCORD_NOTES_CHANNEL_ID: ${{ secrets.DISCORD_NOTES_CHANNEL_ID }}
                   CONTENT_WRITER_TOKEN: ${{ secrets.CONTENT_WRITER_TOKEN }}
-                  PUBLIC_TURNSTILE_SITE_KEY: ${{ secrets.PUBLIC_TURNSTILE_SITE_KEY }}
+                  # Public Turnstile site key: it is embedded in every page, so it
+                  # is configuration, not a credential. The matching secret stays
+                  # server-side as TURNSTILE_SECRET_KEY.
+                  PUBLIC_TURNSTILE_SITE_KEY: 0x4AAAAAAEtY7PZU-bmVmHPV
                   PUBLIC_NOTES_COMPOSER: enabled
