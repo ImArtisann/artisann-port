@@ -79,6 +79,7 @@ const chunkEvent = (overrides: Partial<MemberChunkEvent>): PresenceEvent => ({
         memberIds: [],
         notFound: false,
         presenceUserId: USER_ID,
+        presenceUnknown: false,
         presence: null,
         ...overrides,
     },
@@ -348,6 +349,17 @@ describe("presence worker", () => {
                 );
                 expect(yield* worker.snapshot).toBe(null);
 
+                // Presence data we cannot decode is unknown too, not offline.
+                const malformedNonce = yield* armRequest(worker);
+                yield* worker.handle(
+                    chunkEvent({
+                        nonce: malformedNonce,
+                        memberIds: [USER_ID],
+                        presenceUnknown: true,
+                    }),
+                );
+                expect(yield* worker.snapshot).toBe(null);
+
                 // A returned target member with no presence confirms offline.
                 const offlineNonce = yield* armRequest(worker);
                 yield* worker.handle(
@@ -400,7 +412,11 @@ describe("presence worker", () => {
                 yield* worker.bootstrap;
                 yield* worker.handle({ kind: "guild-unavailable", guildId: SERVER_ID });
                 expect(Option.isNone(yield* worker.requestSnapshot)).toBe(true);
-                // Another guild disappearing changes nothing.
+                // Another guild's availability changes nothing either way.
+                yield* worker.handle({ kind: "guild-unavailable", guildId: OTHER_GUILD_ID });
+                expect(Option.isNone(yield* worker.requestSnapshot)).toBe(true);
+                yield* worker.handle({ kind: "guild-available", guildId: OTHER_GUILD_ID });
+                expect(Option.isNone(yield* worker.requestSnapshot)).toBe(true);
                 yield* worker.handle({ kind: "guild-available", guildId: SERVER_ID });
                 expect(Option.isSome(yield* worker.requestSnapshot)).toBe(true);
                 yield* worker.handle({ kind: "guild-unavailable", guildId: SERVER_ID });

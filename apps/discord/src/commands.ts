@@ -34,14 +34,7 @@ import { PHOTO_TAGS } from "@artisann-port/presence/photos";
 import { BotConfig } from "./config.ts";
 import { BotContentClient } from "./content-client.ts";
 import { BotPhotoClient } from "./photo-client.ts";
-import {
-    cmsEntryFlow,
-    handleAppAutocomplete,
-    handleCmsComponent,
-    handleCmsModal,
-    recordsFlow,
-    usesFlow,
-} from "./cms.ts";
+import { cmsEntryFlow, handleCmsComponent, handleCmsModal, recordsFlow, usesFlow } from "./cms.ts";
 import {
     authorizeOwner,
     ephemeralResponse,
@@ -327,8 +320,8 @@ const photosCommand = Ix.guild(
 
 /**
  * Every definition this bot answers. Components and modals are routed by
- * custom-id prefix; `apps` autocomplete is one definition because dfx matches
- * autocomplete on the top-level command name, so it serves the `app` option.
+ * custom-id prefix; entry selection uses the picker component, so no command
+ * declares an autocompleted option.
  */
 export const commandDefinitions = Ix.builder
     .add(recordsCommand)
@@ -342,8 +335,7 @@ export const commandDefinitions = Ix.builder
     .add(Ix.messageComponent(Ix.idStartsWith("photos:"), handlePhotosComponent))
     .add(Ix.messageComponent(Ix.idStartsWith("cms:"), handleCmsComponent))
     .add(noteDecisionHandler)
-    .add(Ix.modalSubmit(Ix.idStartsWith("cms:"), handleCmsModal))
-    .add(Ix.autocomplete(Ix.option("apps", "app"), handleAppAutocomplete));
+    .add(Ix.modalSubmit(Ix.idStartsWith("cms:"), handleCmsModal));
 
 /**
  * The context and error of one fully routed interaction, read off the builder

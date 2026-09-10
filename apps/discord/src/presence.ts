@@ -55,6 +55,12 @@ export interface MemberChunkEvent {
      * `DiscordPresence` carries no user id, so the reducer cannot match it later.
      */
     readonly presenceUserId: string | null;
+    /**
+     * `true` when Discord sent presence data that yields no usable presence for
+     * the requested member — undecodable, or owned by another member. The
+     * reducer treats this as unknown, never as a confirmed offline status.
+     */
+    readonly presenceUnknown: boolean;
     /** Raw presence object for the targeted member, when one was returned. */
     readonly presence: DiscordPresenceValue | null;
 }
@@ -221,6 +227,14 @@ export const makePresenceWorker = Effect.fn("Presence.makeWorker")(function* (
                         // An absent member is unknown, not offline.
                         return;
                     }
+                    if (chunk.presenceUnknown) {
+                        // Presence data we cannot attribute or decode is unknown:
+                        // renew nothing rather than report an offline status.
+                        yield* Effect.logError(
+                            "Presence: member chunk carried no usable presence for the target",
+                        );
+                        return;
+                    }
                     if (chunk.presence === null || chunk.presence === undefined) {
                         // A returned member with no presence confirms offline.
                         yield* acceptObservation(OFFLINE_PRESENCE);
@@ -334,7 +348,15 @@ const toPresenceEvent = (payload: Discord.GatewayReceivePayload): PresenceEvent 
                 }),
             });
         case "GUILD_MEMBERS_CHUNK": {
-            const rawPresence = payload.d.presences?.[0];
+            const memberIds = payload.d.members.flatMap((member) =>
+                member.user?.id === undefined ? [] : [member.user.id],
+            );
+            const rawPresences = payload.d.presences ?? [];
+            // Select the returned member's own presence: a chunk can carry
+            // several, and index 0 is not necessarily the requested member.
+            const rawPresence = rawPresences.find((presence) =>
+                memberIds.includes(presence.user?.id ?? ""),
+            );
             const presenceUserId = rawPresence?.user?.id ?? null;
             const presence =
                 rawPresence === undefined
@@ -347,10 +369,13 @@ const toPresenceEvent = (payload: Discord.GatewayReceivePayload): PresenceEvent 
                     nonce: payload.d.nonce ?? null,
                     chunkIndex: payload.d.chunk_index,
                     chunkCount: payload.d.chunk_count,
-                    memberIds: payload.d.members.flatMap((member) =>
-                        member.user?.id === undefined ? [] : [member.user.id],
-                    ),
+                    memberIds,
                     notFound: (payload.d.not_found?.length ?? 0) > 0,
+                    // Presence data Discord sent but that does not describe the
+                    // target: either it failed to decode, or it belongs to
+                    // someone else.
+                    presenceUnknown:
+                        rawPresence === undefined ? rawPresences.length > 0 : presence === null,
                     presenceUserId,
                     presence,
                 },
