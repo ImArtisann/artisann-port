@@ -204,7 +204,10 @@ Effect **4.0.0-rc.112**. Import `effect/unstable/*` (`rpc`, `http`,
 - Domain errors are `Schema.TaggedError` (`api-errors.ts` and local siblings).
   Never leak a cause across RPC. Sanitize before log or Discord
   (`rpcStorageError`, `describeError`).
-- Untrusted input decodes to `null` / `Option.none()`, it does not throw.
+- Untrusted input decodes to a typed outcome, never a throw. `.check`-filtered
+  `Schema.decodeUnknownEffect` / `decodeEffect` fail in the Effect channel,
+  `Schema.decodeUnknownOption` returns `Option.none()`, and wrappers such as
+  `decodeNotePayload` return `null`. Synchronous decoders can throw.
 - Corrupt persisted data **fails the read**. It does not fall back to defaults.
 - Bound concurrency with `Semaphore`. Timeouts at every I/O edge (bot RPC 15s,
   interaction jobs 120s).

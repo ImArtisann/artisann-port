@@ -11,12 +11,7 @@ import {
     EmptyMedia,
 } from "@artisann-port/ui/components/empty";
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-    ChevronLeftIcon,
-    ChevronRightIcon,
-    ImagesIcon,
-    ImageNotFound01Icon,
-} from "@hugeicons-pro/core-solid-rounded";
+import { ImagesIcon, ImageNotFound01Icon } from "@hugeicons-pro/core-solid-rounded";
 import * as AsyncResult from "effect/unstable/reactivity/AsyncResult";
 import { useAtomValue } from "@effect/atom-react";
 import { animate, motion, useMotionValue, useReducedMotion, useTransform } from "motion/react";
@@ -86,12 +81,12 @@ function PhotoDeck({
     photos,
     position,
     photoNoun,
-    advance,
+    navigate,
 }: {
     photos: readonly Photo[];
     position: number;
     photoNoun: string;
-    advance: () => void;
+    navigate: (delta: 1 | -1) => void;
 }) {
     const x = useMotionValue(0);
     const rotate = useTransform(x, [-200, 200], [-15, 15]);
@@ -101,6 +96,9 @@ function PhotoDeck({
     const mounted = useRef(true);
     const generation = useRef(0);
     const [failedKeys, setFailedKeys] = useState<ReadonlySet<string>>(() => new Set());
+    // Which neighbour the drag reveals: rightward reveals the previous photo,
+    // leftward the next, matching the arrow-key mapping.
+    const [peek, setPeek] = useState<1 | -1>(1);
     const canSwipe = photos.length > 1;
     const selectedKey = photos[position]?.key;
 
@@ -110,8 +108,18 @@ function PhotoDeck({
         x.set(0);
         busy.current = false;
         setExiting(false);
-        setFailedKeys(new Set());
-    }, [selectedKey, photos, x]);
+    }, [selectedKey, x]);
+
+    // Prune failure markers for photos that no longer exist instead of clearing
+    // them on every refresh: a refreshed array must not re-request a known-bad
+    // image, and must not advance the generation of an in-flight shuffle.
+    useEffect(() => {
+        const available = new Set(photos.map((photo) => photo.key));
+        setFailedKeys((previous) => {
+            const next = new Set([...previous].filter((key) => available.has(key)));
+            return next.size === previous.size ? previous : next;
+        });
+    }, [photos]);
 
     useEffect(() => {
         mounted.current = true;
@@ -130,7 +138,8 @@ function PhotoDeck({
         if (!reduceMotion) {
             await animate(x, direction * 400, { type: "spring", stiffness: 400, damping: 40 });
         }
-        if (mounted.current && generation.current === currentGeneration) advance();
+        if (mounted.current && generation.current === currentGeneration)
+            navigate(direction > 0 ? -1 : 1);
     };
 
     return (
@@ -141,7 +150,8 @@ function PhotoDeck({
             className="relative size-full min-h-0 rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
         >
             {Array.from({ length: Math.min(2, photos.length) }, (_, offset) => {
-                const index = (position + offset) % photos.length;
+                const step = offset === 0 ? 0 : peek;
+                const index = (position + step + photos.length) % photos.length;
                 const photo = photos[index]!;
                 const top = offset === 0;
                 return (
@@ -166,6 +176,10 @@ function PhotoDeck({
                         dragMomentum={false}
                         onDragStart={() => {
                             x.stop();
+                        }}
+                        onDrag={() => {
+                            const next = x.get() >= 0 ? -1 : 1;
+                            if (next !== peek) setPeek(next);
                         }}
                         onDragEnd={(_, info) => {
                             if (Math.abs(info.offset.x) > 80 || Math.abs(info.velocity.x) > 400) {
@@ -271,33 +285,11 @@ function PhotoGalleryInner({
                 photos={photos}
                 position={position}
                 photoNoun={copy.photoNoun}
-                advance={() => step(1)}
+                navigate={step}
             />
         );
 
     const unavailable = isStale || (AsyncResult.isFailure(result) && value._tag === "None");
-    const controls = count > 0 && (
-        <div className="flex shrink-0 items-center justify-end gap-1 pt-1">
-            <button
-                type="button"
-                aria-label={`Previous ${copy.photoNoun.toLowerCase()}`}
-                disabled={count < 2}
-                onClick={() => step(-1)}
-                className="flex size-11 items-center justify-center rounded-lg text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-40"
-            >
-                <HugeiconsIcon icon={ChevronLeftIcon} size={20} aria-hidden="true" />
-            </button>
-            <button
-                type="button"
-                aria-label={`Next ${copy.photoNoun.toLowerCase()}`}
-                disabled={count < 2}
-                onClick={() => step(1)}
-                className="flex size-11 items-center justify-center rounded-lg text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-40"
-            >
-                <HugeiconsIcon icon={ChevronRightIcon} size={20} aria-hidden="true" />
-            </button>
-        </div>
-    );
 
     if (layout === "card") {
         return (
@@ -338,7 +330,6 @@ function PhotoGalleryInner({
                         )}
                     </div>
                 )}
-                {controls}
                 <p role="status" aria-live="polite" className="sr-only">
                     {current === undefined ? "" : `${alt}. `}
                     {unavailable ? "Photo updates are temporarily unavailable." : ""}
@@ -347,8 +338,8 @@ function PhotoGalleryInner({
         );
     }
 
-    // Keep the existing empty treatment and frame size; populated galleries expose
-    // touch controls as well as keyboard navigation.
+    // Keep the existing empty treatment and frame size; populated galleries are
+    // browsed by swipe or with the left and right arrow keys.
     if (count === 0) {
         return (
             <Empty
@@ -394,7 +385,6 @@ function PhotoGalleryInner({
                     </div>
                 )}
             </div>
-            {controls}
             <p
                 role="status"
                 aria-live="polite"

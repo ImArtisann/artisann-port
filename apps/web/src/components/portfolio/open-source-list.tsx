@@ -19,7 +19,7 @@ function OpenSourceListContent({ initial }: { initial: SiteContent }) {
                             <h3>
                                 <a
                                     href={project.url}
-                                    className="inline-flex h-11 max-w-full items-center text-base font-semibold text-primary wrap-anywhere lg:h-auto"
+                                    className="inline-flex min-h-11 max-w-full items-center text-base font-semibold text-primary wrap-anywhere lg:min-h-0"
                                 >
                                     {project.name} ↗
                                 </a>
