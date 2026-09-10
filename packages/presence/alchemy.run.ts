@@ -30,7 +30,7 @@ export default Alchemy.Stack(
                 PRESENCE_KV: snapshots,
                 PORT_GITHUB_TOKEN: Config.redacted("PORT_GITHUB_TOKEN"),
             },
-            crons: [PRESENCE_CRON, GITHUB_CRON],
+            crons: stage === "prod" ? [PRESENCE_CRON, GITHUB_CRON] : [],
             domain: stage === "prod" ? PRESENCE_HOST : undefined,
             compatibility: { flags: ["nodejs_compat"] },
         });

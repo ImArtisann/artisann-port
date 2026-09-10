@@ -26,6 +26,12 @@ export type PresenceStatus = typeof DiscordStatus.Type | null;
  */
 export type PresencePlayback = typeof Playback.Type;
 
+const HttpsUrl = Schema.NonEmptyString.check(
+    Schema.makeFilter<string>((value) => (value.startsWith("https://") ? undefined : false), {
+        identifier: "Presence.HttpsUrl",
+    }),
+);
+
 /** A single YouTube Music track, normalized from a Discord activity. */
 export const PresenceSong = Schema.Struct({
     /** Track title (`activity.details`). */
@@ -33,9 +39,9 @@ export const PresenceSong = Schema.Struct({
     /** Artist or channel (`activity.state`). */
     artist: Schema.NonEmptyString,
     /** Validated HTTPS link to the track (`activity.details_url`). */
-    url: Schema.NonEmptyString,
+    url: HttpsUrl,
     /** Validated HTTPS artwork URL, or `null` when none could be resolved. */
-    artworkUrl: Schema.NullOr(Schema.NonEmptyString),
+    artworkUrl: Schema.NullOr(HttpsUrl),
 });
 
 export interface PresenceSong extends Schema.Schema.Type<typeof PresenceSong> {}
