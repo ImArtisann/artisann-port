@@ -27,8 +27,13 @@ export default Alchemy.Stack(
         const website = yield* Cloudflare.Website.Astro("Website", {
             rootDir: "apps/web",
             astro: { output: "static" },
+            // Vite 8 emits a Rolldown runtime chunk that calls
+            // `createRequire(import.meta.url)` at module scope. The local
+            // workerd loader leaves `import.meta.url` undefined, so the
+            // workerd prerenderer crashes before rendering anything. Astro's
+            // Node prerenderer produces the same static pages.
+            prerenderEnvironment: "node",
             domain: stage === "prod" ? "www.artisann.dev" : undefined,
-            compatibility: { flags: ["nodejs_compat"] },
         });
 
         if (zoneId) {
