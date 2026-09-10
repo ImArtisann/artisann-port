@@ -1,6 +1,6 @@
 /** @jsxImportSource react */
 import type { SiteContent } from "@artisann-port/presence/content";
-import { CardContent, CardFooter } from "@artisann-port/ui/components/card";
+import { CardContent } from "@artisann-port/ui/components/card";
 import { cn } from "@artisann-port/ui/lib/utils";
 import { ProjectPreview } from "@/components/portfolio/project-preview";
 import { SharedAtomRegistry } from "@/lib/atom-registry";
@@ -23,7 +23,7 @@ function DeployedAppsContent({ initial }: { initial: SiteContent }) {
             <div
                 key={app.id}
                 className={cn(
-                    "flex min-w-0 flex-col gap-3",
+                    "flex min-w-0 flex-col gap-6",
                     position > 0 && "border-t border-border pt-4",
                 )}
             >
@@ -31,17 +31,17 @@ function DeployedAppsContent({ initial }: { initial: SiteContent }) {
                     <ProjectPreview app={app} />
                 </CardContent>
                 <CardContent className="flex flex-col gap-2">
-                    <h3 className="text-project font-semibold">{app.name}</h3>
-                    <p className="text-label text-muted-foreground">{app.description}</p>
-                </CardContent>
-                <CardFooter>
+                    <div className="flex flex-col gap-1">
+                        <h3 className="text-project font-semibold">{app.name}</h3>
+                        <p className="text-label text-muted-foreground">{app.description}</p>
+                    </div>
                     <a
                         href={app.url}
                         className="flex h-11 items-center text-caption font-medium text-primary lg:h-auto"
                     >
                         {new URL(app.url).hostname.replace(/^www\./, "")} ↗
                     </a>
-                </CardFooter>
+                </CardContent>
             </div>
         );
     });

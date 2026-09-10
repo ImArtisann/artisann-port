@@ -4,9 +4,9 @@ import { CardContent } from "@artisann-port/ui/components/card";
 import { SharedAtomRegistry } from "@/lib/atom-registry";
 import { useSiteContent } from "@/lib/content-client";
 
-const usesColumn = "flex min-w-0 flex-col gap-2";
+const usesColumn = "flex min-w-0 flex-col gap-1.5";
 const usesHeading = "text-subheading font-semibold";
-const usesList = "flex flex-col gap-2 text-base";
+const usesList = "flex flex-col gap-1 text-base";
 
 function UsesGroup({
     heading,
@@ -49,7 +49,7 @@ function UsesContent({ initial }: { initial: SiteContent }) {
     const content = useSiteContent(initial);
 
     return (
-        <CardContent className="grid grid-cols-2 gap-x-5 gap-y-6 lg:grid-cols-3 lg:gap-x-8">
+        <CardContent className="grid grid-cols-2 gap-x-5 gap-y-4 lg:grid-cols-3 lg:gap-x-8">
             <UsesGroup heading="Software" items={content.uses.software} className={usesColumn} />
             <UsesGroup
                 heading="Hardware"
@@ -58,7 +58,12 @@ function UsesContent({ initial }: { initial: SiteContent }) {
             />
             <UsesGroup
                 heading="Languages"
-                items={content.uses.languages}
+                items={content.uses.languages.map((item) =>
+                    (item.label === "JS / TS" || item.label === "JS/TS") &&
+                    item.note === "Effect highly pilled"
+                        ? { ...item, note: null }
+                        : item,
+                )}
                 className={`${usesColumn} col-start-2 lg:col-start-3 lg:row-start-1`}
             />
         </CardContent>

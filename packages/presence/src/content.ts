@@ -451,10 +451,7 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
         ],
         languages: [
             { label: "Java", note: null },
-            {
-                label: "JS / TS",
-                note: "Effect highly pilled",
-            },
+            { label: "JS / TS", note: null },
             { label: "Go", note: null },
             { label: "Python", note: null },
         ],

@@ -45,13 +45,24 @@ import {
     ChevronRightIcon,
     PlusSignIcon,
 } from "@hugeicons-pro/core-solid-rounded";
-import { useEffect, useId, useRef, useState, type ComponentRef } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ComponentRef } from "react";
 import { SharedAtomRegistry } from "@/lib/atom-registry";
 import { useSiteContent } from "@/lib/content-client";
 import { NotesClient } from "@/lib/rpc-client";
 
 const NOTE_LIMIT = NOTE_BODY_MAX;
 const LOCAL_NOTES_KEY = "artisann:visitor-notes";
+const noteVariants = {
+    enter: (direction: number) => ({ x: direction > 0 ? 20 : -20, opacity: 0 }),
+    center: { x: 0, opacity: 1 },
+    exit: (direction: number) => ({ x: direction > 0 ? -20 : 20, opacity: 0 }),
+};
+const reducedNoteVariants = {
+    enter: { x: 0, opacity: 0 },
+    center: { x: 0, opacity: 1 },
+    exit: { x: 0, opacity: 0 },
+};
 const LocalNote = Schema.Struct({
     id: VisitorNote.fields.id,
     name: VisitorNote.fields.name,
@@ -202,11 +213,28 @@ function VisitorNotesContent({ initial }: { initial: SiteContent }) {
     });
 
     const [selectedId, setSelectedId] = useState<string | null>(null);
+    const [direction, setDirection] = useState<1 | -1>(1);
+    const reduceMotion = useReducedMotion();
+    const activeNoteRef = useRef<HTMLDivElement>(null);
+    const [noteHeight, setNoteHeight] = useState<number>();
     const activeIndex = Math.max(
         0,
         allNotes.findIndex((note) => note.id === selectedId),
     );
     const active = allNotes[activeIndex];
+
+    useLayoutEffect(() => {
+        const element = activeNoteRef.current;
+        if (element === null) {
+            setNoteHeight(undefined);
+            return;
+        }
+        const measure = () => setNoteHeight(element.offsetHeight);
+        measure();
+        const observer = new ResizeObserver(measure);
+        observer.observe(element);
+        return () => observer.disconnect();
+    }, [active?.id]);
 
     const [name, setName] = useState("");
     const [note, setNote] = useState("");
@@ -220,9 +248,12 @@ function VisitorNotesContent({ initial }: { initial: SiteContent }) {
     const countId = `${id}-count`;
     const unavailableId = `${id}-unavailable`;
 
-    const step = (delta: number) => {
+    const step = (delta: 1 | -1) => {
         const next = allNotes[(activeIndex + delta + allNotes.length) % allNotes.length];
-        if (next !== undefined) setSelectedId(next.id);
+        if (next !== undefined) {
+            setDirection(delta);
+            setSelectedId(next.id);
+        }
     };
 
     // React event boundary: promiseExit already owns the Effect through the mounted
@@ -340,14 +371,36 @@ function VisitorNotesContent({ initial }: { initial: SiteContent }) {
                         </CardDescription>
                     ) : (
                         // Plain text nodes only: notes are never interpreted as markup.
-                        <div className="flex flex-col gap-2">
-                            <p className="text-sm/5 whitespace-pre-line text-note-foreground">
-                                {active.body}
-                            </p>
-                            <p className="text-sm/5 text-note-muted-foreground">
-                                — {active.name ?? "Anonymous"}
-                            </p>
-                        </div>
+                        <motion.div
+                            className="relative overflow-hidden"
+                            initial={false}
+                            animate={{ height: noteHeight }}
+                            transition={{ duration: reduceMotion ? 0 : 0.25, ease: "easeOut" }}
+                        >
+                            <AnimatePresence initial={false} mode="popLayout" custom={direction}>
+                                <motion.div
+                                    key={active.id}
+                                    ref={activeNoteRef}
+                                    custom={direction}
+                                    variants={reduceMotion ? reducedNoteVariants : noteVariants}
+                                    initial="enter"
+                                    animate="center"
+                                    exit="exit"
+                                    transition={{
+                                        duration: reduceMotion ? 0.1 : 0.25,
+                                        ease: "easeOut",
+                                    }}
+                                    className="flex flex-col gap-2 will-change-transform"
+                                >
+                                    <p className="text-sm/5 whitespace-pre-line text-note-foreground">
+                                        {active.body}
+                                    </p>
+                                    <p className="text-sm/5 text-note-muted-foreground">
+                                        — {active.name ?? "Anonymous"}
+                                    </p>
+                                </motion.div>
+                            </AnimatePresence>
+                        </motion.div>
                     )}
                 </CardHeader>
                 <CardFooter className="flex-wrap justify-between gap-2">
@@ -385,7 +438,7 @@ function VisitorNotesContent({ initial }: { initial: SiteContent }) {
                     </div>
                 </CardFooter>
             </Card>
-            <DialogContent showCloseButton={false}>
+            <DialogContent showCloseButton={false} className="px-4 sm:px-6">
                 <DialogHeader>
                     <div className="flex min-h-11 items-center justify-between gap-3">
                         <DialogTitle>Add a note</DialogTitle>

@@ -132,7 +132,7 @@ function PresenceStatusContent({ endpoint }: PresenceStatusProps) {
                     </h2>
                 </CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-col gap-3">
+            <CardContent className="flex flex-1 flex-col justify-center gap-3">
                 <p
                     className="flex items-center gap-2.5 text-subheading font-semibold"
                     aria-live="polite"
@@ -166,6 +166,8 @@ function MusicStatusContent({ endpoint }: MusicStatusProps) {
     const [brokenArtwork, setBrokenArtwork] = useState<string | null>(null);
 
     const song = snapshot === null ? null : snapshot.song;
+    const retainedTrack =
+        song !== null && (failed || snapshot?.stale || snapshot?.playback === "last-played");
     const artwork =
         song !== null && song.artworkUrl !== null && song.artworkUrl !== brokenArtwork
             ? { src: song.artworkUrl, alt: `Album art for ${song.title} by ${song.artist}` }
@@ -175,11 +177,16 @@ function MusicStatusContent({ endpoint }: MusicStatusProps) {
         <Card
             role="region"
             aria-labelledby="music-heading"
-            className="@container/music [--card-spacing:--spacing(5)]"
+            className="@container/music min-h-[135px] justify-center py-3 [--card-spacing:--spacing(5)]"
         >
             <CardContent className="flex flex-col items-start gap-3 @xs/music:flex-row @xs/music:items-center @xs/music:gap-4">
                 {artwork === null ? (
-                    <Empty className="size-18 flex-none rounded-xl p-0">
+                    <Empty
+                        className={cn(
+                            "size-18 flex-none rounded-xl p-0",
+                            retainedTrack && "opacity-70",
+                        )}
+                    >
                         <EmptyMedia>
                             <HugeiconsIcon icon={MusicNote02Icon} size={28} aria-hidden="true" />
                         </EmptyMedia>
@@ -194,14 +201,17 @@ function MusicStatusContent({ endpoint }: MusicStatusProps) {
                         decoding="async"
                         draggable={false}
                         onError={() => setBrokenArtwork(artwork.src)}
-                        className="size-18 flex-none rounded-xl bg-muted object-cover"
+                        className={cn(
+                            "size-18 flex-none rounded-xl bg-muted object-cover",
+                            retainedTrack && "opacity-70",
+                        )}
                     />
                 )}
-                <div className="flex w-full min-w-0 flex-1 flex-col gap-1">
+                <div className="flex w-full min-w-0 flex-1 flex-col gap-0">
                     <h2 id="music-heading" className="text-caption text-muted-foreground">
                         {musicHeading(snapshot, failed)}
                     </h2>
-                    <div className="flex flex-col gap-1.75">
+                    <div className="flex flex-col gap-0.5">
                         <p
                             className="text-[1.125rem]/[1.4625rem] font-semibold break-words"
                             title={song?.title}

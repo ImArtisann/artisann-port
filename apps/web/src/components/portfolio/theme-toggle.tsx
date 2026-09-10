@@ -57,7 +57,9 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
             onClick={toggleTheme}
             className={cn("text-muted-foreground", className)}
         >
-            <HugeiconsIcon icon={isDark ? Moon02Icon : Sun03Icon} aria-hidden="true" />
+            <span key={theme} className="inline-flex">
+                <HugeiconsIcon icon={isDark ? Moon02Icon : Sun03Icon} aria-hidden="true" />
+            </span>
         </Button>
     );
 }

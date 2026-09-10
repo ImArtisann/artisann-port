@@ -51,7 +51,7 @@ const navLink = "flex h-11 items-center px-1.5 text-sm leading-[1.5] lg:h-auto l
             <a
                 href="/"
                 aria-label="Artisann home"
-                class="text-wordmark font-normal tracking-[-0.02em]"
+                class="flex h-11 items-center text-wordmark font-normal tracking-[-0.02em] lg:h-auto"
             >
                 artisann.
             </a>
@@ -142,7 +142,7 @@ const navLink = "flex h-11 items-center px-1.5 text-sm leading-[1.5] lg:h-auto l
             <Card
                 data-portfolio-section="open-source"
                 data-design-node="lTwEH"
-                className="lg:col-span-2 lg:col-start-2 lg:row-start-2 lg:min-h-64"
+                className="min-h-0 overflow-hidden lg:col-span-2 lg:col-start-2 lg:row-start-2 lg:h-full lg:min-h-64"
             >
                 <OpenSourceList initial={content} client:load />
             </Card>
@@ -150,7 +150,7 @@ const navLink = "flex h-11 items-center px-1.5 text-sm leading-[1.5] lg:h-auto l
             <Card
                 data-portfolio-section="cat-gallery"
                 data-design-node="S3g7P"
-                className="gap-3 lg:col-start-4 lg:row-start-1"
+                className="[--card-spacing:--spacing(3)] lg:col-start-4 lg:row-start-1"
             >
                 <PhotoGallery tag="cats" layout="card" client:load />
             </Card>
