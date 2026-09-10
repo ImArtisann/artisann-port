@@ -1,0 +1,22 @@
+{
+    "name": "@artisann-port/discord",
+    "version": "0.0.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "bun build --target=bun --external sharp src/main.ts --outdir dist",
+        "start": "bun --no-env-file dist/main.js"
+    },
+    "dependencies": {
+        "@artisann-port/assets": "workspace:*",
+        "@artisann-port/presence": "workspace:*",
+        "@effect/platform-bun": "catalog:",
+        "dfx": "1.0.15",
+        "effect": "catalog:",
+        "sharp": "0.35.4"
+    },
+    "devDependencies": {
+        "@artisann-port/typescript-config": "workspace:*",
+        "@types/bun": "catalog:"
+    }
+}

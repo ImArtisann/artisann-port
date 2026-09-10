@@ -4,7 +4,10 @@
  *   bun run generate     # rewrite the manifest
  *   bun run verify       # fail if the manifest is stale, without rewriting it
  */
-import { collectAssets, type CollectedAsset } from "../src/sources.ts";
+import * as Console from "effect/Console";
+import * as Effect from "effect/Effect";
+import * as Path from "effect/Path";
+import { AssetError, collectAssets, type CollectedAsset } from "../src/sources.ts";
 
 const OUTPUT = Bun.fileURLToPath(new URL("../src/manifest.gen.ts", import.meta.url));
 
@@ -45,15 +48,45 @@ function manifestSource(assets: readonly CollectedAsset[]): string {
     return `${HEADER}\n${declaration}\n${FOOTER}`;
 }
 
-const assets = await collectAssets();
-const source = manifestSource(assets);
-if (process.argv.includes("--check")) {
-    const file = Bun.file(OUTPUT);
-    if (!(await file.exists()) || (await file.text()) !== source) {
-        throw new Error("Asset manifest is stale; run `bun run generate` in packages/assets.");
+const readCurrentManifest = Effect.gen(function* () {
+    const exists = yield* Effect.tryPromise({
+        try: () => Bun.file(OUTPUT).exists(),
+        catch: (cause) =>
+            new AssetError({
+                message: cause instanceof Error ? cause.message : String(cause),
+            }),
+    });
+    if (!exists) return undefined;
+    return yield* Effect.tryPromise({
+        try: () => Bun.file(OUTPUT).text(),
+        catch: (cause) =>
+            new AssetError({
+                message: cause instanceof Error ? cause.message : String(cause),
+            }),
+    });
+});
+
+const generate = Effect.gen(function* () {
+    const assets = yield* collectAssets;
+    const source = manifestSource(assets);
+    if (process.argv.includes("--check")) {
+        const current = yield* readCurrentManifest;
+        if (current !== source) {
+            return yield* new AssetError({
+                message: "Asset manifest is stale; run `bun run generate` in packages/assets.",
+            });
+        }
+        yield* Console.log(`verified ${assets.length} asset(s)`);
+        return;
     }
-    console.log(`verified ${assets.length} asset(s)`);
-} else {
-    await Bun.write(OUTPUT, source);
-    console.log(`generated src/manifest.gen.ts with ${assets.length} asset(s)`);
-}
+    yield* Effect.tryPromise({
+        try: () => Bun.write(OUTPUT, source),
+        catch: (cause) =>
+            new AssetError({
+                message: cause instanceof Error ? cause.message : String(cause),
+            }),
+    });
+    yield* Console.log(`generated src/manifest.gen.ts with ${assets.length} asset(s)`);
+});
+
+await Effect.runPromise(generate.pipe(Effect.provide(Path.layer)));

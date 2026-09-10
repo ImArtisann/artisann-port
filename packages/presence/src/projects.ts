@@ -1,17 +1,14 @@
-import { PRESENCE_URL } from "./config.ts";
+import type { DeployedApp } from "./content.ts";
+import { PORTFOLIO_API_ORIGIN } from "./config.ts";
 
-export const DEPLOYED_PROJECTS = [
-    {
-        id: "blocky",
-        name: "Blocky",
-        href: "https://www.blocky.so",
-        description: "Live Notion data, turned into customizable website widgets.",
-        imageHosts: ["assets.blocky.so", "www.blocky.so", "blocky.so"],
-    },
-] as const;
-
-export type DeployedProject = (typeof DEPLOYED_PROJECTS)[number];
-
-export function projectPreviewUrl(project: DeployedProject): string {
-    return `${PRESENCE_URL}projects/${project.id}/og-image`;
+/**
+ * Build the public preview URL for one published app.
+ *
+ * The version is an encoded representation of the only mutable inputs used
+ * when fetching a preview. It is intentionally computed without Web Crypto:
+ * this function runs during Astro SSR as well as in browser islands.
+ */
+export function projectPreviewUrl(app: DeployedApp, apiOrigin = PORTFOLIO_API_ORIGIN): string {
+    const version = encodeURIComponent(JSON.stringify([app.url, app.ogImageHosts]));
+    return new URL(`/projects/${encodeURIComponent(app.id)}/og-image?v=${version}`, apiOrigin).href;
 }

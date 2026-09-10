@@ -30,4 +30,4 @@ export const GithubSnapshot = Schema.Struct({
     updatedAt: Schema.String,
     stale: Schema.Boolean,
 });
-export interface GithubSnapshot extends Schema.Schema.Type<typeof GithubSnapshot> {}
+export type GithubSnapshot = typeof GithubSnapshot.Type;

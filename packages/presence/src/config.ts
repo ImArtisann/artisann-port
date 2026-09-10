@@ -1,20 +1,73 @@
 /**
- * Browser-safe presence configuration: shared constants only. This module is
+ * Browser-safe presence configuration: constants and pure endpoint helpers. This module is
  * bundled into client code, so it never reads the environment and never
  * touches a credential.
  */
 
-/** Public read endpoint served by the presence Worker. */
-export const PRESENCE_URL = "https://presence.artisann.dev/";
+export const PORTFOLIO_API_ORIGIN = "https://presence.artisann.dev";
+export const PUBLIC_RPC_PATH = "/rpc";
+export const WRITER_RPC_PATH = "/rpc/writer";
+export const NOTES_RPC_PATH = "/rpc/notes";
+export const PRESENCE_WEBSOCKET_PATH = "/presence";
 
-export const GITHUB_CALENDAR_URL = `${PRESENCE_URL}github`;
+/**
+ * Accept the base origin used by typed clients. Production origins must use
+ * HTTPS; local verification may use HTTP only for an explicitly-port-qualified
+ * loopback origin. The value itself must already be trimmed and root-pathed.
+ */
+export function isPortfolioApiOrigin(value: string): boolean {
+    if (value.length === 0 || value !== value.trim()) return false;
+    let parsed: URL;
+    try {
+        parsed = new URL(value);
+    } catch {
+        return false;
+    }
+    return (
+        parsed.pathname === "/" &&
+        parsed.username === "" &&
+        parsed.password === "" &&
+        parsed.search === "" &&
+        parsed.hash === "" &&
+        parsed.hostname.length > 0 &&
+        (parsed.protocol === "https:" ||
+            (parsed.protocol === "http:" &&
+                (parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1") &&
+                // URL normalizes the default :80 away, so inspect the
+                // authority to require that local HTTP always names a port.
+                /^(?:localhost|127\.0\.0\.1):[0-9]+$/iu.test(
+                    value.slice(value.indexOf("//") + 2).split("/")[0] ?? "",
+                )))
+    );
+}
+
+export interface PortfolioEndpoints {
+    rpcUrl: string;
+    writerRpcUrl: string;
+    notesRpcUrl: string;
+    presenceUrl: string;
+}
+
+/** Call only after validating the configured HTTP(S) base origin. */
+export function portfolioEndpoints(baseUrl: string): PortfolioEndpoints {
+    const origin = new URL(baseUrl);
+    const presence = new URL(PRESENCE_WEBSOCKET_PATH, origin);
+    presence.protocol = origin.protocol === "https:" ? "wss:" : "ws:";
+    return {
+        rpcUrl: new URL(PUBLIC_RPC_PATH, origin).href,
+        writerRpcUrl: new URL(WRITER_RPC_PATH, origin).href,
+        notesRpcUrl: new URL(NOTES_RPC_PATH, origin).href,
+        presenceUrl: presence.href,
+    };
+}
+
 export const GITHUB_CRON = "*/15 * * * *";
+
+/** The published site-content copy, written by the authoritative content writer. */
+export const CONTENT_KEY = "site-content";
 
 /** Custom domain bound to the presence Worker. */
 export const PRESENCE_HOST = "presence.artisann.dev";
-
-/** Cron expression that drives the only regular writer of the snapshot. */
-export const PRESENCE_CRON = "* * * * *";
 
 /**
  * Production KV namespace title. Other stages use separate namespaces so
@@ -25,25 +78,12 @@ export const PRESENCE_KV_TITLE = "artisann-portfolio-presence";
 /** The single key the snapshot lives under, written without any TTL. */
 export const PRESENCE_SNAPSHOT_KEY = "snapshot";
 
-/** Discord user id whose presence is published. */
-export const LANYARD_USER_ID = "176215532377210880";
-
-/** Lanyard REST endpoint for {@link LANYARD_USER_ID}. */
-export const LANYARD_URL = `https://api.lanyard.rest/v1/users/${LANYARD_USER_ID}`;
-
 /**
- * A snapshot older than this is reported as stale. The cron writes every 60s,
- * so 150s tolerates two missed passes before the reader stops presenting the
- * status as live.
+ * A snapshot older than this is reported as stale. The bot refreshes on every
+ * confirmed Gateway presence change and periodic target confirmation, so 150s
+ * tolerates a brief gap before the reader stops presenting the status as live.
  */
 export const PRESENCE_STALE_AFTER_MS = 150_000;
-
-/**
- * Edge cache window for the public read. Short enough that a new song appears
- * within one client poll, long enough that a burst of visitors collapses into
- * a handful of Worker invocations.
- */
-export const PRESENCE_CACHE_CONTROL = "public, max-age=15";
 
 /** Activity `type` Discord uses for "Listening to". */
 export const DISCORD_LISTENING_ACTIVITY_TYPE = 2;

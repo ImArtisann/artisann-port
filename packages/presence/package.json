@@ -4,27 +4,37 @@
     "private": true,
     "type": "module",
     "exports": {
+        "./rpc": "./src/rpc.ts",
+        "./rpc-transport": "./src/rpc-transport.ts",
+        "./api-errors": "./src/api-errors.ts",
         "./config": "./src/config.ts",
         "./schema": "./src/schema.ts",
+        "./activity": "./src/activity.ts",
+        "./content": "./src/content.ts",
+        "./photos": "./src/photos.ts",
+        "./content-writer": "./src/content-writer.ts",
+        "./content-writer-object": "./src/content-writer-object.ts",
+        "./notes": "./src/notes.ts",
         "./github-schema": "./src/github-schema.ts",
         "./projects": "./src/projects.ts",
-        "./lanyard": "./src/lanyard.ts",
+        "./project-hosts": "./src/project-hosts.ts",
         "./store": "./src/store.ts",
         "./presence": "./src/presence.ts",
         "./worker": "./src/worker.ts"
     },
     "scripts": {
-        "seed": "bun run scripts/seed.ts",
         "deploy": "alchemy deploy",
         "destroy": "alchemy destroy"
     },
     "devDependencies": {
         "@artisann-port/typescript-config": "workspace:*",
+        "@cloudflare/workers-types": "5.20260907.1",
         "@types/bun": "catalog:",
-        "alchemy": "catalog:",
-        "effect": "catalog:"
+        "alchemy": "catalog:"
     },
     "dependencies": {
+        "@artisann-port/assets": "workspace:*",
+        "effect": "catalog:",
         "entities": "^8.1.0"
     }
 }

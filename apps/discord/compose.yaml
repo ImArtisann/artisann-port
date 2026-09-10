@@ -1,0 +1,37 @@
+# Run from the repository root on the VPS:
+#   docker compose -f apps/discord/compose.yaml up -d --build
+#
+# ../../.env.discord must exist on that host and is never baked into the image;
+# copy .env.discord.example, fill it in with rotated secrets and keep it out of
+# git (the repository ignores .env.* and the build context excludes it).
+#
+# Exactly one instance should run as the owner writer: the bot's authenticated
+# RPC calls update the presence Worker and site-content authority. Compose
+# cannot enforce that: a second compose project, `docker run`, or another
+# machine is not blocked by anything here. Enforcing single-writer is an
+# operational duty: check for a running bot (`docker ps`, `pgrep -f discord`,
+# other hosts) and confirm it is stopped before starting this one. No fixed
+# container name is set, so isolated smoke deployments under distinct compose
+# projects stay possible.
+services:
+    discord:
+        build:
+            context: ../..
+            dockerfile: apps/discord/Dockerfile
+        env_file:
+            - ../../.env.discord
+        environment:
+            # Keep any incidental runtime write inside the tmpfs below.
+            HOME: /tmp
+            TMPDIR: /tmp
+        restart: unless-stopped
+        init: true
+        stop_grace_period: 30s
+        read_only: true
+        tmpfs:
+            # Docker mounts a tmpfs 1777 by default; only the size is capped here.
+            - /tmp:size=64m
+        cap_drop:
+            - ALL
+        security_opt:
+            - no-new-privileges:true
