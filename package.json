@@ -9,7 +9,7 @@
         "plan": "alchemy plan alchemy.run.ts",
         "deploy": "alchemy deploy alchemy.run.ts --stage prod",
         "destroy": "alchemy destroy",
-        "check": "vp check && bun run --cwd apps/web check",
+        "check": "bun run --cwd apps/web check && vp check",
         "format": "vp fmt",
         "lint": "vp lint",
         "test": "vp test",
