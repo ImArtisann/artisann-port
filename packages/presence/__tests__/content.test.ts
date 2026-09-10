@@ -68,6 +68,28 @@ describe("site content document decode", () => {
         await expect(validate(withoutNotes)).rejects.toThrow();
     });
 
+    it("drops the retired note field from stored use entries", async () => {
+        const stored = {
+            ...DEFAULT_SITE_CONTENT,
+            uses: {
+                software: [{ label: "Herdr", note: "Terminal multiplexer" }],
+                hardware: [{ label: "MacBook Pro M4", note: null }],
+                languages: [{ label: "Go", note: null }],
+            },
+            updatedAt: "2026-09-08T03:00:00.000Z",
+        };
+
+        const document = await Effect.runPromise(decodeContentDocument(JSON.stringify(stored)));
+
+        // A document written before the field was removed still reads, with the
+        // note dropped rather than rejected.
+        expect(document.uses).toEqual({
+            software: [{ label: "Herdr" }],
+            hardware: [{ label: "MacBook Pro M4" }],
+            languages: [{ label: "Go" }],
+        });
+    });
+
     it("rejects a present invalid notes field instead of repairing it", async () => {
         const corrupt = {
             ...DEFAULT_SITE_CONTENT,
@@ -262,28 +284,18 @@ describe("site content document decode", () => {
 });
 
 describe("what I use modal text", () => {
-    it("parses labels and notes, dropping blank lines", () => {
-        expect(parseUseLines("JS / TS — Effect highly pilled\n\nGo")).toEqual([
-            { label: "JS / TS", note: "Effect highly pilled" },
-            { label: "Go", note: null },
-        ]);
-    });
-
-    it("accepts the -- separator form", () => {
-        expect(parseUseLines("Ghostty -- terminal")).toEqual([
-            { label: "Ghostty", note: "terminal" },
-        ]);
+    it("parses one label per line, dropping blank lines", () => {
+        expect(parseUseLines("JS / TS\n\nGo")).toEqual([{ label: "JS / TS" }, { label: "Go" }]);
     });
 
     it("round-trips through formatUseLines", async () => {
-        const items = parseUseLines("JS / TS — Effect highly pilled\nGo")!;
-        expect(formatUseLines(items)).toBe("JS / TS — Effect highly pilled\nGo");
+        const items = parseUseLines("JS / TS\nGo")!;
+        expect(formatUseLines(items)).toBe("JS / TS\nGo");
         expect(parseUseLines(formatUseLines(items))).toEqual(items);
     });
 
-    it("returns null for a 61-character label, a 61-character note, or too many lines", async () => {
+    it("returns null for a 61-character label or too many lines", async () => {
         expect(parseUseLines("a".repeat(61))).toBeNull();
-        expect(parseUseLines(`Label — ${"a".repeat(61)}`)).toBeNull();
         expect(
             parseUseLines(Array.from({ length: 26 }, (_, i) => `Item ${i}`).join("\n")),
         ).toBeNull();

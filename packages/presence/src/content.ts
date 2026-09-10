@@ -227,7 +227,6 @@ export type SocialLink = typeof SocialLink.Type;
 
 export const UseItem = Schema.Struct({
     label: boundedLabel(60),
-    note: Schema.NullOr(boundedLabel(60)),
 });
 
 export type UseItem = typeof UseItem.Type;
@@ -432,29 +431,18 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
     ],
     uses: {
         software: [
-            { label: "Herdr", note: null },
-            { label: "Fresh editor", note: null },
-            {
-                label: "Zen",
-                note: null,
-            },
-            { label: "Pen.dev", note: null },
-            { label: "Ghostty", note: null },
+            { label: "Herdr" },
+            { label: "Fresh editor" },
+            { label: "Zen" },
+            { label: "Pen.dev" },
+            { label: "Ghostty" },
         ],
         hardware: [
-            { label: "MacBook Pro M4", note: null },
-            {
-                label: "MSI MAG401QR monitor",
-                note: null,
-            },
-            { label: "Kanto YU2", note: null },
+            { label: "MacBook Pro M4" },
+            { label: "MSI MAG401QR monitor" },
+            { label: "Kanto YU2" },
         ],
-        languages: [
-            { label: "Java", note: null },
-            { label: "JS / TS", note: null },
-            { label: "Go", note: null },
-            { label: "Python", note: null },
-        ],
+        languages: [{ label: "Java" }, { label: "JS / TS" }, { label: "Go" }, { label: "Python" }],
     },
     notes: [],
     experience: [
@@ -488,9 +476,8 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
 
 /**
  * Parse the modal's multi-line "What I use" text into entries. Each non-blank
- * line is a label, optionally followed by the first `—` (em dash with spaces)
- * or `--` separator and a note. Returns `null` — never a partial list — when
- * the input exceeds the section cap or any label/note exceeds 60 characters.
+ * line is one label. Returns `null` — never a partial list — when the input
+ * exceeds the section cap or any label exceeds 60 characters.
  */
 export function parseUseLines(text: string): UseItem[] | null {
     const lines = text
@@ -501,28 +488,15 @@ export function parseUseLines(text: string): UseItem[] | null {
 
     const items: UseItem[] = [];
     for (const line of lines) {
-        const emDash = line.indexOf(" — ");
-        const doubleDash = line.indexOf(" -- ");
-        const separator =
-            emDash === -1 ? doubleDash : doubleDash === -1 ? emDash : Math.min(emDash, doubleDash);
-        const separatorLength = separator === doubleDash && separator !== -1 ? 4 : 3;
-
-        const label = (separator === -1 ? line : line.slice(0, separator)).trim();
-        const note =
-            separator === -1 ? null : normalizeNoteText(line.slice(separator + separatorLength));
-        if (label === "" || label.length > 60 || (note !== null && note.length > 60)) {
-            return null;
-        }
-        items.push({ label, note });
+        if (line.length > 60) return null;
+        items.push({ label: line });
     }
     return items;
 }
 
 /** The inverse of {@link parseUseLines}: the modal text representation. */
 export function formatUseLines(items: readonly UseItem[]): string {
-    return items
-        .map((item) => (item.note === null ? item.label : `${item.label} — ${item.note}`))
-        .join("\n");
+    return items.map((item) => item.label).join("\n");
 }
 
 /**

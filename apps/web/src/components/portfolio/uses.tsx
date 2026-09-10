@@ -26,18 +26,9 @@ function UsesGroup({
                 </ul>
             ) : (
                 <ul className={usesList}>
-                    {items.map((item, index) =>
-                        item.note === null ? (
-                            <li key={index}>{item.label}</li>
-                        ) : (
-                            <li key={index} className="flex flex-col gap-0.5">
-                                <span>{item.label}</span>
-                                <span className="text-caption text-muted-foreground">
-                                    {item.note}
-                                </span>
-                            </li>
-                        ),
-                    )}
+                    {items.map((item, index) => (
+                        <li key={index}>{item.label}</li>
+                    ))}
                 </ul>
             )}
         </section>
@@ -58,12 +49,7 @@ function UsesContent({ initial }: { initial: SiteContent }) {
             />
             <UsesGroup
                 heading="Languages"
-                items={content.uses.languages.map((item) =>
-                    (item.label === "JS / TS" || item.label === "JS/TS") &&
-                    item.note === "Effect highly pilled"
-                        ? { ...item, note: null }
-                        : item,
-                )}
+                items={content.uses.languages}
                 className={`${usesColumn} col-start-2 lg:col-start-3 lg:row-start-1`}
             />
         </CardContent>

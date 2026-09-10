@@ -302,7 +302,7 @@ export const recordsModal = (records: PersonalRecords): Discord.CreateInteractio
         textLabel("Deadlift", null, "deadlift", SHORT, 8, String(records.deadlift)),
     ]);
 
-const USE_LINES_HINT = "One item per line; add ` — note` after a label for a sub-line.";
+const USE_LINES_HINT = "One item per line.";
 
 /** `/uses`: all three lists as editable text, replaced as a set on submit. */
 export const usesModal = (uses: Uses): Discord.CreateInteractionResponseRequest =>
@@ -727,7 +727,7 @@ const requiredUseLines = (
     const items = parseUseLines(raw);
     if (items === null) {
         return Result.fail(
-            `${label} needs 1 to ${MAX_USE_ITEMS} lines, each label and note 60 characters or fewer.`,
+            `${label} needs 1 to ${MAX_USE_ITEMS} lines, each 60 characters or fewer.`,
         );
     }
     return Result.succeed(items);
