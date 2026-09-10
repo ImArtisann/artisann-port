@@ -14,8 +14,16 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { ImagesIcon, ImageNotFound01Icon } from "@hugeicons-pro/core-solid-rounded";
 import * as AsyncResult from "effect/unstable/reactivity/AsyncResult";
 import { useAtomValue } from "@effect/atom-react";
-import { animate, motion, useMotionValue, useReducedMotion, useTransform } from "motion/react";
 import {
+    animate,
+    motion,
+    useInView,
+    useMotionValue,
+    useReducedMotion,
+    useTransform,
+} from "motion/react";
+import {
+    useCallback,
     useEffect,
     useLayoutEffect,
     useRef,
@@ -43,6 +51,19 @@ const COPY = {
     },
     card: { label: "Cat photos", empty: "Cat photos go here", photoNoun: "Cat photo" },
 } satisfies Record<PhotoGalleryLayout, { label: string; empty: string; photoNoun: string }>;
+
+/** Delay between automatic photo changes while an eligible gallery is on screen. */
+const AUTO_ADVANCE_MS = 5_500;
+
+/**
+ * Layouts whose photos rotate on their own. Only the mobile life gallery cycles, and only
+ * after it scrolls into view; the desktop gallery and the cat card stay user-driven.
+ */
+const AUTO_ADVANCE_LAYOUTS = {
+    "sidebar-desktop": false,
+    "sidebar-mobile": true,
+    card: false,
+} satisfies Record<PhotoGalleryLayout, boolean>;
 
 type PhotoGalleryProps = {
     tag: PhotoTag;
@@ -82,16 +103,22 @@ function PhotoDeck({
     position,
     photoNoun,
     navigate,
+    autoAdvance,
 }: {
     photos: readonly Photo[];
     position: number;
     photoNoun: string;
     navigate: (delta: 1 | -1) => void;
+    /** Rotate through the photos while the deck is on screen. */
+    autoAdvance: boolean;
 }) {
     const x = useMotionValue(0);
     const rotate = useTransform(x, [-200, 200], [-15, 15]);
     const reduceMotion = useReducedMotion();
     const busy = useRef(false);
+    const dragging = useRef(false);
+    const deckRef = useRef<HTMLDivElement | null>(null);
+    const inView = useInView(deckRef, { amount: 0.5 });
     const [exiting, setExiting] = useState(false);
     const mounted = useRef(true);
     const generation = useRef(0);
@@ -129,21 +156,41 @@ function PhotoDeck({
         };
     }, [x]);
 
-    // oxlint-disable-next-line effecttsgo/async-function
-    const shuffle = async (direction: number) => {
-        if (!canSwipe || busy.current) return;
-        busy.current = true;
-        setExiting(true);
-        const currentGeneration = generation.current;
-        if (!reduceMotion) {
-            await animate(x, direction * 400, { type: "spring", stiffness: 400, damping: 40 });
-        }
-        if (mounted.current && generation.current === currentGeneration)
-            navigate(direction > 0 ? -1 : 1);
-    };
+    const shuffle = useCallback(
+        // oxlint-disable-next-line effecttsgo/async-function
+        async (direction: number) => {
+            if (!canSwipe || busy.current) return;
+            busy.current = true;
+            setExiting(true);
+            const currentGeneration = generation.current;
+            if (!reduceMotion) {
+                await animate(x, direction * 400, {
+                    type: "spring",
+                    stiffness: 400,
+                    damping: 40,
+                });
+            }
+            if (mounted.current && generation.current === currentGeneration)
+                navigate(direction > 0 ? -1 : 1);
+        },
+        [canSwipe, navigate, reduceMotion, x],
+    );
+
+    // The cycling animation is the same spring the deck uses for a left swipe, so it runs only
+    // once the deck scrolls into view. A finger already on the card or an in-flight shuffle
+    // suppresses the tick, and every navigation re-arms the full delay.
+    useEffect(() => {
+        if (!autoAdvance || reduceMotion || !canSwipe || !inView) return;
+        const timer = window.setInterval(() => {
+            if (dragging.current || busy.current) return;
+            void shuffle(-1);
+        }, AUTO_ADVANCE_MS);
+        return () => window.clearInterval(timer);
+    }, [autoAdvance, canSwipe, inView, reduceMotion, shuffle]);
 
     return (
         <div
+            ref={deckRef}
             tabIndex={0}
             role="group"
             aria-label="Swipe or use the left and right arrow keys to browse photos"
@@ -175,6 +222,7 @@ function PhotoDeck({
                         dragElastic={reduceMotion ? 0 : 0.7}
                         dragMomentum={false}
                         onDragStart={() => {
+                            dragging.current = true;
                             x.stop();
                         }}
                         onDrag={() => {
@@ -182,6 +230,7 @@ function PhotoDeck({
                             if (next !== peek) setPeek(next);
                         }}
                         onDragEnd={(_, info) => {
+                            dragging.current = false;
                             if (Math.abs(info.offset.x) > 80 || Math.abs(info.velocity.x) > 400) {
                                 const direction = Math.sign(
                                     Math.abs(info.offset.x) > 80 ? info.offset.x : info.velocity.x,
@@ -256,13 +305,17 @@ function PhotoGalleryInner({
     );
     const current = photos[position];
     const count = photos.length;
-    const step = (delta: number) => {
-        if (count === 0) return;
-        const next = photos[(position + delta + count) % count];
-        if (next !== undefined) {
-            setSelection((previous) => ({ ...previous, selectedKey: next.key }));
-        }
-    };
+    // Stable identity keeps the deck's auto-advance timer from re-arming on unrelated renders.
+    const step = useCallback(
+        (delta: number) => {
+            if (count === 0) return;
+            const next = photos[(position + delta + count) % count];
+            if (next !== undefined) {
+                setSelection((previous) => ({ ...previous, selectedKey: next.key }));
+            }
+        },
+        [count, photos, position],
+    );
     const onGalleryKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
         if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
             event.preventDefault();
@@ -286,6 +339,7 @@ function PhotoGalleryInner({
                 position={position}
                 photoNoun={copy.photoNoun}
                 navigate={step}
+                autoAdvance={AUTO_ADVANCE_LAYOUTS[layout]}
             />
         );
 
