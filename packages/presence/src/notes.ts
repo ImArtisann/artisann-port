@@ -259,7 +259,7 @@ export function parseNoteCustomId(
     return { action, id };
 }
 
-/** One Discord action row with the Approve/Reject pair. */
+/** One Discord action row with the Ok/Delete pair. */
 export interface NoteActionRow {
     readonly type: 1;
     readonly components: ReadonlyArray<{
@@ -331,13 +331,13 @@ export function noteReviewMessage(payload: NoteReviewPayload): NoteReviewMessage
                               {
                                   type: 2,
                                   style: 3,
-                                  label: "Approve",
+                                  label: "Ok",
                                   custom_id: noteApproveCustomId(payload.id),
                               },
                               {
                                   type: 2,
                                   style: 4,
-                                  label: "Reject",
+                                  label: "Delete",
                                   custom_id: noteRejectCustomId(payload.id),
                               },
                           ],

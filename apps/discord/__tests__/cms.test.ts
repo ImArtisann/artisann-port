@@ -373,6 +373,7 @@ const makeStorage = (initial: SiteContent, failures: StorageFailures): StorageFi
                     ? "already-approved"
                     : "rejected",
             ),
+        deleteNote: () => Effect.die("unexpected deleteNote in CMS test"),
     };
     return { storage, state };
 };

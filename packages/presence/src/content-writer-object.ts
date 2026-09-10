@@ -48,6 +48,7 @@ import {
     type ContentWriterState,
     type ApproveAction,
     type ContentWriterEnv,
+    type DeleteNoteAction,
     type DurableObjectStateLike,
     type ReplaceAction,
 } from "./content-writer.ts";
@@ -56,6 +57,8 @@ import {
 const STATE_KEY = "state";
 const REJECTION_MARKER_PREFIX = "rejected:";
 const REJECTION_MARKER_TOMBSTONE = "rejected";
+const DELETED_MARKER_PREFIX = "deleted:";
+const DELETED_MARKER_TOMBSTONE = "deleted";
 const equivalentNotes = Schema.toEquivalence(SiteContent.fields.notes);
 
 /** The persisted form: the encoded document plus its projection bookkeeping. */
@@ -126,6 +129,7 @@ export class ContentWriterController {
     private applyAction(action: ContentWriterAction) {
         if (action.action === "replace") return this.replace(action);
         if (action.action === "approve") return this.approve(action);
+        if (action.action === "delete") return this.deleteNote(action);
         return this.reject(action);
     }
 
@@ -170,6 +174,17 @@ export class ContentWriterController {
                 // A rejected submission is final: answered without publishing,
                 // without mutating anything.
                 return yield* this.respond("already-rejected", stored);
+            }
+            const deleted = yield* Effect.promise(() =>
+                this.doState.storage.get<{
+                    readonly id: string;
+                    readonly decision: string;
+                }>(DELETED_MARKER_PREFIX + action.id),
+            );
+            if (deleted !== undefined) {
+                // A deleted note is final: a stale or retried approval of its id
+                // must never append it back to the document.
+                return yield* this.respond("not-found", stored);
             }
             const content = yield* this.decode(stored.document);
             const existing = content.notes.find((note) => note.id === action.id);
@@ -217,6 +232,35 @@ export class ContentWriterController {
         });
     }
 
+    private deleteNote(action: DeleteNoteAction) {
+        return Effect.gen({ self: this }, function* () {
+            const stored = yield* this.ensureState();
+            const content = yield* this.decode(stored.document);
+            if (!content.notes.some((note) => note.id === action.id)) {
+                // A prior deletion may still be visible in the unconfirmed mirror.
+                if (stored.dirty) return error("unavailable");
+                return yield* this.respond("not-found", stored);
+            }
+            const now = yield* Clock.currentTimeMillis;
+            const document = yield* this.encode({
+                ...content,
+                notes: content.notes.filter((note) => note.id !== action.id),
+                updatedAt: nextUpdatedAt(content.updatedAt, now),
+            });
+            const result = yield* this.commit(
+                {
+                    revision: stored.revision + 1,
+                    publishedRevision: stored.publishedRevision,
+                    document,
+                    dirty: true,
+                },
+                "deleted",
+                { id: action.id },
+            );
+            return result;
+        });
+    }
+
     private reject(action: { action: "reject"; id: string }) {
         return Effect.gen({ self: this }, function* () {
             const stored = yield* this.ensureState();
@@ -253,7 +297,11 @@ export class ContentWriterController {
      * The mutation is durable either way; only a confirmed mirror lets the
      * success outcome be claimed, otherwise the caller sees 503.
      */
-    private commit(next: StoredState, outcome: "updated" | "approved") {
+    private commit(
+        next: StoredState,
+        outcome: "updated" | "approved" | "deleted",
+        deletion?: { readonly id: string },
+    ) {
         return Effect.gen({ self: this }, function* () {
             // Arm recovery before committing authority: termination between the
             // durable write and the projection must not strand an approved note.
@@ -263,6 +311,17 @@ export class ContentWriterController {
                 yield* Effect.promise(() => this.doState.storage.setAlarm(due));
             }
             yield* this.persist(next);
+            if (deletion !== undefined) {
+                // Durable with the deletion itself, before any projection: a
+                // crash now leaves the id tombstoned rather than revivable.
+                // Only the decision is stored — never the note text.
+                yield* Effect.promise(() =>
+                    this.doState.storage.put(DELETED_MARKER_PREFIX + deletion.id, {
+                        id: deletion.id,
+                        decision: DELETED_MARKER_TOMBSTONE,
+                    }),
+                );
+            }
             yield* this.pump();
             const stored = yield* this.readStored();
             if (stored === undefined || stored.dirty) return error("unavailable");

@@ -43,6 +43,7 @@ import {
     PRIVATE_BOT_MESSAGE,
 } from "./interaction-jobs.ts";
 import { NoteModerationLive, noteDecisionHandler, verifyNotesWebhook } from "./notes.ts";
+import { browseNotesFlow, deleteNoteFlow, handleNotesComponent } from "./notes-command.ts";
 import {
     browsePhotosFlow,
     handlePhotosComponent,
@@ -314,6 +315,45 @@ const photosCommand = Ix.guild(
         }),
 );
 
+const notesCommand = Ix.guild(
+    {
+        name: "notes",
+        description: "Browse and delete approved visitor notes",
+        options: [
+            {
+                type: 1,
+                name: "list",
+                description: "Browse approved notes and delete them",
+            },
+            {
+                type: 1,
+                name: "delete",
+                description: "Delete an approved note by id",
+                options: [
+                    {
+                        type: 3,
+                        name: "id",
+                        description: "The note id shown by /notes list",
+                        required: true,
+                    },
+                ],
+            },
+        ],
+    },
+    (helper) =>
+        Effect.gen(function* () {
+            if (!(yield* authorizeOwner)) return ephemeralResponse(PRIVATE_BOT_MESSAGE);
+            const interaction = yield* Ix.Interaction;
+            const invocation = commandInvocation(helper.data);
+            if (invocation.path[0] === "list") return yield* browseNotesFlow(interaction);
+            if (invocation.path[0] === "delete") {
+                const id = stringOption(invocation, "id");
+                return id === null ? MISSING_OPTION : yield* deleteNoteFlow(interaction, id);
+            }
+            return UNKNOWN_SUBCOMMAND;
+        }),
+);
+
 // ===========================================================================
 // The interaction surface
 // ===========================================================================
@@ -332,6 +372,8 @@ export const commandDefinitions = Ix.builder
     .add(openSourceCommand)
     .add(socialsCommand)
     .add(photosCommand)
+    .add(notesCommand)
+    .add(Ix.messageComponent(Ix.idStartsWith("notes:"), handleNotesComponent))
     .add(Ix.messageComponent(Ix.idStartsWith("photos:"), handlePhotosComponent))
     .add(Ix.messageComponent(Ix.idStartsWith("cms:"), handleCmsComponent))
     .add(noteDecisionHandler)

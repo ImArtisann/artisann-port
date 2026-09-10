@@ -99,14 +99,14 @@ const reviewMessageJson = (footer: string) => ({
                     type: 2,
                     id: 2,
                     style: 3,
-                    label: "Approve",
+                    label: "Ok",
                     custom_id: `note:approve:${NOTE_ID}`,
                 },
                 {
                     type: 2,
                     id: 3,
                     style: 4,
-                    label: "Reject",
+                    label: "Delete",
                     custom_id: `note:reject:${NOTE_ID}`,
                 },
             ],
@@ -276,6 +276,7 @@ interface ContentScript {
 const makeContentClient = (script: ContentScript): BotContentClientService => ({
     loadContent: Effect.die("unexpected loadContent in notes test"),
     updateContent: () => Effect.die("unexpected updateContent in notes test"),
+    deleteNote: () => Effect.die("unexpected deleteNote in moderation test"),
     approveNote: (approval) => {
         script.approvals.push({
             id: approval.id,
