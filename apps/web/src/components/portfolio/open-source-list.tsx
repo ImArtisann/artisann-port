@@ -4,17 +4,21 @@ import { CardContent } from "@artisann-port/ui/components/card";
 import { SharedAtomRegistry } from "@/lib/atom-registry";
 import { useSiteContent } from "@/lib/content-client";
 
+/** The bento card shows at most three projects. The full list stays in site content. */
+const MAX_VISIBLE_PROJECTS = 3;
+
 /** The "Open source" card body: one entry per project, server-rendered then refreshed by the query. */
 function OpenSourceListContent({ initial }: { initial: SiteContent }) {
     const content = useSiteContent(initial);
+    const projects = content.openSource.slice(0, MAX_VISIBLE_PROJECTS);
 
     return (
         <CardContent className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] lg:contain-size [&::-webkit-scrollbar]:hidden">
-            {content.openSource.length === 0 ? (
+            {projects.length === 0 ? (
                 <p className="text-caption text-muted-foreground">Nothing here yet.</p>
             ) : (
                 <ul className="flex flex-col gap-4">
-                    {content.openSource.map((project) => (
+                    {projects.map((project) => (
                         <li key={project.id} className="flex min-w-0 flex-col gap-1">
                             <h3>
                                 <a
