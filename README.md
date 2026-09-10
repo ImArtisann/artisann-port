@@ -16,9 +16,16 @@ listening to, and a little about life in Dallas.
 | `packages/ui`       | Shared UI primitives.                                                                                     |
 
 Run `bun run dev` from the repository root to start both the Astro server and
-the Discord bot. Run `bun run deploy --yes` to deploy the presence Worker and
-the Astro website to Cloudflare. The Discord container remains outside this
-deployment command; Coolify deploys it from GitHub webhooks.
+the Discord bot against the deployed API at `https://presence.artisann.dev`. The
+website reads the live R2 galleries; Discord uploads and deletions change the
+production bucket. No local Worker, KV, Durable Objects, or R2 emulator starts.
+The visitor note composer stays disabled during local development. Use
+`bun run dev:web` to start only the website when the bot is already running
+elsewhere.
+
+Run `bun run deploy --yes` to deploy the presence Worker and the Astro website
+to Cloudflare. The Discord container remains outside this deployment command;
+Coolify deploys it from GitHub webhooks.
 
 ## Discord bot operations
 
@@ -61,9 +68,8 @@ Startup fails fast and names any missing or invalid variable without printing
 its value. Only one process may run against a namespace — stop a running local
 process before starting the container, and vice versa.
 
-Set `PORTFOLIO_API_URL` to the Worker’s HTTPS origin. The bot has no default API
-origin. Local verification can use an HTTP origin with an explicit port on
-`localhost` or `127.0.0.1`. Supply the same nonempty `CONTENT_WRITER_TOKEN` to
+Set `PORTFOLIO_API_URL=https://presence.artisann.dev` in `.env.discord`. The bot
+has no default API origin. Supply the same nonempty `CONTENT_WRITER_TOKEN` to
 the Worker and bot. The bot does not need a Cloudflare management API token,
 account ID, KV namespace ID, or bucket name.
 
