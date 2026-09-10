@@ -11,6 +11,7 @@ import {
     decodeNoteSubmission,
     encodeNotePayload,
     noteReviewMessage,
+    parseDiscordWebhookUrl,
     type NoteSubmissionInput,
     type NoteReviewPayload,
 } from "../src/notes.ts";
@@ -191,6 +192,20 @@ describe("visitor submission contract", () => {
 });
 
 describe("notes service", () => {
+    it("accepts only Discord webhook hosts and rejects fragments", () => {
+        const path = "/api/webhooks/100000000000000005/isolated-webhook-fixture";
+
+        expect(parseDiscordWebhookUrl(`https://discord.com${path}`)).toEqual({
+            id: "100000000000000005",
+            token: "isolated-webhook-fixture",
+        });
+        expect(parseDiscordWebhookUrl(`https://discordapp.com${path}`)).not.toBeNull();
+        // A URL pointing at another host is a misconfiguration: rewriting it to
+        // discord.com would hide the mistake.
+        expect(parseDiscordWebhookUrl(`https://attacker.example${path}`)).toBeNull();
+        expect(parseDiscordWebhookUrl(`https://discord.com${path}#fragment`)).toBeNull();
+    });
+
     it("confirms the private review before returning the pending value", async () => {
         const { result, peer } = await runSubmit({
             ...submission(),
@@ -266,18 +281,26 @@ describe("notes service", () => {
             Response.json({ success: true, hostname: "localhost", action: "submit-note" }),
             confirmedMessage(),
         );
+        let capturedKey: string | null = null;
         const invocation = submit(
             { ...submission() },
             { origin: "http://localhost:3000", ip: null },
             {
                 websiteOrigin: "http://localhost:3000",
                 client: peer.client,
+                limiter: {
+                    limit: async (options) => {
+                        capturedKey = options.key;
+                        return { success: true };
+                    },
+                },
             },
         );
         expect(await Effect.runPromise(invocation.effect)).toEqual({
             status: "pending",
             id: submissionId,
         });
+        expect(capturedKey).toBe("note:local-dev");
     });
 
     it("throttles before forwarding a submission", async () => {

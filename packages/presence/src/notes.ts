@@ -391,6 +391,13 @@ export interface ParsedWebhookUrl {
 const WEBHOOK_TOKEN_PATTERN = /^[A-Za-z0-9_-]+$/u;
 
 /**
+ * Hosts Discord serves webhook execution URLs from. The host is validated
+ * rather than rewritten: a URL pointing somewhere else is a misconfiguration,
+ * not something to normalize into a Discord request.
+ */
+const DISCORD_WEBHOOK_HOSTS: readonly string[] = ["discord.com", "discordapp.com"];
+
+/**
  * Parse `https://discord.com/api/webhooks/<id>/<token>`. Returns `null` on
  * any mismatch; the token is never logged or exposed by the caller.
  */
@@ -404,6 +411,7 @@ export function parseDiscordWebhookUrl(url: string): ParsedWebhookUrl | null {
     if (parsed.protocol !== "https:" || parsed.port !== "" || parsed.search !== "") {
         return null;
     }
+    if (parsed.hash !== "" || !DISCORD_WEBHOOK_HOSTS.includes(parsed.hostname)) return null;
     const parts = parsed.pathname.split("/").filter((part) => part !== "");
     if (parts.length !== 4 || parts[0] !== "api" || parts[1] !== "webhooks") return null;
     const id = parts[2];

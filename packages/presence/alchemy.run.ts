@@ -32,7 +32,7 @@ export default Alchemy.Stack(
         const stage = yield* Alchemy.Stage;
         const { dev } = yield* Alchemy.AlchemyContext;
         if (dev && stage === "prod") {
-            return yield* Effect.die("Use --stage dev for isolated local development.");
+            return yield* Effect.die(new Error("Use --stage dev for isolated local development."));
         }
 
         const snapshots = yield* Cloudflare.KV.Namespace("Snapshots", {
@@ -50,14 +50,16 @@ export default Alchemy.Stack(
                 // Local note submission must not post into the production review channel.
                 DISCORD_NOTES_WEBHOOK_URL: dev ? "" : Config.redacted("DISCORD_NOTES_WEBHOOK_URL"),
                 TURNSTILE_SECRET_KEY: dev ? "" : Config.redacted("TURNSTILE_SECRET_KEY"),
-                DISCORD_NOTES_CHANNEL_ID: Config.string("DISCORD_NOTES_CHANNEL_ID"),
+                // Local development never posts to the review channel: its
+                // webhook URL is empty, so the channel id is unused there.
+                DISCORD_NOTES_CHANNEL_ID: dev ? "" : Config.string("DISCORD_NOTES_CHANNEL_ID"),
                 WEBSITE_ORIGIN: dev
                     ? "http://localhost:3000"
-                    : Config.string("WEBSITE_ORIGIN").pipe(
+                    : Config.nonEmptyString("WEBSITE_ORIGIN").pipe(
                           Config.withDefault("https://www.artisann.dev"),
                       ),
                 CONTENT_WRITER_TOKEN: Config.redacted("CONTENT_WRITER_TOKEN"),
-                ASSETS_HOST: Config.string("ASSETS_HOST").pipe(
+                ASSETS_HOST: Config.nonEmptyString("ASSETS_HOST").pipe(
                     Config.withDefault(DEFAULT_ASSETS_HOST),
                 ),
             },
@@ -70,7 +72,7 @@ export default Alchemy.Stack(
         // instead owns a virtual local bucket, never a remote R2 binding.
         const bucketName = dev
             ? (yield* Cloudflare.R2.Bucket("DevPhotos", {})).bucketName
-            : yield* Config.string("ASSETS_BUCKET_NAME").pipe(
+            : yield* Config.nonEmptyString("ASSETS_BUCKET_NAME").pipe(
                   Config.withDefault(DEFAULT_ASSETS_BUCKET_NAME),
               );
         yield* worker.bind("photos:r2", {
