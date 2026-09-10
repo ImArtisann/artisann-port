@@ -4,7 +4,7 @@
     "type": "module",
     "scripts": {
         "dev": "vp run dev:all",
-        "dev:presence": "PORTFOLIO_DEV_API_ONLY=true bun --no-env-file tools/dev.ts",
+        "dev:web": "PUBLIC_NOTES_COMPOSER=disabled bun --no-env-file run --cwd apps/web dev",
         "discord": "bun --no-env-file --env-file=.env.discord apps/discord/src/main.ts",
         "preview": "bun run --cwd apps/web preview",
         "login": "alchemy login stacks/github.ts --profile admin --configure",

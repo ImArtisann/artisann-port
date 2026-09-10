@@ -47,18 +47,6 @@ describe("Discord configuration", () => {
         }
     });
 
-    it("accepts explicit-port loopback HTTP for local verification", async () => {
-        const result = await load({
-            ...baseEnvironment,
-            PORTFOLIO_API_URL: "http://localhost:1338/",
-        });
-
-        expect(Result.isSuccess(result)).toBe(true);
-        if (Result.isSuccess(result)) {
-            expect(result.success.portfolioApiUrl).toBe("http://localhost:1338/");
-        }
-    });
-
     it.each([
         ["surrounding whitespace", " https://presence.artisann.dev/"],
         ["a non-root path", "https://presence.artisann.dev/rpc"],

@@ -30,7 +30,7 @@ export default defineConfig({
     run: {
         tasks: {
             "dev:all": {
-                command: "bun --no-env-file tools/dev.ts",
+                command: "bun run --parallel dev:web discord",
                 cache: false,
             },
             "deploy:all": {
