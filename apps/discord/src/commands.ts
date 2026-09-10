@@ -66,6 +66,15 @@ export class CommandsStartupError extends Schema.TaggedError<CommandsStartupErro
 /** Answer for an interaction whose required option Discord did not send. */
 const MISSING_OPTION = ephemeralResponse("That command was missing required input.");
 
+/**
+ * Picker entries for the gallery option, derived from the shared tag list so a
+ * new gallery cannot be validated by the bot yet missing from the choices.
+ */
+const PHOTO_TAG_CHOICES = PHOTO_TAGS.map((tag) => ({
+    name: `${tag.charAt(0).toUpperCase()}${tag.slice(1)}`,
+    value: tag,
+}));
+
 /** Answer for a subcommand this build does not implement. */
 const UNKNOWN_SUBCOMMAND = ephemeralResponse("That command is not available.");
 
@@ -266,10 +275,7 @@ const photosCommand = Ix.guild(
                         name: "tag",
                         description: "Which gallery",
                         required: true,
-                        choices: [
-                            { name: "Life", value: "life" },
-                            { name: "Cats", value: "cats" },
-                        ],
+                        choices: PHOTO_TAG_CHOICES,
                     },
                     {
                         type: 11,
@@ -289,10 +295,7 @@ const photosCommand = Ix.guild(
                         name: "tag",
                         description: "Which gallery",
                         required: true,
-                        choices: [
-                            { name: "Life", value: "life" },
-                            { name: "Cats", value: "cats" },
-                        ],
+                        choices: PHOTO_TAG_CHOICES,
                     },
                 ],
             },
