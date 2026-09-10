@@ -59,6 +59,10 @@ jobs:
             - name: Install dependencies
               if: steps.current.outputs.deploy == 'true'
               run: bun install --frozen-lockfile
+              env:
+                  # Private registries: `.npmrc` expands these into auth tokens.
+                  HUGE_ICONS_TOKEN: ${{ secrets.HUGE_ICONS_TOKEN }}
+                  MOTION_TOKEN: ${{ secrets.MOTION_TOKEN }}
 
             - name: Deploy production website
               if: steps.current.outputs.deploy == 'true'

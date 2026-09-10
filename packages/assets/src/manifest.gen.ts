@@ -2,7 +2,40 @@
 import type { AssetEntry } from "./config.ts";
 
 /** Every image under `images/`, keyed by its path relative to that directory. */
-export const ASSET_MANIFEST = {} as const satisfies Readonly<Record<string, AssetEntry>>;
+export const ASSET_MANIFEST = {
+    "opengraph/site.png": {
+        path: "opengraph/site.png",
+        key: "opengraph/site.933bf9b8293365b2.png",
+        contentType: "image/png",
+        width: 1200,
+        height: 630,
+        bytes: 113754,
+    },
+    "portfolio/cats.webp": {
+        path: "portfolio/cats.webp",
+        key: "portfolio/cats.c1cf3281dc7962c9.webp",
+        contentType: "image/webp",
+        width: 1090,
+        height: 928,
+        bytes: 30148,
+    },
+    "portfolio/milo.webp": {
+        path: "portfolio/milo.webp",
+        key: "portfolio/milo.4407bb6940b64d7d.webp",
+        contentType: "image/webp",
+        width: 542,
+        height: 928,
+        bytes: 2014,
+    },
+    "portfolio/profile-picture.jpg": {
+        path: "portfolio/profile-picture.jpg",
+        key: "portfolio/profile-picture.282a25e29d082b36.jpg",
+        contentType: "image/jpeg",
+        width: 400,
+        height: 400,
+        bytes: 15615,
+    },
+} as const satisfies Readonly<Record<string, AssetEntry>>;
 
 /** Every path present in {@link ASSET_MANIFEST}; `never` while it is empty. */
 export type AssetPath = keyof typeof ASSET_MANIFEST;

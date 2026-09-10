@@ -20,6 +20,10 @@ jobs:
               with:
                   node-version: 24
             - run: bun install --frozen-lockfile
+              env:
+                  # Private registries: `.npmrc` expands these into auth tokens.
+                  HUGE_ICONS_TOKEN: ${{ secrets.HUGE_ICONS_TOKEN }}
+                  MOTION_TOKEN: ${{ secrets.MOTION_TOKEN }}
             - run: bun run check
             - run: bun run test
             - run: bun run build

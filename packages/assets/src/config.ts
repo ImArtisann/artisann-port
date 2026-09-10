@@ -41,6 +41,13 @@ export const ASSET_CONTENT_TYPES = {
 export const DEFAULT_ASSETS_BUCKET_NAME = "artisann-portfolio-assets";
 
 /**
+ * Custom domain bound to the bucket, used when `ASSETS_HOST` is unset. Not a
+ * secret and not environment-specific: the R2 custom domain is the same one for
+ * every stage, so a build never needs a `.env` to know where assets live.
+ */
+export const DEFAULT_ASSETS_HOST = "assets.artisann.dev";
+
+/**
  * Shared width ladder, keyed off intrinsic width — never display width — so the
  * same source image yields the same transformation set in every app.
  */

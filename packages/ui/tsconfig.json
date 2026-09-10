@@ -1,10 +1,10 @@
 {
-    "extends": "@repo/typescript-config/base.json",
+    "extends": "@artisann-port/typescript-config/base.json",
     "compilerOptions": {
         "lib": ["ESNext", "DOM", "DOM.Iterable"],
         "jsx": "react-jsx",
         "types": ["bun"],
-        "paths": { "@repo/ui/*": ["./src/*"] }
+        "paths": { "@artisann-port/ui/*": ["./src/*"] }
     },
     "include": ["src/**/*.ts", "src/**/*.tsx"]
 }

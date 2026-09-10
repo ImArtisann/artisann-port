@@ -1,4 +1,4 @@
 {
-    "extends": "@repo/typescript-config/base.json",
+    "extends": "@artisann-port/typescript-config/base.json",
     "include": ["alchemy.run.ts", "vite.config.ts", "stacks/**/*.ts", "tools/**/*.ts"]
 }

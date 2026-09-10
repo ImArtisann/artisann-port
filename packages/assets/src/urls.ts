@@ -70,6 +70,17 @@ export function assetUrl(path: AssetPath, origin: string): string {
 }
 
 /**
+ * Normalize `PUBLIC_ASSETS_HOST` to a bare hostname. Accepts a hostname or a
+ * full `http(s)://` origin and strips a trailing slash.
+ */
+export function assetHost(hostOrOrigin: string): string {
+    return hostOrOrigin
+        .trim()
+        .replace(/^https?:\/\//iu, "")
+        .replace(/\/+$/, "");
+}
+
+/**
  * Narrow an arbitrary string — a content frontmatter field, a CMS value — to a
  * manifest path. Returns `undefined` for anything the manifest does not have,
  * which is also how a call site stays typecheckable while the manifest is empty.
