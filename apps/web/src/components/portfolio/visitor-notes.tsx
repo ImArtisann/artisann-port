@@ -427,12 +427,7 @@ function VisitorNotesContent({ initial }: { initial: SiteContent }) {
                         <Field>
                             <div className="flex items-center justify-between gap-3">
                                 <FieldLabel htmlFor={noteId}>Your note</FieldLabel>
-                                <span
-                                    id={countId}
-                                    className="text-sm text-muted-foreground"
-                                    aria-live="polite"
-                                    aria-atomic="true"
-                                >
+                                <span id={countId} className="text-sm text-muted-foreground">
                                     {note.length} / {NOTE_LIMIT}
                                 </span>
                             </div>
