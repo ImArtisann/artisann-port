@@ -50,6 +50,11 @@ export interface MemberChunkEvent {
     readonly memberIds: ReadonlyArray<string>;
     /** `true` when Discord answered `not_found` for the requested id. */
     readonly notFound: boolean;
+    /**
+     * Owner of {@link presence}, captured from the raw payload before decoding:
+     * `DiscordPresence` carries no user id, so the reducer cannot match it later.
+     */
+    readonly presenceUserId: string | null;
     /** Raw presence object for the targeted member, when one was returned. */
     readonly presence: DiscordPresenceValue | null;
 }
@@ -221,6 +226,14 @@ export const makePresenceWorker = Effect.fn("Presence.makeWorker")(function* (
                         yield* acceptObservation(OFFLINE_PRESENCE);
                         return;
                     }
+                    if (chunk.presenceUserId !== options.userId) {
+                        // Another member's presence is unknown for the target,
+                        // never the target's own status.
+                        yield* Effect.logError(
+                            "Presence: member chunk carried a presence for another user",
+                        );
+                        return;
+                    }
                     yield* acceptObservation(chunk.presence);
                     return;
                 }
@@ -322,6 +335,7 @@ const toPresenceEvent = (payload: Discord.GatewayReceivePayload): PresenceEvent 
             });
         case "GUILD_MEMBERS_CHUNK": {
             const rawPresence = payload.d.presences?.[0];
+            const presenceUserId = rawPresence?.user?.id ?? null;
             const presence =
                 rawPresence === undefined
                     ? null
@@ -337,6 +351,7 @@ const toPresenceEvent = (payload: Discord.GatewayReceivePayload): PresenceEvent 
                         member.user?.id === undefined ? [] : [member.user.id],
                     ),
                     notFound: (payload.d.not_found?.length ?? 0) > 0,
+                    presenceUserId,
                     presence,
                 },
             };

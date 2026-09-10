@@ -78,6 +78,7 @@ const chunkEvent = (overrides: Partial<MemberChunkEvent>): PresenceEvent => ({
         chunkCount: 1,
         memberIds: [],
         notFound: false,
+        presenceUserId: USER_ID,
         presence: null,
         ...overrides,
     },
@@ -332,6 +333,18 @@ describe("presence worker", () => {
                 const absentNonce = yield* armRequest(worker);
                 yield* worker.handle(
                     chunkEvent({ nonce: absentNonce, memberIds: [OTHER_USER_ID] }),
+                );
+                expect(yield* worker.snapshot).toBe(null);
+
+                // A presence owned by another member is not the target's status.
+                const foreignNonce = yield* armRequest(worker);
+                yield* worker.handle(
+                    chunkEvent({
+                        nonce: foreignNonce,
+                        memberIds: [USER_ID],
+                        presenceUserId: OTHER_USER_ID,
+                        presence: { status: "dnd", activities: [] },
+                    }),
                 );
                 expect(yield* worker.snapshot).toBe(null);
 
