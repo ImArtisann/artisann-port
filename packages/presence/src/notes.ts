@@ -173,7 +173,7 @@ function bytesToBase64Url(bytes: Uint8Array): string {
 }
 
 function base64UrlToBytes(encoded: string): Uint8Array {
-    const padded = encoded.replaceAll("-", "+").replaceAll("/", "_");
+    const padded = encoded.replaceAll("-", "+").replaceAll("_", "/");
     const binary = atob(padded + "=".repeat((4 - (padded.length % 4)) % 4));
     const bytes = new Uint8Array(binary.length);
     for (let index = 0; index < binary.length; index += 1) {

@@ -228,9 +228,8 @@ describe("presence worker", () => {
                     yield* openGate(fake);
                     // The flush captures version 1 and blocks inside savePresence.
                     const flushing = yield* Effect.forkChild(worker.flush);
-                    // Wait until the write has entered the persistence layer before
-                    // dispatching version 2; the worker mutex then makes ordering
-                    // deterministic without a scheduler sleep.
+                    // Wait until the write has entered persistence. handle must
+                    // proceed on the reducer mutex without waiting for the RPC.
                     yield* Deferred.await(fake.saveStarted);
                     const handling = yield* Effect.forkChild(
                         worker.handle(presenceEvent({ status: "dnd", activities: [] })),

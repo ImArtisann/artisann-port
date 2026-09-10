@@ -296,7 +296,7 @@ describe("native HTTP RPC boundary", () => {
             });
             const pending = handleRpcRequest(request, fixture.layer, fixture.config);
             await vi.advanceTimersByTimeAsync(5_000);
-            expect((await pending).status).toBe(413);
+            expect((await pending).status).toBe(408);
             expect(cancelled).toBe(true);
             expect(fixture.uploaded).toEqual([]);
         } finally {

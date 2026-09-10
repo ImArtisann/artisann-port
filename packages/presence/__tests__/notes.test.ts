@@ -166,6 +166,28 @@ describe("visitor submission contract", () => {
         expect(review?.allowed_mentions.parse).toEqual([]);
         expect(decodeNotePayload("note.v1:invalid-base64%")).toBeNull();
     });
+
+    it("round-trips a footer whose base64url encoding contains - and _", () => {
+        const withHyphen: NoteReviewPayload = {
+            v: 1,
+            id: submissionId,
+            name: null,
+            body: "~~~~~~~~~~~~~",
+            submittedAt: "2026-09-08T03:00:00.000Z",
+            state: "pending",
+        };
+        const hyphenEncoded = encodeNotePayload(withHyphen);
+        expect(hyphenEncoded).toContain("-");
+        expect(decodeNotePayload(hyphenEncoded ?? "")).toEqual(withHyphen);
+
+        const withUnderscore: NoteReviewPayload = {
+            ...withHyphen,
+            body: "?????????????",
+        };
+        const underscoreEncoded = encodeNotePayload(withUnderscore);
+        expect(underscoreEncoded).toContain("_");
+        expect(decodeNotePayload(underscoreEncoded ?? "")).toEqual(withUnderscore);
+    });
 });
 
 describe("notes service", () => {

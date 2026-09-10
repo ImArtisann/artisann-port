@@ -26,7 +26,7 @@ export class BotConfigError extends Schema.TaggedError<BotConfigError>()("Discor
 const SNOWFLAKE = /^[0-9]{17,20}$/u;
 
 /** A bare hostname: no scheme, port, path, or query. */
-const HOSTNAME = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$/u;
+const HOSTNAME = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$/iu;
 
 /** The decoded, validated configuration every bot service is built from. */
 export interface BotConfigService {
@@ -130,6 +130,18 @@ export const BotConfigLive: Layer.Layer<BotConfig, Config.ConfigError | BotConfi
                 Redacted.value(values.contentWriterToken),
                 Redacted.value(values.contentWriterToken).length > 0,
                 "Expected a non-empty token",
+            );
+            yield* require_(
+                "DISCORD_BOT_TOKEN",
+                Redacted.value(values.token),
+                Redacted.value(values.token).length > 0,
+                "Expected a non-empty token",
+            );
+            yield* require_(
+                "DISCORD_NOTES_WEBHOOK_URL",
+                Redacted.value(values.notesWebhookUrl),
+                Redacted.value(values.notesWebhookUrl).length > 0,
+                "Expected a non-empty webhook URL",
             );
             const assetsHost = yield* require_(
                 "ASSETS_HOST",

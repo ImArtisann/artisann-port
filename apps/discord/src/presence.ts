@@ -139,6 +139,7 @@ export const makePresenceWorker = Effect.fn("Presence.makeWorker")(function* (
     // One mutex for every state transition: dispatch reducer, timer-armed
     // requests, and flush publish decisions.
     const mutex = yield* Semaphore.make(1);
+    const flushMutex = yield* Semaphore.make(1);
 
     const acceptObservation = (presence: DiscordPresence) =>
         Effect.gen(function* () {
@@ -226,9 +227,9 @@ export const makePresenceWorker = Effect.fn("Presence.makeWorker")(function* (
             }
         });
 
-    const flush = mutex.withPermits(1)(
+    const flush = flushMutex.withPermits(1)(
         Effect.gen(function* () {
-            const before = yield* Ref.get(state);
+            const before = yield* mutex.withPermits(1)(Ref.get(state));
             if (!before.dirty || before.snapshot === null) return;
             const captured = before.snapshot;
             const capturedVersion = before.version;
@@ -240,10 +241,12 @@ export const makePresenceWorker = Effect.fn("Presence.makeWorker")(function* (
                 );
                 return;
             }
-            yield* Ref.update(state, (current) =>
-                current.version === capturedVersion
-                    ? { ...current, publishedVersion: capturedVersion, dirty: false }
-                    : current,
+            yield* mutex.withPermits(1)(
+                Ref.update(state, (current) =>
+                    current.version === capturedVersion
+                        ? { ...current, publishedVersion: capturedVersion, dirty: false }
+                        : current,
+                ),
             );
         }),
     );

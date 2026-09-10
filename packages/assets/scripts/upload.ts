@@ -218,8 +218,8 @@ const upload = Effect.gen(function* () {
         return;
     }
 
-    const bucketName = yield* Config.nonEmptyString("ASSETS_BUCKET_NAME").pipe(
-        Config.withDefault(DEFAULT_ASSETS_BUCKET_NAME),
+    const bucketName = yield* optionalText("ASSETS_BUCKET_NAME").pipe(
+        Config.map(Option.getOrElse(() => DEFAULT_ASSETS_BUCKET_NAME)),
     );
 
     if (process.argv.includes("--plan")) {

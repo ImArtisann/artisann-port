@@ -1,6 +1,8 @@
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
+import * as Match from "effect/Match";
 import * as Redacted from "effect/Redacted";
+import * as Result from "effect/Result";
 import * as Stream from "effect/Stream";
 import * as HttpEffect from "effect/unstable/http/HttpEffect";
 import * as HttpServerRequest from "effect/unstable/http/HttpServerRequest";
@@ -64,18 +66,20 @@ function authorized(request: Request, token: Redacted.Redacted<string>): boolean
 }
 
 /** Read actual streamed bytes; neither Content-Length nor a stalled reader can bypass the cap. */
-function readRpcBody(request: Request, maximum: number): Effect.Effect<Uint8Array | null> {
+type RpcBodyFailure = "overflow" | "timeout" | "invalid";
+
+function readRpcBody(request: Request, maximum: number): Effect.Effect<Uint8Array, RpcBodyFailure> {
     const body = request.body;
     if (!body) return Effect.succeed(new Uint8Array());
     return Stream.fromReadableStream({
         evaluate: () => body,
-        onError: () => "rpc-body" as const,
+        onError: () => "invalid" as const,
     }).pipe(
         Stream.mapAccumEffect(
             () => 0,
             (size, chunk: Uint8Array) => {
                 const next = size + chunk.byteLength;
-                if (next > maximum) return Effect.fail("rpc-body" as const);
+                if (next > maximum) return Effect.fail("overflow" as const);
                 return Effect.succeed([next, [chunk]] as const);
             },
         ),
@@ -93,9 +97,8 @@ function readRpcBody(request: Request, maximum: number): Effect.Effect<Uint8Arra
         }),
         Effect.timeoutOrElse({
             duration: "5 seconds",
-            orElse: () => Effect.succeed(null),
+            orElse: () => Effect.fail("timeout" as const),
         }),
-        Effect.orElseSucceed(() => null),
     );
 }
 
@@ -177,17 +180,22 @@ export function handleRpcRequest(
     if (request.method !== "POST") return Promise.resolve(deny(405));
     return HttpEffect.toWebHandler(
         Effect.gen(function* () {
-            const body = yield* readRpcBody(
-                request,
-                writer ? 32 * 1024 * 1024 : notes ? 8 * 1024 : 16 * 1024,
+            const body = yield* Effect.result(
+                readRpcBody(request, writer ? 32 * 1024 * 1024 : notes ? 8 * 1024 : 16 * 1024),
             );
-            if (body === null) {
-                return HttpServerResponse.empty({ status: 413, headers });
+            if (Result.isFailure(body)) {
+                const status = Match.value(body.failure).pipe(
+                    Match.when("overflow", () => 413),
+                    Match.when("timeout", () => 408),
+                    Match.when("invalid", () => 400),
+                    Match.exhaustive,
+                );
+                return HttpServerResponse.empty({ status, headers });
             }
             const buffered = new Request(request.url, {
                 method: "POST",
                 headers: request.headers,
-                body,
+                body: body.success,
                 signal: request.signal,
             });
             const response = yield* rpcHttpApp(
