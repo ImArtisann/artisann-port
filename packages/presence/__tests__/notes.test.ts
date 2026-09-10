@@ -286,6 +286,51 @@ describe("notes service", () => {
         expect(limiterCalls).toBe(0);
     });
 
+    it("refuses a localhost origin when the deployment is not local", async () => {
+        let limiterCalls = 0;
+        const invocation = submit(
+            { ...submission() },
+            { origin: "http://localhost:3000", ip: null },
+            {
+                limiter: {
+                    limit: async () => {
+                        limiterCalls += 1;
+                        return { success: true };
+                    },
+                },
+            },
+        );
+        await expect(Effect.runPromise(invocation.effect)).rejects.toMatchObject({
+            reason: "forbidden",
+        });
+        expect(invocation.peer.requests).toEqual([]);
+        expect(limiterCalls).toBe(0);
+    });
+
+    it("refuses the testing token and the testing secret when the deployment is not local", async () => {
+        const peer = transport(
+            Response.json({
+                success: true,
+                hostname: "localhost",
+                action: "submit-note",
+                metadata: { result_with_testing_key: true },
+            }),
+            confirmedMessage(),
+        );
+        const invocation = submit(
+            { ...submission(), turnstileToken: "XXXX.DUMMY.TOKEN.XXXX" },
+            { origin: websiteOrigin, ip: "192.0.2.1" },
+            { client: peer.client },
+        );
+        await expect(Effect.runPromise(invocation.effect)).rejects.toMatchObject({
+            reason: "forbidden",
+        });
+        const siteverify = peer.requests.find((request) => request.url.includes("siteverify"));
+        // The real secret is used, so a testing-key response can never pass.
+        expect(siteverify?.body).toContain("isolated-secret-fixture");
+        expect(siteverify?.body).not.toContain("1x0000000000000000000000000000000AA");
+    });
+
     it("allows local development to use the local origin rate-limit key without an IP", async () => {
         const peer = transport(
             Response.json({ success: true, hostname: "localhost", action: "submit-note" }),

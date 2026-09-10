@@ -119,13 +119,16 @@ const verifyTurnstile = Effect.fn("Notes.verifyTurnstile")(function* (
     remoteIp: string | null,
     secret: string,
     origin: string,
+    websiteOrigin: string,
 ) {
     const hostname = yield* Effect.try({
         try: () => new URL(origin).hostname,
         catch: () => "bad-website-origin" as const,
     });
     const client = yield* HttpClient.HttpClient;
-    const local = isLocalOrigin(origin);
+    // Development-only shortcut, gated on this deployment's own configuration:
+    // a caller cannot reach it by claiming a localhost Origin in production.
+    const local = isLocalOrigin(websiteOrigin) && isLocalOrigin(origin);
     const dummy = local && token === "XXXX.DUMMY.TOKEN.XXXX";
     const effectiveSecret = dummy ? DUMMY_SECRET_KEY : secret;
     const response = yield* client
@@ -194,15 +197,18 @@ function isLocalOrigin(origin: string): boolean {
 /** Pure origin rule shared by the notes service and the RPC request boundary. */
 export function originAllowed(origin: string, websiteOrigin: string): boolean {
     if (origin === websiteOrigin) return true;
-    if (LOCAL_ORIGIN_PATTERN.test(origin)) return true;
-    return isLocalOrigin(websiteOrigin);
+    // A localhost request origin is only meaningful when this deployment is
+    // itself configured for local development.
+    return isLocalOrigin(websiteOrigin) && LOCAL_ORIGIN_PATTERN.test(origin);
 }
 
-function rateLimitKey(ip: string | null, origin: string, _websiteOrigin: string): string | null {
+function rateLimitKey(ip: string | null, origin: string, websiteOrigin: string): string | null {
     if (ip !== null && ip !== "" && ip === ip.trim() && ip.length <= 64) {
         return `note:${ip}`;
     }
-    return LOCAL_ORIGIN_PATTERN.test(origin) ? "note:local-dev" : null;
+    return isLocalOrigin(websiteOrigin) && LOCAL_ORIGIN_PATTERN.test(origin)
+        ? "note:local-dev"
+        : null;
 }
 
 const RateLimitResult = Schema.Struct({ success: Schema.Boolean });
@@ -256,6 +262,7 @@ export const NotesLive: Layer.Layer<
                 context.ip,
                 Redacted.value(config.turnstileSecretKey),
                 context.origin,
+                config.websiteOrigin,
             ).pipe(
                 Effect.provideService(HttpClient.HttpClient, client),
                 Effect.timeout("10 seconds"),
