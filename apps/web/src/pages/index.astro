@@ -14,7 +14,8 @@ import { SocialLinks } from "@/components/portfolio/social-links";
 import { Uses } from "@/components/portfolio/uses";
 import { PersonalFacts } from "@/components/portfolio/personal-facts";
 import { WorkExperience } from "@/components/portfolio/work-experience";
-import { PhotoGallery } from "@/components/portfolio/photo-gallery";
+import { LifeGallery } from "@/components/portfolio/life-gallery";
+import { CatGallery } from "@/components/portfolio/cat-gallery";
 import { ThemeToggle } from "@/components/portfolio/theme-toggle";
 import { MusicStatus, PresenceStatus } from "@/components/portfolio/presence-widgets";
 import { VisitorNotes } from "@/components/portfolio/visitor-notes";
@@ -113,9 +114,8 @@ const navLink = "flex h-11 items-center px-1.5 text-sm leading-[1.5] lg:h-auto l
                     </div>
                 </section>
 
-                <PhotoGallery
-                    tag="life"
-                    layout="sidebar-desktop"
+                <LifeGallery
+                    variant="desktop"
                     data-design-node="B2q4fP"
                     client:load
                 />
@@ -152,7 +152,7 @@ const navLink = "flex h-11 items-center px-1.5 text-sm leading-[1.5] lg:h-auto l
                 data-design-node="S3g7P"
                 className="[--card-spacing:--spacing(3)] lg:col-start-4 lg:row-start-1"
             >
-                <PhotoGallery tag="cats" layout="card" client:load />
+                <CatGallery client:load />
             </Card>
 
             <div
@@ -163,9 +163,8 @@ const navLink = "flex h-11 items-center px-1.5 text-sm leading-[1.5] lg:h-auto l
                 <GithubActivity client:load />
             </div>
 
-            <PhotoGallery
-                tag="life"
-                layout="sidebar-mobile"
+            <LifeGallery
+                variant="mobile"
                 data-portfolio-section="personal-photos"
                 data-design-node="P9RRLh"
                 client:load

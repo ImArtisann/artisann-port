@@ -1,4 +1,3 @@
-/** @jsxImportSource react */
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import { renderToString } from "react-dom/server";
 import * as Effect from "effect/Effect";

@@ -1,4 +1,3 @@
-/** @jsxImportSource react */
 import type { SiteContent } from "@artisann-port/presence/content";
 import * as AsyncResult from "effect/unstable/reactivity/AsyncResult";
 import * as Atom from "effect/unstable/reactivity/Atom";

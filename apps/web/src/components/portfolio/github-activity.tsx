@@ -1,4 +1,3 @@
-/** @jsxImportSource react */
 import type { GithubSnapshot } from "@artisann-port/presence/github-schema";
 import { Card, CardContent } from "@artisann-port/ui/components/card";
 import { cn } from "@artisann-port/ui/lib/utils";

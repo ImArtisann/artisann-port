@@ -1,4 +1,3 @@
-/** @jsxImportSource react */
 import { Button } from "@artisann-port/ui/components/button";
 import { cn } from "@artisann-port/ui/lib/utils";
 import { Moon02Icon, Sun03Icon } from "@hugeicons-pro/core-solid-rounded";

@@ -1,4 +1,3 @@
-/** @jsxImportSource react */
 import { RegistryContext, scheduleTask } from "@effect/atom-react/RegistryContext";
 import * as AtomRegistry from "effect/unstable/reactivity/AtomRegistry";
 import { useState, type ReactNode } from "react";

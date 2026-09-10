@@ -1,4 +1,3 @@
-/** @jsxImportSource react */
 import type { SiteContent } from "@artisann-port/presence/content";
 import { CardContent } from "@artisann-port/ui/components/card";
 import { SharedAtomRegistry } from "@/lib/atom-registry";

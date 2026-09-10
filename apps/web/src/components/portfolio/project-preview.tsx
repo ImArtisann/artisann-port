@@ -1,4 +1,3 @@
-/** @jsxImportSource react */
 import type { DeployedApp } from "@artisann-port/presence/content";
 import { projectPreviewUrl } from "@artisann-port/presence/projects";
 import { portfolioApiOrigin } from "@/lib/rpc-client";

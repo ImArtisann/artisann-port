@@ -1,7 +1,8 @@
-/** @jsxImportSource react */
 import type { SiteContent } from "@artisann-port/presence/content";
 import { CardContent } from "@artisann-port/ui/components/card";
 import { cn } from "@artisann-port/ui/lib/utils";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowUpRight01Icon } from "@hugeicons-pro/core-solid-rounded";
 import { ProjectPreview } from "@/components/portfolio/project-preview";
 import { SharedAtomRegistry } from "@/lib/atom-registry";
 import { useSiteContent } from "@/lib/content-client";
@@ -39,7 +40,13 @@ function DeployedAppsContent({ initial }: { initial: SiteContent }) {
                         href={app.url}
                         className="flex h-11 items-center text-caption font-medium text-primary lg:h-auto"
                     >
-                        {new URL(app.url).hostname.replace(/^www\./, "")} ↗
+                        {new URL(app.url).hostname.replace(/^www\./, "")}
+                        <HugeiconsIcon
+                            icon={ArrowUpRight01Icon}
+                            size={12}
+                            className="ml-1"
+                            aria-hidden="true"
+                        />
                     </a>
                 </CardContent>
             </div>

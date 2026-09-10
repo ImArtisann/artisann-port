@@ -1,4 +1,3 @@
-/** @jsxImportSource react */
 import type { SiteContent } from "@artisann-port/presence/content";
 import { SharedAtomRegistry } from "@/lib/atom-registry";
 import { useSiteContent } from "@/lib/content-client";

@@ -1,4 +1,3 @@
-/** @jsxImportSource react */
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
     BlueskyIcon,
