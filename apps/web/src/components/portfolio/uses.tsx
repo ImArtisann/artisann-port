@@ -4,9 +4,9 @@ import { CardContent } from "@artisann-port/ui/components/card";
 import { SharedAtomRegistry } from "@/lib/atom-registry";
 import { useSiteContent } from "@/lib/content-client";
 
-const usesColumn = "flex min-w-0 flex-col gap-2";
+const usesColumn = "flex min-w-0 flex-col gap-1.5";
 const usesHeading = "text-subheading font-semibold";
-const usesList = "flex flex-col gap-2 text-base";
+const usesList = "flex flex-col gap-1 text-base";
 
 function UsesGroup({
     heading,
@@ -26,18 +26,9 @@ function UsesGroup({
                 </ul>
             ) : (
                 <ul className={usesList}>
-                    {items.map((item, index) =>
-                        item.note === null ? (
-                            <li key={index}>{item.label}</li>
-                        ) : (
-                            <li key={index} className="flex flex-col gap-0.5">
-                                <span>{item.label}</span>
-                                <span className="text-caption text-muted-foreground">
-                                    {item.note}
-                                </span>
-                            </li>
-                        ),
-                    )}
+                    {items.map((item, index) => (
+                        <li key={index}>{item.label}</li>
+                    ))}
                 </ul>
             )}
         </section>
@@ -49,7 +40,7 @@ function UsesContent({ initial }: { initial: SiteContent }) {
     const content = useSiteContent(initial);
 
     return (
-        <CardContent className="grid grid-cols-2 gap-x-5 gap-y-6 lg:grid-cols-3 lg:gap-x-8">
+        <CardContent className="grid grid-cols-2 gap-x-5 gap-y-4 lg:grid-cols-3 lg:gap-x-8">
             <UsesGroup heading="Software" items={content.uses.software} className={usesColumn} />
             <UsesGroup
                 heading="Hardware"

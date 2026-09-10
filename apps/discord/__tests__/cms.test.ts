@@ -660,7 +660,7 @@ describe("uses modal submissions", () => {
         expect(world.state.writes).toHaveLength(0);
     });
 
-    it("parses labels and em-dash notes into the three lists", async () => {
+    it("parses one label per line into the three lists", async () => {
         const world = harness(DEFAULT_SITE_CONTENT, noFailures);
         const run = await runModal(
             world,
@@ -670,17 +670,14 @@ describe("uses modal submissions", () => {
                 [
                     ["software", "Herdr\nGhostty"],
                     ["hardware", "MacBook Pro M4"],
-                    ["languages", "JS / TS — Effect highly pilled\nGo"],
+                    ["languages", "JS / TS\nGo"],
                 ],
                 [],
             ),
         );
         expect(run.response).toEqual(deferredEphemeralAck);
         await runQueuedJob(run.slot);
-        const expected: ReadonlyArray<UseItem> = [
-            { label: "JS / TS", note: "Effect highly pilled" },
-            { label: "Go", note: null },
-        ];
+        const expected: ReadonlyArray<UseItem> = [{ label: "JS / TS" }, { label: "Go" }];
         expect(world.state.content.uses.languages).toEqual(expected);
         expect(world.state.content.uses.software).toHaveLength(2);
     });

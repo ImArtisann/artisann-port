@@ -143,7 +143,10 @@ function GithubActivityContent() {
     return (
         <Card role="region" aria-label="GitHub activity" className="gap-4">
             <CardContent className="flex items-center justify-between gap-4 text-caption text-muted-foreground">
-                <a href="https://github.com/ImArtisann" className="min-w-0">
+                <a
+                    href="https://github.com/ImArtisann"
+                    className="flex h-11 min-w-0 items-center lg:h-auto"
+                >
                     ImArtisann on GitHub
                 </a>
                 <span className="shrink-0 tabular-nums">
