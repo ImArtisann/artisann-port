@@ -101,7 +101,6 @@ function OpenSourceListContent({ initial }: { initial: SiteContent }) {
                 </AnimatePresence>
             </div>
             <ProjectPreviewControls
-                name={project.name}
                 carousel={{ position: index, count: projects.length, onStep: step }}
             />
             <div className="relative min-w-0 overflow-hidden" aria-live="polite">

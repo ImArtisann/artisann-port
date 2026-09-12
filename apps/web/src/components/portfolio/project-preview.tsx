@@ -31,7 +31,6 @@ interface ProjectPreviewCarousel {
 }
 
 interface ProjectPreviewControlsProps {
-    readonly name: string;
     /**
      * Carousel state when the preview browses a list of projects: the active index,
      * the total, and a stepper receiving ±1. Omitted for a single static preview —
@@ -124,7 +123,7 @@ export function ProjectPreviewImage({ src, name, url, loadingLabel }: ProjectPre
 }
 
 /** The dots and chevrons under a preview. Static chrome: it never animates with the slide. */
-export function ProjectPreviewControls({ name, carousel }: ProjectPreviewControlsProps) {
+export function ProjectPreviewControls({ carousel }: ProjectPreviewControlsProps) {
     return (
         <div className="flex h-11 items-center justify-between gap-3 lg:h-9">
             <span className="flex items-center gap-1.5" aria-hidden="true">
@@ -150,7 +149,7 @@ export function ProjectPreviewControls({ name, carousel }: ProjectPreviewControl
                     variant="ghost"
                     size="icon-carousel"
                     disabled={carousel === undefined || carousel.count < 2}
-                    aria-label={`Previous ${name} project image`}
+                    aria-label={`Previous project`}
                     onClick={carousel === undefined ? undefined : () => carousel.onStep(-1)}
                 >
                     <HugeiconsIcon icon={ChevronLeftIcon} aria-hidden="true" />
@@ -159,7 +158,7 @@ export function ProjectPreviewControls({ name, carousel }: ProjectPreviewControl
                     variant="ghost"
                     size="icon-carousel"
                     disabled={carousel === undefined || carousel.count < 2}
-                    aria-label={`Next ${name} project image`}
+                    aria-label={`Next project`}
                     onClick={carousel === undefined ? undefined : () => carousel.onStep(1)}
                 >
                     <HugeiconsIcon icon={ChevronRightIcon} aria-hidden="true" />
@@ -174,7 +173,7 @@ export function ProjectPreview({ src, name, url, loadingLabel, carousel }: Proje
     return (
         <div className="flex min-w-0 flex-col gap-3">
             <ProjectPreviewImage src={src} name={name} url={url} loadingLabel={loadingLabel} />
-            <ProjectPreviewControls name={name} carousel={carousel} />
+            <ProjectPreviewControls carousel={carousel} />
         </div>
     );
 }
