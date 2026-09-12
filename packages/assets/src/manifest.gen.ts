@@ -3,6 +3,14 @@ import type { AssetEntry } from "./config.ts";
 
 /** Every image under `images/`, keyed by its path relative to that directory. */
 export const ASSET_MANIFEST = {
+    "opengraph/jakes-cats.png": {
+        path: "opengraph/jakes-cats.png",
+        key: "opengraph/jakes-cats.37db9cf7739e7e16.png",
+        contentType: "image/png",
+        width: 1200,
+        height: 630,
+        bytes: 41036,
+    },
     "opengraph/site.png": {
         path: "opengraph/site.png",
         key: "opengraph/site.933bf9b8293365b2.png",

@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+@theme {
+    --color-cream: #faf3ea;
+    --color-ink: #1c1512;
+    /* Interactive pink: white label text on it clears 4.5:1 (4.55). */
+    --color-heart: #d63a5c;
+    /* The same pink as text on the page surface, where it must be darker. */
+    --color-heart-ink: #b3274d;
+    --color-pass: #6f655c;
+    --color-card: #fffdf9;
+    --color-line: #eadfd2;
+    --font-display: ui-rounded, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --color-cream: #171310;
+        --color-ink: #f5ece2;
+        /* On the dark surface the readable accent is lighter, not darker. */
+        --color-heart-ink: #ff9aa8;
+        --color-pass: #9a8d82;
+        --color-card: #241d18;
+        --color-line: #3a2f27;
+    }
+}
+
+html,
+body {
+    height: 100%;
+}
+
+body {
+    overscroll-behavior: none;
+}

@@ -34,7 +34,11 @@ export default defineConfig({
                 cache: false,
             },
             "deploy:all": {
-                command: ["bun run deploy:presence --yes", "bun run deploy:website --yes"],
+                command: [
+                    "bun run deploy:presence --yes",
+                    "bun run deploy:website --yes",
+                    "bun run deploy:cats --yes",
+                ],
                 cache: false,
             },
         },

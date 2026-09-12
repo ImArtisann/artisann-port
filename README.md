@@ -11,6 +11,7 @@ listening to, and a little about life in Dallas.
 | ------------------- | --------------------------------------------------------------------------------------------------------- |
 | `apps/web`          | Astro site (`bun run --cwd apps/web dev`, `bun run --cwd apps/web build`).                                |
 | `apps/discord`      | Owner-only Discord bot: presence source and website CMS.                                                  |
+| `apps/jakes-cats`   | [jakes.cat](https://jakes.cat): TanStack Start Worker that serves the `cats/` photos as a swipe deck.     |
 | `packages/presence` | Shared schemas plus the Cloudflare Worker serving presence, content, photos, GitHub and note submissions. |
 | `packages/assets`   | R2 asset tooling and the generated manifest.                                                              |
 | `packages/ui`       | Shared UI primitives.                                                                                     |
@@ -23,9 +24,81 @@ The visitor note composer stays disabled during local development. Use
 `bun run dev:web` to start only the website when the bot is already running
 elsewhere.
 
-Run `bun run deploy --yes` to deploy the presence Worker and the Astro website
-to Cloudflare. The Discord container remains outside this deployment command;
-Coolify deploys it from GitHub webhooks.
+Run `bun run deploy --yes` to deploy the presence Worker, the Astro website, and
+the jakes.cat Worker to Cloudflare, each at `--stage prod`. The Discord
+container remains outside this deployment command; Coolify deploys it from
+GitHub webhooks. The shared deployment token is minted by `stacks/github.ts` and
+stored by the admin bootstrap (`bun run deploy:github`); widening its Cloudflare
+zone policy there does not touch already-stored Actions secrets until that
+bootstrap re-runs.
+
+## jakes.cat
+
+`apps/jakes-cats` is a public, for-fun site: a visitor gets the `cats/` photos
+from the shared R2 bucket in a shuffled, looping deck, swipes right to heart
+one, sees the heart count, browses the most-hearted cats at `/top`, and leaves
+anonymous comments on `/photos/<id>`. Visitors are identified by an HttpOnly
+`jc_visitor` cookie, so a second heart from the same browser does not count. It
+is its own Alchemy stack (`JakesCats`) with its own deploy command;
+`bun run deploy` includes it, and `bun run deploy:cats --yes` still works
+standalone.
+
+Comments are checked for local spam patterns and sent to profanity.dev for
+moderation. Only the comment text is sent, not the visitor ID. Long comments use
+overlapping requests of at most 35 words, with at most two in flight and an
+eight-second total deadline. A flagged comment or unavailable moderation service
+prevents the write.
+
+```sh
+bun run dev:cats             # alchemy dev: local D1, but the LIVE assets bucket
+bun run deploy:cats --yes    # --stage prod: jakes.cat domain, D1 migrations, bindings
+```
+
+Under `alchemy dev` the by-name `r2_bucket` binding is remote: the deck reads
+the production `cats/` photos, and a `POST /api/photos` against `localhost:1337`
+writes to the production bucket. Hearts go to a local `dev:` D1. Do not exercise
+the upload route locally unless you intend to publish the photo.
+
+The stack provisions one D1 database (`jakes-cats-likes`, migrations in
+`apps/jakes-cats/migrations`: `photos`, `photo_hearts`, `photo_comments`), a
+Cloudflare Images binding for WebP conversion, an edge rate limiter for hearts
+and comments, and binds the existing assets bucket **by name**. It never creates
+or deletes the bucket. Deploy reads `CONTENT_WRITER_TOKEN` (shared with the
+presence Worker and the bot), `ASSETS_HOST`, and `ASSETS_BUCKET_NAME` from the
+process environment; the deployment token needs D1 Write and Workers Scripts
+Write at the account level, plus Zone Read, DNS Write, and Workers Routes Write
+on the `jakes.cat` zone.
+
+### Uploading from an iPhone
+
+`POST https://jakes.cat/api/photos` stores one photo in the `cats/` collection
+(`?tag=life` targets the other one). The route accepts a raw image body or a
+`multipart/form-data` field named `photo`, converts it to WebP, writes it to R2
+under the same key grammar the Discord bot uses, and registers it in D1 with
+zero hearts. It is gated by `Authorization: Bearer <CONTENT_WRITER_TOKEN>` and
+answers `201` with `{ key, url, tag, likes }`.
+
+The 20 MiB file limit also applies to streamed uploads. Multipart requests have
+a 64 KiB framing allowance and are capped before parsing, including unused
+fields. Writes create new R2 objects only. A key collision retries with a new
+ID, up to three attempts; storage errors are not retried automatically. If D1
+registration fails, the Worker deletes the object it just created before
+reporting failure. If that cleanup also fails, the object can remain public:
+inspect the `Upload rollback failed` log and its key before retrying.
+
+iOS Shortcut recipe (Share Sheet → image):
+
+1. _Receive_ **Images** from **Share Sheet**.
+2. **Convert Image** to **JPEG** (Cloudflare Images does not accept HEIC).
+3. **Get Contents of URL** — Method `POST`, URL `https://jakes.cat/api/photos`,
+   Headers `Authorization` = `Bearer <token>`, Request Body **File** = the
+   converted image.
+4. Optional: **Show Result** to see the returned URL.
+
+The token is shared by the presence Worker, the cats Worker, the Discord bot,
+and every installed upload Shortcut. Rotate all copies using the
+[credential rotation procedure](#credential-rotation); updating the bot and
+presence Worker alone does not revoke access to the cats upload endpoint.
 
 ## Discord bot operations
 
@@ -94,10 +167,25 @@ interactive review buttons.
    restart the container (`docker compose -f apps/discord/compose.yaml up -d`);
    the old token stops working immediately, so expect a short gap in presence
    updates.
-2. **Writer token** — `CONTENT_WRITER_TOKEN` authorizes the bot’s private RPC
-   calls. Keep it in the Worker and bot only. If rotation is required, update
-   both sides together. Missing or mismatched tokens refuse private reads and
-   writes. Do not replace it with a Cloudflare management token.
+2. **Writer token** — `CONTENT_WRITER_TOKEN` authorizes the bot's private RPC
+   calls and the cats upload endpoint. Keep it in both Workers, the bot's
+   runtime configuration, and the owner's upload Shortcuts; never send it to
+   browser code. To rotate it:
+    - Pause uploads and stop the bot. Replace the token in the Alchemy process
+      environment and saved deployment secrets, including GitHub Actions, so a
+      later deployment cannot restore the old value.
+    - Deploy **both** Workers with the replacement:
+      `bun run deploy:presence --yes` and `bun run deploy:cats --yes`, or one
+      `bun run deploy`. A failed cats deployment leaves its token rotation
+      unverified.
+    - Replace the bot's `.env.discord` or container runtime value and the
+      `Authorization` header in every installed Shortcut. Restart the bot with
+      the new environment.
+    - Verify that both the presence writer route and cats upload endpoint reject
+      the old token and accept the new one before resuming writes. Missing or
+      mismatched tokens refuse writes; retry failed operations only after all
+      consumers use the replacement. Do not substitute a Cloudflare management
+      token.
 3. **Notes webhook** — the URL is a secret held in two places: `.env.discord`
    for the bot and a presence Worker secret for the submission route. Rotating
    the webhook means recreating it with the bot application against the same
@@ -198,10 +286,11 @@ repository.
 3. Before deploying or starting the bot, configure the private review channel,
    application-owned incoming webhook, Turnstile keys, and the Worker's secrets.
    Set `PORTFOLIO_API_URL` to the Worker’s origin without an API path. Retain
-   the existing `CONTENT_WRITER_TOKEN` and supply the same value to the Worker
-   and bot. Never expose it to the website. The content writer persists
-   decisions before projecting them to KV; uncertain projections stay pending
-   and cannot be rejected as though publication never happened.
+   the existing `CONTENT_WRITER_TOKEN` and supply the same value to both
+   Workers, the bot, and upload Shortcuts. Never expose it to browser code. The
+   content writer persists decisions before projecting them to KV; uncertain
+   projections stay pending and cannot be rejected as though publication never
+   happened.
 4. Confirm that the existing R2 bucket can be bound without taking ownership of
    its lifecycle. Deploy the presence Worker
    (`bun run deploy:presence --profile admin --yes`) with the bot **stopped**.
@@ -214,9 +303,9 @@ repository.
    denial with Message Content disabled.
 6. Only after those checks, set `PUBLIC_TURNSTILE_SITE_KEY` and
    `PUBLIC_NOTES_COMPOSER=enabled` for the website build. A site key alone does
-   not enable submissions. Rotate the shared writer token in the Worker and bot
-   together; failed operations during rotation must be retried after both sides
-   use the new token.
+   not enable submissions. Follow the credential rotation procedure above for
+   both Workers, the bot, and upload Shortcuts; failed operations during
+   rotation must be retried only after all consumers use the new token.
 
 Existing Alchemy resource identities, the `PORT_GITHUB_TOKEN` binding and the
 GitHub cron are preserved by this work.
@@ -228,6 +317,7 @@ bun run test --run
 bun run check
 bun run --cwd apps/discord build
 bun run --cwd apps/web build
+bun run --cwd apps/jakes-cats build
 docker build -f apps/discord/Dockerfile -t artisann-discord .
 docker compose -f apps/discord/compose.yaml config --quiet
 ```

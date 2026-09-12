@@ -11,13 +11,14 @@ rollout. Read it before you change `apps/discord` or `packages/presence`.
 
 Bun workspace (`apps/*`, `packages/*`) with catalog-pinned dependencies.
 
-| Deployable          | Role                                                                         |
-| ------------------- | ---------------------------------------------------------------------------- |
-| `apps/web`          | Static Astro site. Build-time content read, React islands at runtime.        |
-| `apps/discord`      | Private dfx bot. Only writer of presence and site content.                   |
-| `packages/presence` | Worker: public RPC, writer RPC, notes, WebSocket presence, OG proxy.         |
-| `packages/assets`   | R2 bucket, content-addressed image manifest, upload tooling.                 |
-| `packages/ui`       | Shared React/shadcn primitives. The site does not depend on them for layout. |
+| Deployable          | Role                                                                                                             |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `apps/web`          | Static Astro site. Build-time content read, React islands at runtime.                                            |
+| `apps/discord`      | Private dfx bot. Only writer of presence and site content.                                                       |
+| `apps/jakes-cats`   | TanStack Start Worker at `jakes.cat`: swipe deck over the `cats/` photos, hearts in D1, secret-gated upload API. |
+| `packages/presence` | Worker: public RPC, writer RPC, notes, WebSocket presence, OG proxy.                                             |
+| `packages/assets`   | R2 bucket, content-addressed image manifest, upload tooling.                                                     |
+| `packages/ui`       | Shared React/shadcn primitives. The site does not depend on them for layout.                                     |
 
 Local `bun run dev` talks to **production** `https://presence.artisann.dev`. It
 does not start a local Worker, KV, Durable Object, or R2 emulator. Discord photo
@@ -72,29 +73,57 @@ source message → `content.apply`. Rejected text never reaches site content.
 **GitHub.** Worker cron `*/15` → GraphQL → KV. Failures keep the previous
 calendar.
 
-Three Alchemy stacks, plus a one-shot GitHub bootstrap:
+Four Alchemy stacks, plus a one-shot GitHub bootstrap:
 
 - `alchemy.run.ts` — Astro site, prod-only apex→www redirect.
 - `packages/presence/alchemy.run.ts` — Worker, KV, DOs, R2 binding by name.
 - `packages/assets/alchemy.run.ts` — R2 bucket + custom domain.
-- `stacks/github.ts` — repo settings and the scoped Cloudflare token.
+- `apps/jakes-cats/alchemy.run.ts` — TanStack Start Worker, D1 (`photos`,
+  `photo_hearts`, `photo_comments`), Images binding, visitor rate limiter, R2
+  binding by name, prod-only `jakes.cat`.
+- `stacks/github.ts` — repo settings and the Cloudflare deployment token, scoped
+  to the `artisann.dev` and `jakes.cat` zones.
 
-The presence stack **binds** the assets bucket by name. It must not provision
-it. Coolify deploys the Discord container; `bun run deploy` does not.
+The presence and jakes-cats stacks **bind** the assets bucket by name. They must
+not provision it. Coolify deploys the Discord container; `bun run deploy`
+deploys presence, the website, and jakes.cat (`bun run deploy:cats --yes` stays
+valid standalone). The GitHub bootstrap mints that token and writes the Actions
+secrets; re-run it (`bun run deploy:github`) to apply zone-policy changes,
+because editing the stack never rotates a stored secret.
+
+**jakes.cat.** Every server function resolves an anonymous visitor from the
+HttpOnly `jc_visitor` cookie (minted on first call). `getDeck` → R2 `list()` of
+`cats/` joined with D1 `photo_hearts` counts and this visitor's hearts →
+shuffled, looping deck. `likePhoto` → edge ratelimit (per IP) → R2 `head()` →
+`INSERT … ON CONFLICT DO NOTHING` keyed `(photo_key, visitor_id)`, so a repeat
+heart never counts. `getLeaderboard` (`/top`) and `getPhoto` (`/photos/$id`,
+comments in `photo_comments`) read the same tables; `addComment` is rate limited
+and anonymous. Moderation sends only comment text to profanity.dev in
+overlapping windows of at most 35 words, with concurrency 2 and an eight-second
+total deadline; provider failures refuse the comment. Leaderboard eligibility is
+filtered against live R2 photos before taking the top 20. `POST /api/photos` →
+Bearer `CONTENT_WRITER_TOKEN` → streamed 20 MiB file cap (multipart body capped
+before parsing, plus 64 KiB framing) → Images binding → WebP → create-only R2
+`put` under the same managed key grammar the bot uses (synthetic snowflake id) →
+`photos` registry row. Failed registration deletes the new object; failed
+cleanup is logged and never reported as success. Contracts in
+`apps/jakes-cats/src/contracts.ts` are browser-safe; server code lives under
+`apps/jakes-cats/src/server`.
 
 ## Key Directories
 
-| Path                                | Purpose                                                                                                                                                                                                  |
-| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/web/src/pages`                | One page: `index.astro`.                                                                                                                                                                                 |
-| `apps/web/src/components/portfolio` | React islands (`client:load`).                                                                                                                                                                           |
-| `apps/web/src/lib`                  | RPC atoms, WebSocket presence, build-time content, Atom registry.                                                                                                                                        |
-| `apps/discord/src`                  | One file per concern: `main`, `config`, `commands`, `cms`, `photos`, `notes`, `presence`, `*-client`.                                                                                                    |
-| `packages/presence/src`             | Browser-safe **contracts** (`schema`, `content`, `rpc`, …); **services** (`*-service.ts`); **native adapters** (`worker-handlers`, `rpc-server`, `durable-objects`); **DO controllers** (`*-object.ts`). |
-| `packages/assets`                   | Manifest, `images/`, R2 upload scripts.                                                                                                                                                                  |
-| `packages/ui`                       | shadcn primitives and `cn`.                                                                                                                                                                              |
-| `tools/oxlint/{effect,anti-slop}`   | Local oxlint plugins. Do not lint this tree.                                                                                                                                                             |
-| `stacks/`                           | Alchemy stacks outside the main deploy graph.                                                                                                                                                            |
+| Path                                | Purpose                                                                                                                                                                                                        |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/web/src/pages`                | One page: `index.astro`.                                                                                                                                                                                       |
+| `apps/web/src/components/portfolio` | React islands (`client:load`).                                                                                                                                                                                 |
+| `apps/web/src/lib`                  | RPC atoms, WebSocket presence, build-time content, Atom registry.                                                                                                                                              |
+| `apps/discord/src`                  | One file per concern: `main`, `config`, `commands`, `cms`, `photos`, `notes`, `presence`, `*-client`.                                                                                                          |
+| `apps/jakes-cats/src`               | `routes/` (file routes incl. `api.photos.tsx`), `components/` (motion swipe deck), `server/` (Effect services + composition root), `server-fns.ts`, `contracts.ts`, `env.ts`. `DESIGN.md` is the design brief. |
+| `packages/presence/src`             | Browser-safe **contracts** (`schema`, `content`, `rpc`, …); **services** (`*-service.ts`); **native adapters** (`worker-handlers`, `rpc-server`, `durable-objects`); **DO controllers** (`*-object.ts`).       |
+| `packages/assets`                   | Manifest, `images/`, R2 upload scripts.                                                                                                                                                                        |
+| `packages/ui`                       | shadcn primitives and `cn`.                                                                                                                                                                                    |
+| `tools/oxlint/{effect,anti-slop}`   | Local oxlint plugins. Do not lint this tree.                                                                                                                                                                   |
+| `stacks/`                           | Alchemy stacks outside the main deploy graph.                                                                                                                                                                  |
 
 Contract modules under `packages/presence/src` must stay free of env reads,
 credentials, and Worker-only imports. A Node/Workers import in a contract file
@@ -108,6 +137,7 @@ Run from the repository root. Package manager is Bun `1.4.2`.
 bun install                         # prepare: lefthook + effect-tsgo patch
 bun run dev                         # Astro + Discord against live API
 bun run dev:web                     # website only (--no-env-file)
+bun run dev:cats                    # jakes.cat via alchemy dev (local D1, LIVE R2 bucket)
 bun run discord                     # bot via .env.discord
 bun run check                       # vp check + astro check
 bun run lint                        # vp lint
@@ -120,9 +150,10 @@ bun run build                       # vp run -r build (web + discord + assets)
 Deploy (production stage is mandatory):
 
 ```sh
-bun run deploy --yes                # presence then website, --stage prod
+bun run deploy --yes                # presence, website, then cats, --stage prod
 bun run deploy:presence --yes
 bun run deploy:website --yes
+bun run deploy:cats --yes           # jakes.cat stack, --stage prod
 bun run plan                        # alchemy plan alchemy.run.ts
 bun run login                       # GitHub stack profile admin
 bun run deploy:github
@@ -151,14 +182,15 @@ bun run test --run
 bun run check
 bun run --cwd apps/discord build
 bun run --cwd apps/web build
+bun run --cwd apps/jakes-cats build
 docker build -f apps/discord/Dockerfile -t artisann-discord .
 docker compose -f apps/discord/compose.yaml config --quiet
 ```
 
 `vp check` does not typecheck Astro. Always use `bun run check`.
 
-`packages/presence`'s own `deploy` script has **no** `--stage prod`. Do not use
-it to ship production.
+`packages/presence`'s and `apps/jakes-cats`'s own `deploy` scripts have **no**
+`--stage prod`. Do not use them to ship production.
 
 ## Code Conventions & Common Patterns
 
@@ -295,7 +327,8 @@ Dynamic injection fails with “Could not find Turnscript tag.”
 
 - `package.json`, `vite.config.ts`, `lefthook.yaml`
 - `alchemy.run.ts`, `packages/presence/alchemy.run.ts`,
-  `packages/assets/alchemy.run.ts`, `stacks/github.ts`
+  `packages/assets/alchemy.run.ts`, `apps/jakes-cats/alchemy.run.ts`,
+  `stacks/github.ts`
 - `patches/@distilled.cloud%2Fcore@1.0.0-rc.8.patch` — keep `patches/` in every
   install context (Docker copies it before `bun install`).
 
@@ -303,6 +336,8 @@ Dynamic injection fails with “Could not find Turnscript tag.”
 
 - `packages/assets/src/manifest.gen.ts` —
   `bun run --cwd packages/assets generate`. Root `bun run build` rewrites it.
+- `apps/jakes-cats/src/routeTree.gen.ts` — TanStack file-route tree, rewritten
+  by `vite build` / `alchemy dev`.
 
 ## Runtime/Tooling Preferences
 
@@ -360,6 +395,8 @@ Tests live in `__tests__/` only (17 files):
 - `apps/discord/__tests__/` — commands, CMS, notes, content-client, presence,
   config.
 - `apps/web/__tests__/` — presence socket, Atom SSR lifetime.
+- `apps/jakes-cats/__tests__/` — photo id grammar, upload auth, hearts and
+  comments against an in-memory D1 double.
 
 Place new tests under `__tests__/`. A `src/*.test.ts` file misses the lint
 override for `effecttsgo/async-function`, `global-date`, and `new-promise`.
