@@ -1,0 +1,5 @@
+# .worktreeinclude (repo root)
+.env
+.env.discord
+PRODUCT.md
+DESIGN.md
