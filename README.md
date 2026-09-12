@@ -11,6 +11,7 @@ listening to, and a little about life in Dallas.
 | ------------------- | --------------------------------------------------------------------------------------------------------- |
 | `apps/web`          | Astro site (`bun run --cwd apps/web dev`, `bun run --cwd apps/web build`).                                |
 | `apps/discord`      | Owner-only Discord bot: presence source and website CMS.                                                  |
+| `apps/jakes-cats`   | [jakes.cat](https://jakes.cat): TanStack Start Worker that serves the `cats/` photos as a swipe deck.     |
 | `packages/presence` | Shared schemas plus the Cloudflare Worker serving presence, content, photos, GitHub and note submissions. |
 | `packages/assets`   | R2 asset tooling and the generated manifest.                                                              |
 | `packages/ui`       | Shared UI primitives.                                                                                     |
@@ -26,6 +27,55 @@ elsewhere.
 Run `bun run deploy --yes` to deploy the presence Worker and the Astro website
 to Cloudflare. The Discord container remains outside this deployment command;
 Coolify deploys it from GitHub webhooks.
+
+## jakes.cat
+
+`apps/jakes-cats` is a public, for-fun site: a visitor gets the `cats/` photos
+from the shared R2 bucket in a shuffled, looping deck, swipes right to heart
+one, sees the heart count, browses the most-hearted cats at `/top`, and leaves
+anonymous comments on `/photos/<id>`. Visitors are identified by an HttpOnly
+`jc_visitor` cookie, so a second heart from the same browser does not count. It
+is its own Alchemy stack (`JakesCats`) with its own deploy command, and it is
+not part of `bun run deploy`.
+
+```sh
+bun run dev:cats             # alchemy dev: local D1, but the LIVE assets bucket
+bun run deploy:cats --yes    # --stage prod: jakes.cat domain, D1 migrations, bindings
+```
+
+Under `alchemy dev` the by-name `r2_bucket` binding is remote: the deck reads
+the production `cats/` photos, and a `POST /api/photos` against `localhost:1337`
+writes to the production bucket. Hearts go to a local `dev:` D1. Do not exercise
+the upload route locally unless you intend to publish the photo.
+
+The stack provisions one D1 database (`jakes-cats-likes`, migrations in
+`apps/jakes-cats/migrations`: `photos`, `photo_hearts`, `photo_comments`), a
+Cloudflare Images binding for WebP conversion, an edge rate limiter for hearts
+and comments, and binds the existing assets bucket **by name**. It never creates
+or deletes the bucket. Deploy reads `CONTENT_WRITER_TOKEN` (shared with the
+presence Worker and the bot), `ASSETS_HOST`, and `ASSETS_BUCKET_NAME` from the
+process environment; the Cloudflare token needs D1 Write, Workers Scripts Write,
+and Zone/DNS access for the `jakes.cat` zone.
+
+### Uploading from an iPhone
+
+`POST https://jakes.cat/api/photos` stores one photo in the `cats/` collection
+(`?tag=life` targets the other one). The route accepts a raw image body or a
+`multipart/form-data` field named `photo`, converts it to WebP, writes it to R2
+under the same key grammar the Discord bot uses, and registers it in D1 with
+zero hearts. It is gated by `Authorization: Bearer <CONTENT_WRITER_TOKEN>` and
+answers `201` with `{ key, url, tag, likes }`.
+
+iOS Shortcut recipe (Share Sheet → image):
+
+1. _Receive_ **Images** from **Share Sheet**.
+2. **Convert Image** to **JPEG** (Cloudflare Images does not accept HEIC).
+3. **Get Contents of URL** — Method `POST`, URL `https://jakes.cat/api/photos`,
+   Headers `Authorization` = `Bearer <token>`, Request Body **File** = the
+   converted image.
+4. Optional: **Show Result** to see the returned URL.
+
+The token is the same secret the bot uses; rotate both together.
 
 ## Discord bot operations
 
@@ -228,6 +278,7 @@ bun run test --run
 bun run check
 bun run --cwd apps/discord build
 bun run --cwd apps/web build
+bun run --cwd apps/jakes-cats build
 docker build -f apps/discord/Dockerfile -t artisann-discord .
 docker compose -f apps/discord/compose.yaml config --quiet
 ```

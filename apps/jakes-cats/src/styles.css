@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+@theme {
+    --color-cream: #faf3ea;
+    --color-ink: #1c1512;
+    --color-heart: #f2506e;
+    --color-pass: #8a7f76;
+    --color-card: #fffdf9;
+    --color-line: #eadfd2;
+    --font-display: ui-rounded, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --color-cream: #171310;
+        --color-ink: #f5ece2;
+        --color-heart: #ff7a8c;
+        --color-pass: #9a8d82;
+        --color-card: #241d18;
+        --color-line: #3a2f27;
+    }
+}
+
+html,
+body {
+    height: 100%;
+}
+
+body {
+    overscroll-behavior: none;
+}

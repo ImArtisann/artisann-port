@@ -22,7 +22,7 @@
         "@unpic/astro": "catalog:",
         "astro": "catalog:",
         "effect": "catalog:",
-        "motion": "^13.2.0",
+        "motion": "catalog:",
         "react": "catalog:",
         "react-dom": "catalog:",
         "scheduler": "0.27.0",

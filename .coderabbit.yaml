@@ -23,6 +23,10 @@ reviews:
         - "!apps/web/.astro/**"
         - "!apps/web/dist/**"
         - "!apps/web/.alchemy/**"
+        - "!apps/jakes-cats/src/routeTree.gen.ts"
+        - "!apps/jakes-cats/.tanstack/**"
+        - "!apps/jakes-cats/.output/**"
+        - "!apps/jakes-cats/.alchemy/**"
 
 chat:
     auto_reply: true

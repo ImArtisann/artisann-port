@@ -5,12 +5,14 @@
     "scripts": {
         "dev": "vp run dev:all",
         "dev:web": "bun --no-env-file run --cwd apps/web dev",
+        "dev:cats": "alchemy dev apps/jakes-cats/alchemy.run.ts",
         "discord": "bun --no-env-file --env-file=.env.discord apps/discord/src/main.ts",
         "preview": "bun run --cwd apps/web preview",
         "login": "alchemy login stacks/github.ts --profile admin --configure",
         "plan": "alchemy plan alchemy.run.ts",
         "deploy": "vp run deploy:all",
         "deploy:website": "alchemy deploy alchemy.run.ts --stage prod",
+        "deploy:cats": "alchemy deploy apps/jakes-cats/alchemy.run.ts --stage prod",
         "destroy": "alchemy destroy",
         "check": "bun run --cwd apps/web check && vp check",
         "format": "vp fmt",
@@ -53,7 +55,13 @@
         "@unpic/react": "^1.0.2",
         "@unpic/astro": "^1.0.2",
         "astro": "^7.3.1",
-        "@alchemy.run/frontend-frameworks": "2.0.0-beta.77"
+        "@alchemy.run/frontend-frameworks": "2.0.0-beta.77",
+        "@tanstack/react-router": "^1.170.35",
+        "@tanstack/react-start": "^1.168.52",
+        "@vitejs/plugin-react": "^6.1.1",
+        "vite": "^8.3.0",
+        "@cloudflare/workers-types": "^5.20260911.1",
+        "motion": "^13.2.0"
     },
     "devDependencies": {
         "@alchemy.run/frontend-frameworks": "catalog:",
