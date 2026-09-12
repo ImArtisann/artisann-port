@@ -1,0 +1,13 @@
+# Orca worktree configuration.
+# Gitignored directories materialized from the primary checkout into each new
+# worktree (symlink/share). Entries must exist and be gitignored; tracked or
+# missing paths are skipped. Copied files (secrets) live in .worktreeinclude.
+worktree:
+    sharedDirectories:
+        - node_modules
+        - apps/web/node_modules
+        - apps/web/.astro
+        - apps/discord/node_modules
+        - packages/presence/node_modules
+        - packages/assets/node_modules
+        - packages/ui/node_modules
