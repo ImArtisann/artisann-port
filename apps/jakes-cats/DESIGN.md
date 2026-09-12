@@ -84,6 +84,18 @@ is `shrink-0` and each route fills the rest. Safe-area insets via
   (`https://www.artisann.dev`) in a new tab with
   `target="_blank" rel="noreferrer"`.
 
+## Social sharing
+
+- Default artwork: `opengraph/jakes-cats.png` in the assets package, a 1200×630
+  PNG on cream. The original pixel cats sit left of the large pink "Jake's Cats"
+  title, with "created by artisann" below in smaller muted text. The cats use
+  nearest-neighbor scaling; there are no decorative frames.
+- `SITE_OG_IMAGE_URL` resolves its content-addressed public URL from the
+  manifest. The homepage and leaderboard use it for Open Graph and Twitter, with
+  `summary_large_image` cards.
+- Individual photo pages override both image URLs and alt text with the selected
+  photo, rather than inheriting the default artwork.
+
 ## Card anatomy
 
 - Photo fills the frame: `object-cover`, `rounded-3xl`, `bg-card` surface,
@@ -156,8 +168,9 @@ Constants live in `src/components/deck-config.ts` (mirrors the portfolio deck).
 
 - Loader is `getPhoto({ data: { id } })`; an unknown or unmanaged id throws
   TanStack `notFound()`, rendering "That cat wandered off." with a link home.
-  Meta title "A cat · Jake's Cats", `og:image` set to the photo URL, and
-  `og:url` set to that photo's canonical `https://jakes.cat/photos/<id>` URL.
+  Meta title "A cat · Jake's Cats", `og:image` and `twitter:image` set to the
+  photo URL, and `og:url` set to that photo's canonical
+  `https://jakes.cat/photos/<id>` URL.
 - Anatomy, top to bottom: "Back to the deck" link; the photo at
   `max-w-md rounded-2xl`; a row with the heart-count chip and shared heart
   button (same optimistic, idempotent, disabled-when-hearted semantics as the

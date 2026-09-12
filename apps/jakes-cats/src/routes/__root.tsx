@@ -1,11 +1,12 @@
 import type { ReactNode } from "react";
 import { HeadContent, Outlet, Scripts, createRootRoute } from "@tanstack/react-router";
 import { SiteHeader } from "../components/site-header.tsx";
-import { SITE_MARK_URL, SITE_URL } from "../contracts.ts";
+import { SITE_MARK_URL, SITE_OG_IMAGE_URL, SITE_URL } from "../contracts.ts";
 import appCss from "../styles.css?url";
 
 const SITE_TITLE = "Jake's Cats";
 const SITE_DESCRIPTION = "Swipe through Jake's cat photos, heart the good ones, and leave a note.";
+const SITE_OG_IMAGE_ALT = "Pixel-art cats — Jake's Cats, created by artisann";
 
 export const Route = createRootRoute({
     head: () => ({
@@ -51,8 +52,24 @@ export const Route = createRootRoute({
                 content: SITE_URL,
             },
             {
+                property: "og:image",
+                content: SITE_OG_IMAGE_URL,
+            },
+            {
+                property: "og:image:alt",
+                content: SITE_OG_IMAGE_ALT,
+            },
+            {
                 name: "twitter:card",
-                content: "summary",
+                content: "summary_large_image",
+            },
+            {
+                name: "twitter:image",
+                content: SITE_OG_IMAGE_URL,
+            },
+            {
+                name: "twitter:image:alt",
+                content: SITE_OG_IMAGE_ALT,
             },
         ],
         links: [

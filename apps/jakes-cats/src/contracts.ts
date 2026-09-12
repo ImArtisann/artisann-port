@@ -18,6 +18,12 @@ export const SITE_URL = "https://jakes.cat";
 /** Absolute URL of the site mark image on the assets host (favicon, header). */
 export const SITE_MARK_URL = assetUrl("portfolio/cats.webp", `https://${DEFAULT_ASSETS_HOST}`);
 
+/** Absolute URL of the default social preview image on the assets host. */
+export const SITE_OG_IMAGE_URL = assetUrl(
+    "opengraph/jakes-cats.png",
+    `https://${DEFAULT_ASSETS_HOST}`,
+);
+
 /** Discord-style snowflake: the id part of a managed key. */
 export const PhotoId = Schema.String.check(Schema.isPattern(/^[0-9]{17,20}$/u));
 

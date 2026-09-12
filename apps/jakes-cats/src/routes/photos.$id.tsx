@@ -38,7 +38,14 @@ export const Route = createFileRoute("/photos/$id")({
         return {
             meta: [
                 { title: "A cat · Jake's Cats" },
-                ...(photo === undefined ? [] : [{ property: "og:image", content: photo.url }]),
+                ...(photo === undefined
+                    ? []
+                    : [
+                          { property: "og:image", content: photo.url },
+                          { property: "og:image:alt", content: "A cat" },
+                          { name: "twitter:image", content: photo.url },
+                          { name: "twitter:image:alt", content: "A cat" },
+                      ]),
                 ...(pagePath === null
                     ? []
                     : [{ property: "og:url", content: `${SITE_URL}${pagePath}` }]),
