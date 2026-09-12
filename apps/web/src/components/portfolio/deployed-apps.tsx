@@ -1,4 +1,5 @@
 import type { SiteContent } from "@artisann-port/presence/content";
+import { projectPreviewUrl } from "@artisann-port/presence/projects";
 import { CardContent } from "@artisann-port/ui/components/card";
 import { cn } from "@artisann-port/ui/lib/utils";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -6,6 +7,7 @@ import { ArrowUpRight01Icon } from "@hugeicons-pro/core-solid-rounded";
 import { ProjectPreview } from "@/components/portfolio/project-preview";
 import { SharedAtomRegistry } from "@/lib/atom-registry";
 import { useSiteContent } from "@/lib/content-client";
+import { portfolioApiOrigin } from "@/lib/rpc-client";
 
 /** The "Deployed apps" card body: preview, name/description and visit link for every app. */
 function DeployedAppsContent({ initial }: { initial: SiteContent }) {
@@ -29,7 +31,12 @@ function DeployedAppsContent({ initial }: { initial: SiteContent }) {
                 )}
             >
                 <CardContent>
-                    <ProjectPreview app={app} />
+                    <ProjectPreview
+                        src={projectPreviewUrl(app, portfolioApiOrigin)}
+                        name={app.name}
+                        url={app.url}
+                        loadingLabel="Website OG image"
+                    />
                 </CardContent>
                 <CardContent className="flex flex-col gap-2">
                     <div className="flex flex-col gap-1">
