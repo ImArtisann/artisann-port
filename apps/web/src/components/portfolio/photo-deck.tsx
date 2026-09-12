@@ -37,11 +37,17 @@ type GallerySelection = {
     readonly source: readonly Photo[] | null;
 };
 
-/** Preserve selection, then choose the first surviving successor, then newest. */
+/**
+ * Preserve selection, then choose the first surviving successor, then newest.
+ * `priorOrdering` is the order the removed photo was last seen in — the
+ * successor lookup needs it because the reconciled `ordering` no longer
+ * contains the removed key.
+ */
 const selectPhotoKey = (
     priorOrdering: readonly Photo[],
     selectedKey: string | null,
     photos: readonly Photo[],
+    ordering: readonly Photo[],
 ): string | null => {
     const availableKeys = new Set(photos.map((photo) => photo.key));
     if (selectedKey !== null && availableKeys.has(selectedKey)) return selectedKey;
@@ -53,7 +59,7 @@ const selectPhotoKey = (
             .find((photo) => availableKeys.has(photo.key));
         if (successor !== undefined) return successor.key;
     }
-    return priorOrdering[0]?.key ?? photos[0]?.key ?? null;
+    return ordering[0]?.key ?? photos[0]?.key ?? null;
 };
 
 /**
@@ -85,7 +91,12 @@ export function useGallerySelection(
                     ? shuffle(photos)
                     : reconcileOrder(previous.priorOrdering, photos, (photo) => photo.key);
             return {
-                selectedKey: selectPhotoKey(ordering, previous.selectedKey, photos),
+                selectedKey: selectPhotoKey(
+                    previous.priorOrdering,
+                    previous.selectedKey,
+                    photos,
+                    ordering,
+                ),
                 priorOrdering: ordering,
                 source: photos,
             };

@@ -48,6 +48,7 @@ import {
     useMemo,
     useRef,
     useState,
+    useSyncExternalStore,
     type ComponentRef,
     type ReactNode,
 } from "react";
@@ -78,6 +79,72 @@ type LocalNote = typeof LocalNote.Type;
 /** A note shown in the carousel: a visitor's own draft or an approved server note. */
 type NoteEntry = LocalNote | VisitorNote;
 const decodeLocalNotes = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Array(LocalNote)));
+
+/**
+ * The page mounts two VisitorNotes placements (mobile and lg). Both must see a
+ * note the moment it is submitted — a visitor who posts on mobile and then
+ * crosses the lg breakpoint must not lose it until reload. localStorage alone
+ * does not notify same-tab writers, so the local list lives in a module store
+ * that persists on every write and notifies every mounted instance.
+ */
+interface LocalNotesState {
+    readonly notes: readonly LocalNote[];
+    readonly loaded: boolean;
+}
+
+const readStoredNotes = (): readonly LocalNote[] => {
+    try {
+        const stored = window.localStorage.getItem(LOCAL_NOTES_KEY);
+        if (stored === null) return [];
+        const decoded = decodeLocalNotes(stored);
+        return Option.isSome(decoded) ? decoded.value : [];
+    } catch {
+        // Storage may be blocked; notes submitted this visit still appear immediately.
+        return [];
+    }
+};
+
+let localNotesState: LocalNotesState = { notes: [], loaded: false };
+const localNotesListeners = new Set<() => void>();
+
+const setSharedLocalNotes = (update: (previous: readonly LocalNote[]) => readonly LocalNote[]) => {
+    const next = update(localNotesState.notes);
+    if (next === localNotesState.notes) return;
+    localNotesState = { notes: next, loaded: true };
+    try {
+        window.localStorage.setItem(LOCAL_NOTES_KEY, JSON.stringify(next));
+    } catch {
+        // Persistence failed, so the stored copy still names the reconciled
+        // ids. Drop it: a reload must not restore a note the server no longer
+        // has — or one it never saw.
+        try {
+            window.localStorage.removeItem(LOCAL_NOTES_KEY);
+        } catch {
+            // Storage stays unavailable; the in-memory state still applies.
+        }
+    }
+    for (const listener of localNotesListeners) listener();
+};
+
+const subscribeLocalNotes = (listener: () => void) => {
+    localNotesListeners.add(listener);
+    return () => localNotesListeners.delete(listener);
+};
+
+const useSharedLocalNotes = (): LocalNotesState => {
+    const state = useSyncExternalStore(
+        subscribeLocalNotes,
+        () => localNotesState,
+        () => localNotesState,
+    );
+    useEffect(() => {
+        if (localNotesState.loaded) return;
+        const stored = readStoredNotes();
+        localNotesState = { notes: stored, loaded: true };
+        for (const listener of localNotesListeners) listener();
+    }, []);
+    return state;
+};
 
 /**
  * The composer ships disabled until the owner publishes the Turnstile site key AND flips the
@@ -193,21 +260,7 @@ function VisitorNotesContent({ initial }: { initial: SiteContent }) {
     // which is what a first visit saw while the request was still in flight.
     const contentResult = useAtomValue(contentAtom(portfolioApiEndpoints.rpcUrl));
     const notesKnown = Option.isSome(AsyncResult.value(contentResult));
-    const [localNotes, setLocalNotes] = useState<readonly LocalNote[]>([]);
-    const [localNotesLoaded, setLocalNotesLoaded] = useState(false);
-    useEffect(() => {
-        try {
-            const stored = window.localStorage.getItem(LOCAL_NOTES_KEY);
-            if (stored !== null) {
-                const decoded = decodeLocalNotes(stored);
-                if (Option.isSome(decoded)) setLocalNotes(decoded.value);
-            }
-        } catch {
-            // Storage may be blocked; notes submitted this visit still appear immediately.
-        } finally {
-            setLocalNotesLoaded(true);
-        }
-    }, []);
+    const { notes: localNotes, loaded: localNotesLoaded } = useSharedLocalNotes();
     const allNotes = useMemo(
         () => [
             ...localNotes.filter((localNote) => !notes.some((note) => note.id === localNote.id)),
@@ -236,23 +289,11 @@ function VisitorNotesContent({ initial }: { initial: SiteContent }) {
     // server note, and a reload would resurrect the stale local record.
     useEffect(() => {
         if (notes.length === 0) return;
-        setLocalNotes((previous) => {
+        setSharedLocalNotes((previous) => {
             const remaining = previous.filter(
                 (localNote) => !notes.some((note) => note.id === localNote.id),
             );
             if (remaining.length === previous.length) return previous;
-            try {
-                window.localStorage.setItem(LOCAL_NOTES_KEY, JSON.stringify(remaining));
-            } catch {
-                // Persistence failed, so the stored copy still names the
-                // reconciled ids. Drop it: a reload must not restore a note the
-                // server no longer has.
-                try {
-                    window.localStorage.removeItem(LOCAL_NOTES_KEY);
-                } catch {
-                    // Storage stays unavailable; the in-memory reduction applies.
-                }
-            }
             return remaining;
         });
     }, [notes]);
@@ -367,17 +408,11 @@ function VisitorNotesContent({ initial }: { initial: SiteContent }) {
             body: trimmedBody,
             submittedAt: DateTime.formatIso(DateTime.nowUnsafe()),
         };
-        const nextLocalNotes = [
+        setSharedLocalNotes((previous) => [
             submitted,
-            ...localNotes.filter((localNote) => localNote.id !== id),
-        ];
-        setLocalNotes(nextLocalNotes);
+            ...previous.filter((localNote) => localNote.id !== id),
+        ]);
         setSelectedId(id);
-        try {
-            window.localStorage.setItem(LOCAL_NOTES_KEY, JSON.stringify(nextLocalNotes));
-        } catch {
-            // A storage failure must not hide an accepted note from this visit.
-        }
         setSubmitState("sent");
         setFeedback("Shown here and sent for review. It will be public after approval.");
     };
