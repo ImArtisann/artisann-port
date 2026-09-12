@@ -5,6 +5,9 @@ export function getRouter() {
     return createRouter({
         routeTree,
         scrollRestoration: true,
+        // These views seed optimistic state from loaders. Revisited routes
+        // must mount with fresh data, not a stale snapshot followed by SWR.
+        defaultStaleReloadMode: "blocking",
     });
 }
 

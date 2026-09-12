@@ -9,6 +9,9 @@ import { PhotoTag, photoKey } from "@artisann-port/presence/photos";
 /** The photo collection this site serves. */
 export const SITE_PHOTO_TAG: PhotoTag = "cats";
 
+/** Canonical origin this site is served from; absolute URLs are built from it. */
+export const SITE_URL = "https://jakes.cat";
+
 /** Discord-style snowflake: the id part of a managed key. */
 export const PhotoId = Schema.String.check(Schema.isPattern(/^[0-9]{17,20}$/u));
 

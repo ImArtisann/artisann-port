@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import { HeadContent, Outlet, Scripts, createRootRoute } from "@tanstack/react-router";
 import { SiteHeader } from "../components/site-header.tsx";
+import { SITE_URL } from "../contracts.ts";
 import appCss from "../styles.css?url";
 
-const SITE_URL = "https://jakes.cat";
 const SITE_TITLE = "Jake's Cats";
 const SITE_DESCRIPTION = "Swipe through Jake's cat photos, heart the good ones, and leave a note.";
 
@@ -90,7 +90,7 @@ function SiteFooter() {
                     href="https://www.artisann.dev"
                     target="_blank"
                     rel="noreferrer"
-                    className="text-ink hover:text-heart focus-visible:ring-ink rounded-sm underline underline-offset-4 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                    className="text-ink hover:text-heart-ink focus-visible:ring-ink rounded-sm underline underline-offset-4 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                 >
                     artisann.dev
                 </a>

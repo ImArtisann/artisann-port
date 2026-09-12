@@ -109,33 +109,34 @@ export const DeckLive = Layer.effect(
         });
 
         const leaderboard = Effect.fn("Deck.leaderboard")(function* (visitorId: string) {
-            const ranked = yield* hearts
-                .top(SITE_PHOTO_TAG, LEADERBOARD_SIZE)
-                .pipe(Effect.mapError(() => new DeckError({ operation: "leaderboard.read" })));
             const photos = yield* listManaged("leaderboard.read");
+            const counts = yield* hearts
+                .countsFor(SITE_PHOTO_TAG)
+                .pipe(Effect.mapError(() => new DeckError({ operation: "leaderboard.read" })));
             const hearted = yield* hearts
                 .heartedBy(visitorId)
                 .pipe(Effect.mapError(() => new DeckError({ operation: "leaderboard.read" })));
 
-            const livePhotos = new Map<string, (typeof photos)[number]>();
-            for (const photo of photos) livePhotos.set(photo.key, photo);
+            // Rank only photos still in the bucket: a deleted leader drops out
+            // before the limit, never consuming a slot a live photo could take.
+            const eligible = photos
+                .map((photo) => ({ photo, likes: counts.get(photo.key) ?? 0 }))
+                .filter((entry) => entry.likes > 0)
+                .sort(
+                    (left, right) =>
+                        right.likes - left.likes || right.photo.key.localeCompare(left.photo.key),
+                )
+                .slice(0, LEADERBOARD_SIZE);
 
-            // A photo deleted from the bucket drops out, so the ranks below it
-            // close up instead of leaving a gap.
-            const entries: LeaderboardEntry[] = [];
-            for (const tally of ranked) {
-                const photo = livePhotos.get(tally.key);
-                if (photo === undefined) continue;
-                entries.push({
-                    rank: entries.length + 1,
-                    photo: {
-                        key: photo.key,
-                        url: photo.url,
-                        likes: tally.likes,
-                        hearted: hearted.has(photo.key),
-                    },
-                });
-            }
+            const entries: LeaderboardEntry[] = eligible.map((entry, index) => ({
+                rank: index + 1,
+                photo: {
+                    key: entry.photo.key,
+                    url: entry.photo.url,
+                    likes: entry.likes,
+                    hearted: hearted.has(entry.photo.key),
+                },
+            }));
 
             return { entries } satisfies LeaderboardPayload;
         });

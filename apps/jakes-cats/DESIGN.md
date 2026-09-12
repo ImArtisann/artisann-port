@@ -20,18 +20,20 @@ told they are done.
 Tailwind v4 `@theme` tokens, defined in `src/styles.css`. Light values first,
 `prefers-color-scheme: dark` overrides second.
 
-| Token           | Light     | Dark      | Use                                  |
-| --------------- | --------- | --------- | ------------------------------------ |
-| `--color-cream` | `#faf3ea` | `#171310` | Page background                      |
-| `--color-ink`   | `#1c1512` | `#f5ece2` | Text, icon strokes                   |
-| `--color-heart` | `#f2506e` | `#ff7a8c` | Heart button, LIKE stamp, heart chip |
-| `--color-pass`  | `#8a7f76` | `#9a8d82` | Skip button, SKIP stamp, captions    |
-| `--color-card`  | `#fffdf9` | `#241d18` | Card surface, fallback tile          |
-| `--color-line`  | `#eadfd2` | `#3a2f27` | Hairline borders, chip outline       |
+| Token               | Light     | Dark      | Use                                  |
+| ------------------- | --------- | --------- | ------------------------------------ |
+| `--color-cream`     | `#faf3ea` | `#171310` | Page background                      |
+| `--color-ink`       | `#1c1512` | `#f5ece2` | Text, icon strokes                   |
+| `--color-heart`     | `#d63a5c` | `#d63a5c` | Heart button, LIKE stamp, heart chip |
+| `--color-heart-ink` | `#b3274d` | `#ff9aa8` | Small accent text on page surfaces   |
+| `--color-pass`      | `#6f655c` | `#9a8d82` | Skip button, SKIP stamp, captions    |
+| `--color-card`      | `#fffdf9` | `#241d18` | Card surface, fallback tile          |
+| `--color-line`      | `#eadfd2` | `#3a2f27` | Hairline borders, chip outline       |
 
 `--font-display` is the system-ui stack (`ui-rounded` first for headings). No
-background images, no grid patterns — flat cream, one card. No new tokens were
-needed for the leaderboard or the photo page.
+background images, no grid patterns — flat cream, one card. White button text on
+`--color-heart` meets 4.5:1 in both themes; `--color-heart-ink` keeps small
+accent text readable on light and dark page surfaces.
 
 Classes used by the implementation map 1:1: `bg-cream`, `text-ink`, `bg-heart`,
 `text-pass`, `bg-card`, `border-line`, `font-display`, plus tokens read through
@@ -59,10 +61,10 @@ is `shrink-0` and each route fills the rest. Safe-area insets via
 - Header (shared, every route): `max-w-lg`, pixel-cat mark left, nav right.
   Active link is `text-ink underline underline-offset-4`; inactive is
   `text-pass`.
-- Deck page: card stack fills available space, `aspect-4/5`, `max-w-md`
-  (~28rem), centered, then the action row (`h-16`), centered. The column uses
-  `gap-6 px-4 py-6` — the same rhythm as the comments section — so the buttons
-  keep a clear gap from both the card and the bottom edge.
+- Deck page: the card (`aspect-4/5`, `max-w-md`, about 28rem) and action row
+  (`h-16`) form a top-aligned group, both centered horizontally. The column uses
+  `gap-6 px-4 py-6`, matching the comments section. Spare viewport space stays
+  below the controls, not between the card and its buttons.
 - Footer (shared, every route): `mt-auto border-t border-line` strip so it pins
   to the bottom of the `min-h-dvh` column; centered copy at `px-4 py-6`
   `text-xs text-pass`.
@@ -107,6 +109,9 @@ Constants live in `src/components/deck-config.ts` (mirrors the portfolio deck).
   velocity) and returns `null` to snap back.
 - Exit: `EXIT_SPRING` stiffness 400 / damping 40, travels
   `EXIT_DISTANCE_PX = 400`.
+- An exiting swipe owns the motion value: a later drag release cannot replace it
+  with snapback. Cancellation completes that exit once so controls do not remain
+  locked.
 - Snap back (canceled drag): `SNAP_BACK_SPRING` stiffness 600 / damping 30.
 - Stamps: LIKE / SKIP tilted `STAMP_ROTATE_DEG = 12`, opacity from 0 to 1 across
   the first `SWIPE_OFFSET_PX` of drag in their direction.
@@ -122,7 +127,9 @@ Constants live in `src/components/deck-config.ts` (mirrors the portfolio deck).
 - Empty collection: plain text panel "No cats yet.", body "Jake is on it. Check
   back soon." — no icons.
 - Loader error: "Cats are napping" panel, body "Try again in a moment.", with a
-  "Try again" button that resets the route.
+  "Try again" button that invalidates the route and reruns its loader.
+- Cached revisits wait for refreshed loader data before mounting. Optimistic
+  heart/comment state is not initialized from stale cached snapshots.
 - End of deck: **there is no end.** Advancing past the last card wraps to the
   first; the loop is the state.
 - Heart rejected (rate limit or server): toast "Slow down, tiger." for rate
@@ -135,7 +142,8 @@ Constants live in `src/components/deck-config.ts` (mirrors the portfolio deck).
 
 - One `max-w-lg` column titled "Top cats", meta title "Top cats · Jake's Cats".
 - `getLeaderboard()` returns the most-hearted photos, ranked 1-based, hearts
-  descending then newest key first.
+  descending then newest key first. Deleted photos are excluded before the
+  20-entry limit.
 - One row per cat, the whole row a link to that cat's page: rank number (`w-6`,
   right-aligned, `tabular-nums`), 96px square thumbnail
   (`size-24 rounded-xl object-cover`), then `♥ n` as text.
@@ -145,10 +153,12 @@ Constants live in `src/components/deck-config.ts` (mirrors the portfolio deck).
 
 - Loader is `getPhoto({ data: { id } })`; an unknown or unmanaged id throws
   TanStack `notFound()`, rendering "That cat wandered off." with a link home.
-  Meta title "A cat · Jake's Cats", `og:image` set to the photo URL.
-- Anatomy, top to bottom: the photo at `max-w-md rounded-2xl`; a row with the
-  heart-count chip and the shared heart button (same optimistic, idempotent,
-  disabled-when-hearted semantics as the deck); then the comments section.
+  Meta title "A cat · Jake's Cats", `og:image` set to the photo URL, and
+  `og:url` set to that photo's canonical `https://jakes.cat/photos/<id>` URL.
+- Anatomy, top to bottom: "Back to the deck" link; the photo at
+  `max-w-md rounded-2xl`; a row with the heart-count chip and shared heart
+  button (same optimistic, idempotent, disabled-when-hearted semantics as the
+  deck); then the comments section.
 - Comments list, newest first: author line (`You` when the visitor wrote it,
   otherwise `Anonymous`) with a relative timestamp ("just now", "3m ago", "2d
   ago", then a short date), and the body with
@@ -157,9 +167,10 @@ Constants live in `src/components/deck-config.ts` (mirrors the portfolio deck).
   `n / 280` counter, placeholder "Say something nice about this cat"; the submit
   button reads "Post comment" ("Posting…" while in flight) and is disabled while
   the trimmed body is empty or a submit is in flight. Success prepends the
-  returned comment and clears the field; rejection toasts the message.
-- Relative time is a tiny pure helper (`components/relative-time.ts`) — no date
-  library.
+  returned comment and clears only the submitted draft. Edits made during the
+  request are preserved; rejection toasts the message and retains the draft.
+- Relative time is a pure helper (`components/relative-time.ts`) using Effect
+  DateTime.
 
 ## Accessibility
 

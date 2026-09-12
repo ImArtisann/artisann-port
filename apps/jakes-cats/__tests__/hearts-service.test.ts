@@ -1,10 +1,9 @@
 /**
  * Heart, comment, and registry behavior. D1 lives behind a fake that executes
  * exactly the statements the service prepares, in the same order, so the tests
- * pin the SQL contract — one heart per visitor, one row per comment, ranks
- * ordered by hearts then key — without a database. The comment action is
- * exercised through the full `HeartService`, with a scripted moderation
- * provider standing in for profanity.dev.
+ * pin the SQL contract — one heart per visitor, one row per comment — without a
+ * database. The comment action is exercised through the full `HeartService`,
+ * with a scripted moderation provider standing in for profanity.dev.
  */
 import { describe, expect, it } from "vite-plus/test";
 import * as Effect from "effect/Effect";
@@ -27,7 +26,6 @@ import {
     HEARTS_COUNTS_SQL,
     HEARTS_HEARTED_SQL,
     HEARTS_HEART_SQL,
-    HEARTS_TOP_SQL,
     HeartsBinding,
     HeartsError,
     HeartsLive,
@@ -54,7 +52,6 @@ interface FakeComment {
 }
 
 const CATS_KEY = "cats/123456789012345678.webp";
-const OTHER_CATS_KEY = "cats/123456789012345679.webp";
 const LIFE_KEY = "life/123456789012345678.webp";
 
 const VISITOR_A = "0123456789abcdef0123456789abcdef";
@@ -85,7 +82,7 @@ class FakeHeartsDatabase implements HeartsD1Binding {
         this.hearts.set(key, existing);
     }
 
-    /** `HEARTS_COUNTS_SQL` / `HEARTS_TOP_SQL`: one row per hearted key, best first. */
+    /** `HEARTS_COUNTS_SQL`: one row per hearted key, best first. */
     talliesOf(tag: string): ReadonlyArray<HeartsRawRow> {
         const scripted = this.scriptedTallies.get(tag);
         if (scripted !== undefined) return scripted;
@@ -183,13 +180,6 @@ class FakeStatement implements HeartsStatement {
         if (this.query === HEARTS_COUNTS_SQL) {
             return { results: this.database.talliesOf(this.values[0] ?? "") };
         }
-        if (this.query === HEARTS_TOP_SQL) {
-            return {
-                results: this.database
-                    .talliesOf(this.values[0] ?? "")
-                    .slice(0, Number(this.values[1])),
-            };
-        }
         if (this.query === HEARTS_HEARTED_SQL) {
             return { results: this.database.heartedKeys(this.values[0] ?? "") };
         }
@@ -240,9 +230,6 @@ const heartedBy = (visitorId: string) =>
 const heart = (key: string, visitorId: string) =>
     Effect.flatMap(HeartsService, (service) => service.heart(key, visitorId));
 
-const top = (tag: PhotoTag, limit: number) =>
-    Effect.flatMap(HeartsService, (service) => service.top(tag, limit));
-
 const register = (key: string, tag: PhotoTag, uploadedAt: string) =>
     Effect.flatMap(HeartsService, (service) => service.register(key, tag, uploadedAt));
 
@@ -281,20 +268,6 @@ describe("HeartsService", () => {
         await runHearts(heart(LIFE_KEY, VISITOR_B), database);
 
         expect([...(await runHearts(heartedBy(VISITOR_A), database))]).toEqual([CATS_KEY]);
-    });
-
-    it("ranks by hearts and breaks ties with the newest key", async () => {
-        const database = new FakeHeartsDatabase();
-        await runHearts(heart(CATS_KEY, VISITOR_A), database);
-        await runHearts(heart(CATS_KEY, VISITOR_B), database);
-        await runHearts(heart(OTHER_CATS_KEY, VISITOR_A), database);
-        await runHearts(heart(LIFE_KEY, VISITOR_A), database);
-
-        expect(await runHearts(top("cats", 10), database)).toEqual([
-            { key: CATS_KEY, likes: 2 },
-            { key: OTHER_CATS_KEY, likes: 1 },
-        ]);
-        expect(await runHearts(top("cats", 1), database)).toEqual([{ key: CATS_KEY, likes: 2 }]);
     });
 
     it("fails the read on a corrupt row instead of defaulting", async () => {

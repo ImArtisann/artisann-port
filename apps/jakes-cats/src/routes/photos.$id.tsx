@@ -1,9 +1,13 @@
 import { useState } from "react";
 import * as DateTime from "effect/DateTime";
-import { Link, createFileRoute } from "@tanstack/react-router";
+import * as Schema from "effect/Schema";
+import { Link, createFileRoute, notFound } from "@tanstack/react-router";
 import {
     MAX_COMMENT_LENGTH,
     MAX_COMMENTS_PER_PHOTO,
+    PhotoInput,
+    SITE_URL,
+    photoPagePath,
     type PhotoComment,
     type PhotoDetail,
 } from "../contracts.ts";
@@ -15,17 +19,30 @@ import { failureMessage } from "../components/toast-message.ts";
 import { addComment, getPhoto, likePhoto } from "../server-fns.ts";
 
 export const Route = createFileRoute("/photos/$id")({
-    loader: ({ params }) => getPhoto({ data: { id: params.id } }),
+    loader: ({ params }) => {
+        const input = { id: params.id };
+        // An id outside the managed grammar is not a missing cat, it is not a
+        // cat page at all: refuse it here so the strict decoder never throws a
+        // SchemaError at the browser.
+        if (!Schema.is(PhotoInput)(input)) throw notFound();
+        return getPhoto({ data: input });
+    },
     component: PhotoPage,
     notFoundComponent: CatNotFound,
     pendingComponent: Pending,
     head: ({ loaderData }) => {
-        const url = loaderData?.photo.url;
+        const photo = loaderData?.photo;
+        // The validated loader's key is the canonical identity; the page
+        // advertises itself rather than whichever host the request arrived on.
+        const pagePath = photo === undefined ? null : photoPagePath(photo.key);
         return {
-            meta:
-                url === undefined
-                    ? [{ title: "A cat · Jake's Cats" }]
-                    : [{ title: "A cat · Jake's Cats" }, { property: "og:image", content: url }],
+            meta: [
+                { title: "A cat · Jake's Cats" },
+                ...(photo === undefined ? [] : [{ property: "og:image", content: photo.url }]),
+                ...(pagePath === null
+                    ? []
+                    : [{ property: "og:url", content: `${SITE_URL}${pagePath}` }]),
+            ],
         };
     },
 });
@@ -70,13 +87,16 @@ function PhotoView({ detail }: { detail: PhotoDetail }) {
     const postComment = () => {
         const trimmed = body.trim();
         if (trimmed.length === 0 || sending) return;
+        const submitted = body;
         setSending(true);
         void addComment({ data: { key: photo.key, body: trimmed } })
             .then((result) => {
                 setComments((previous) =>
                     [result.comment, ...previous].slice(0, MAX_COMMENTS_PER_PHOTO),
                 );
-                setBody("");
+                // Clear only the draft this request submitted; anything typed
+                // while it was in flight is newer and stays put.
+                setBody((current) => (current === submitted ? "" : current));
             })
             .catch((error: Error) => {
                 setToast(failureMessage(error));

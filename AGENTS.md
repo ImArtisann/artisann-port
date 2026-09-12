@@ -94,9 +94,15 @@ shuffled, looping deck. `likePhoto` → edge ratelimit (per IP) → R2 `head()` 
 `INSERT … ON CONFLICT DO NOTHING` keyed `(photo_key, visitor_id)`, so a repeat
 heart never counts. `getLeaderboard` (`/top`) and `getPhoto` (`/photos/$id`,
 comments in `photo_comments`) read the same tables; `addComment` is rate limited
-and anonymous. `POST /api/photos` → Bearer `CONTENT_WRITER_TOKEN` → streamed 20
-MiB cap → Images binding → WebP → R2 `put` under the same managed key grammar
-the bot uses (synthetic snowflake id) → `photos` registry row. Contracts in
+and anonymous. Moderation sends only comment text to profanity.dev in
+overlapping windows of at most 35 words, with concurrency 2 and an eight-second
+total deadline; provider failures refuse the comment. Leaderboard eligibility is
+filtered against live R2 photos before taking the top 20. `POST /api/photos` →
+Bearer `CONTENT_WRITER_TOKEN` → streamed 20 MiB file cap (multipart body capped
+before parsing, plus 64 KiB framing) → Images binding → WebP → create-only R2
+`put` under the same managed key grammar the bot uses (synthetic snowflake id) →
+`photos` registry row. Failed registration deletes the new object; failed
+cleanup is logged and never reported as success. Contracts in
 `apps/jakes-cats/src/contracts.ts` are browser-safe; server code lives under
 `apps/jakes-cats/src/server`.
 

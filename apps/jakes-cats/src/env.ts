@@ -3,8 +3,8 @@ import type { R2Bucket } from "@cloudflare/workers-types";
 import type { PhotosR2Binding } from "@artisann-port/presence/photos";
 import type { WebsiteEnv } from "../alchemy.run.ts";
 
-/** The R2 surface this site drives: gallery listing plus upload and probe. */
-export type PhotosR2MutationBinding = PhotosR2Binding & Pick<R2Bucket, "put" | "head">;
+/** The R2 surface this site drives: gallery listing plus upload, probe, and rollback. */
+export type PhotosR2MutationBinding = PhotosR2Binding & Pick<R2Bucket, "put" | "head" | "delete">;
 
 /** Cloudflare's simple edge rate limiter, as far as hearts and comments use it. */
 export interface VisitorRateLimitBinding {

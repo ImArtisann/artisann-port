@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useEffect, useRef, type ReactNode } from "react";
 import { ActionBar } from "../components/action-bar.tsx";
 import { CatDeck, DeckSkeleton, type DeckHandle } from "../components/cat-deck.tsx";
@@ -103,7 +103,8 @@ function Pending() {
     );
 }
 
-function Failed({ reset }: { reset: () => void }) {
+function Failed() {
+    const router = useRouter();
     return (
         <Frame>
             <DeckPanel
@@ -112,7 +113,10 @@ function Failed({ reset }: { reset: () => void }) {
                 action={
                     <button
                         type="button"
-                        onClick={reset}
+                        // Invalidation reruns the getDeck loader; the router owns the
+                        // pending and repeat-failure states, and a fresh match resets
+                        // this error boundary.
+                        onClick={() => void router.invalidate()}
                         className="bg-heart focus-visible:ring-ink focus-visible:ring-offset-cream mt-1 rounded-full px-5 py-2.5 text-sm font-semibold text-white focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                     >
                         Try again

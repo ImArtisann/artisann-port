@@ -28,6 +28,7 @@ import { PhotoTag } from "@artisann-port/presence/photos";
 import { MAX_UPLOAD_BYTES, type UploadResult } from "../contracts.ts";
 import { env } from "../env.ts";
 import { isAuthorized } from "../server/auth.ts";
+import { capRequestBody, isBodyTooLarge } from "../server/body-limit.ts";
 import { runServer } from "../server/layer.ts";
 import { UploadError, UploadService } from "../server/upload-service.ts";
 
@@ -41,6 +42,8 @@ type ApiBody = ApiErrorBody | UploadResult;
 /**
  * Multipart framing (boundaries, headers, field names) rides on top of the
  * file itself, so a declared length is only rejected well past the real cap.
+ * This ceiling bounds the framing a parser may buffer; the file bytes inside
+ * still have to satisfy the smaller `MAX_UPLOAD_BYTES` cap.
  */
 const MULTIPART_FRAMING_BYTES = 64 * 1024;
 
@@ -106,7 +109,10 @@ function firstFile(form: FormData): File | undefined {
 /**
  * The upload bytes as a stream. Multipart bodies are decoded so `curl -F` and
  * Shortcuts that post a form both work; anything else is read as the raw body.
- * The size cap is enforced downstream on the streamed bytes.
+ * The multipart parser buffers what it is handed, so the request is capped on
+ * its real byte stream before `formData()` reads it — a missing or lying
+ * `Content-Length` never widens the ceiling. The file's own bytes are capped
+ * downstream as well, on the stream that reaches storage.
  */
 function readUploadBody(
     request: Request,
@@ -116,10 +122,12 @@ function readUploadBody(
         return Effect.succeed(request.body ?? new Uint8Array());
     }
 
+    const bounded = capRequestBody(request, MAX_UPLOAD_BYTES + MULTIPART_FRAMING_BYTES);
     return Effect.gen(function* () {
         const form = yield* Effect.tryPromise({
-            try: () => request.formData(),
-            catch: () => new UploadError({ reason: "InvalidImage" }),
+            try: () => bounded.formData(),
+            catch: (cause) =>
+                new UploadError({ reason: isBodyTooLarge(cause) ? "TooLarge" : "InvalidImage" }),
         });
         const file = firstFile(form);
         if (file === undefined) return yield* new UploadError({ reason: "InvalidImage" });

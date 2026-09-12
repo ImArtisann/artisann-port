@@ -1,4 +1,4 @@
-import { useCallback, useImperativeHandle, useRef, useState, type Ref } from "react";
+import { useCallback, useEffect, useImperativeHandle, useRef, useState, type Ref } from "react";
 import { Link } from "@tanstack/react-router";
 import { animate, motion, useMotionValue, useReducedMotion, useTransform } from "motion/react";
 import { photoIdFromKey, type DeckPhoto } from "../contracts.ts";
@@ -82,6 +82,8 @@ export function CatDeck({
     const likeOpacity = useTransform(x, [0, SWIPE_OFFSET_PX], [0, 1]);
     const skipOpacity = useTransform(x, [-SWIPE_OFFSET_PX, 0], [1, 0]);
     const busy = useRef(false);
+    /** Completes an exit whose animation was stopped before it could report back. */
+    const finishExit = useRef<() => void>(() => {});
     const [exiting, setExiting] = useState(false);
     const [failed, setFailed] = useState<ReadonlySet<string>>(() => new Set());
     const photoId = photoIdFromKey(current.key);
@@ -90,6 +92,12 @@ export function CatDeck({
         setFailed((previous) => new Set(previous).add(key));
     }, []);
 
+    // Anything that stops the exit animation — a fresh drag grabbing the card
+    // during the commit window, or motion's own drag bookkeeping — leaves its
+    // promise forever unsettled. Finish the exit instead of stranding the busy
+    // flag, which would disable the deck for good.
+    useEffect(() => x.on("animationCancel", () => finishExit.current()), [x]);
+
     const swipe = useCallback(
         (direction: SwipeDirection) => {
             if (busy.current) return;
@@ -97,7 +105,9 @@ export function CatDeck({
             setExiting(true);
             const target = (direction === "right" ? 1 : -1) * EXIT_DISTANCE_PX;
             const land = () => {
+                if (!busy.current) return;
                 busy.current = false;
+                finishExit.current = () => {};
                 setExiting(false);
                 // Reset before the promoted card binds this motion value: the deck
                 // re-renders with the next photo at rest, never mid-exit.
@@ -110,6 +120,10 @@ export function CatDeck({
                 return;
             }
             void animate(x, target, EXIT_SPRING).then(land);
+            // Armed only once the exit owns `x`: starting it stops whatever
+            // animation `x` was running, and that cancel is not an interruption.
+            // From here on, a stop means the exit can never report completion.
+            finishExit.current = land;
         },
         [onResolve, reduceMotion, x],
     );
@@ -145,8 +159,18 @@ export function CatDeck({
                 dragConstraints={{ left: 0, right: 0 }}
                 dragElastic={reduceMotion ? 0 : DRAG_ELASTIC}
                 dragMomentum={false}
-                onDragStart={() => x.stop()}
+                onDragStart={() => {
+                    // An in-flight exit owns `x` until `land` runs. Stopping it here
+                    // would drop the exit's completion callback, leaving the deck
+                    // stuck on a busy flag that never clears.
+                    if (busy.current) return;
+                    x.stop();
+                }}
                 onDragEnd={(_, info) => {
+                    // A release that lands mid-exit must not animate `x` back and
+                    // replace the exit target: that stop cancels the exit's
+                    // completion, stranding `busy`/`exiting` and disabling the deck.
+                    if (busy.current) return;
                     const direction = commitDirection(info.offset.x, info.velocity.x);
                     if (direction === null) {
                         void animate(x, 0, SNAP_BACK_SPRING);

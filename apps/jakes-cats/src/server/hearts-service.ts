@@ -2,7 +2,7 @@
  * Hearts, comments, and the photo registry live in D1. This module owns every
  * statement the site issues against `photo_hearts`, `photo_comments`, and
  * `photos` — the deck's counts and this visitor's hearts, the leaderboard's
- * ranking, a photo page's comments, and the registry row an upload claims.
+ * heart counts, a photo page's comments, and the registry row an upload claims.
  *
  * Rows are decoded with Schema, so a corrupt row fails the read instead of
  * silently defaulting to zero hearts, and comments are shaped before they
@@ -49,26 +49,12 @@ export interface HeartsD1Binding {
 }
 
 export class HeartsError extends Schema.TaggedError<HeartsError>()("Hearts.Error", {
-    operation: Schema.Literals([
-        "counts",
-        "hearted",
-        "heart",
-        "top",
-        "register",
-        "comments",
-        "comment",
-    ]),
+    operation: Schema.Literals(["counts", "hearted", "heart", "register", "comments", "comment"]),
 }) {}
 
 export class HeartsBinding extends Context.Service<HeartsBinding, HeartsD1Binding>()(
     "Hearts.Binding",
 ) {}
-
-/** One ranked photo: its key and its heart count. */
-export interface HeartTally {
-    readonly key: string;
-    readonly likes: number;
-}
 
 /** Every heart on one collection, grouped by photo. */
 export const HEARTS_COUNTS_SQL =
@@ -85,12 +71,6 @@ export const HEARTS_HEART_SQL =
 
 /** The authoritative count of one photo, read after the heart landed. */
 export const HEARTS_COUNT_SQL = "SELECT COUNT(*) AS likes FROM photo_hearts WHERE photo_key = ?1";
-
-/** The most-hearted photos of one collection; ties go to the newest key. */
-export const HEARTS_TOP_SQL =
-    "SELECT h.photo_key AS key, COUNT(*) AS likes FROM photo_hearts h " +
-    "WHERE h.photo_key LIKE ?1 || '/%' GROUP BY h.photo_key " +
-    "ORDER BY likes DESC, h.photo_key DESC LIMIT ?2";
 
 /** Claim a freshly uploaded photo; an existing row wins. */
 export const PHOTOS_REGISTER_SQL =
@@ -157,11 +137,6 @@ export interface HeartsOperations {
     readonly heartedBy: (visitorId: string) => Effect.Effect<ReadonlySet<string>, HeartsError>;
     /** Land one heart and return the authoritative count, unchanged on a repeat. */
     readonly heart: (key: string, visitorId: string) => Effect.Effect<number, HeartsError>;
-    /** The most-hearted photos of one collection, at most `limit` rows. */
-    readonly top: (
-        tag: PhotoTag,
-        limit: number,
-    ) => Effect.Effect<ReadonlyArray<HeartTally>, HeartsError>;
     /** Claim an uploaded photo; an existing row is left alone. */
     readonly register: (
         key: string,
@@ -243,17 +218,6 @@ export const HeartsLive = Layer.effect(
             return decoded.likes;
         });
 
-        const top = Effect.fn("Hearts.top")(function* (tag: PhotoTag, limit: number) {
-            const result = yield* Effect.tryPromise({
-                try: () => binding.prepare(HEARTS_TOP_SQL).bind(tag, limit).all(),
-                catch: () => new HeartsError({ operation: "top" }),
-            });
-            const rows = yield* decodeCountRows(result.results).pipe(
-                Effect.mapError(() => new HeartsError({ operation: "top" })),
-            );
-            return rows satisfies ReadonlyArray<HeartTally>;
-        });
-
         const register = Effect.fn("Hearts.register")(function* (
             key: string,
             tag: PhotoTag,
@@ -310,6 +274,6 @@ export const HeartsLive = Layer.effect(
             };
         });
 
-        return { countsFor, heartedBy, heart, top, register, commentsFor, addComment };
+        return { countsFor, heartedBy, heart, register, commentsFor, addComment };
     }),
 );

@@ -6,6 +6,7 @@
 import * as Context from "effect/Context";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
+import * as Exit from "effect/Exit";
 import * as Layer from "effect/Layer";
 import * as Schema from "effect/Schema";
 import * as Stream from "effect/Stream";
@@ -167,9 +168,13 @@ export const UploadLive = Layer.effect(
             const url = photoUrl(key, config.assetsHost);
             if (url === null) return yield* new UploadError({ reason: "Unavailable" });
 
-            yield* Effect.tryPromise({
+            // Create-only: a key that already exists is a collision, not a
+            // silent overwrite. Nothing this upload wrote then needs undoing,
+            // and the rollback below can only ever delete its own object.
+            const written = yield* Effect.tryPromise({
                 try: () =>
                     photos.put(key, stored, {
+                        onlyIf: { etagDoesNotMatch: "*" },
                         httpMetadata: {
                             contentType: "image/webp",
                             cacheControl: PHOTO_CACHE_CONTROL,
@@ -177,11 +182,31 @@ export const UploadLive = Layer.effect(
                     }),
                 catch: () => new UploadError({ reason: "Unavailable" }),
             });
+            if (written === null) return yield* new UploadError({ reason: "Unavailable" });
 
             const uploadedAt = DateTime.formatIso(yield* DateTime.now);
-            yield* hearts
-                .register(key, tag, uploadedAt)
-                .pipe(Effect.mapError(() => new UploadError({ reason: "Unavailable" })));
+            // The object is already live under its key; a photo D1 never
+            // claimed must not outlive the registration that failed, so the
+            // rollback deletes it. The delete names exactly the key this upload
+            // created, so no other object — in particular none that predates
+            // the create-only put — can be caught in the rollback.
+            const rollback = Effect.tryPromise({
+                try: () => photos.delete(key),
+                catch: () => new UploadError({ reason: "Unavailable" }),
+            }).pipe(
+                Effect.tapError(() => Effect.logError("Upload rollback failed", key)),
+                // The client still gets `Unavailable`: this photo was never
+                // registered, so the site does not publish it. If the delete
+                // failed too, the object can remain reachable under its key —
+                // the log is the trace of that, and it is never reported as
+                // success nor silently discarded.
+                Effect.ignore,
+            );
+
+            yield* hearts.register(key, tag, uploadedAt).pipe(
+                Effect.mapError(() => new UploadError({ reason: "Unavailable" })),
+                Effect.onExit((exit) => (Exit.isSuccess(exit) ? Effect.void : rollback)),
+            );
 
             return { key, url, tag, likes: 0 };
         });

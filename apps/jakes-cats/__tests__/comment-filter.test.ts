@@ -14,13 +14,25 @@ describe("spamProblem", () => {
         expect(spamProblem("~~~~~~~~~~~~~~~~~")).toBe("spam");
     });
 
+    it("counts astral characters the same as ASCII in floods", () => {
+        // Ten copies of one astral character is the same flood as "aaaaaaaaaa".
+        expect(spamProblem("🐱".repeat(10))).toBe("spam");
+        // 60% threshold: 12 astral + 8 ASCII still floods, 11 + 8 does not.
+        expect(spamProblem("🐱".repeat(12) + "abcdefgh")).toBe("spam");
+        expect(spamProblem("🐱".repeat(11) + "abcdefgh")).toBeNull();
+    });
+
     it("rejects link dumps as spam", () => {
         expect(spamProblem("https://free-cats.example")).toBe("spam");
         expect(spamProblem("buy now https://a.example and https://b.example")).toBe("spam");
+        // Nine astral characters beside one URL is still under ten.
+        expect(spamProblem(`https://a.example ${"🐱".repeat(9)}`)).toBe("spam");
     });
 
     it("rejects symbol floods as spam", () => {
         expect(spamProblem("🎉🎉🎉🎉🎉🎉🎉🎉")).toBe("spam");
+        // Astral letters count once each, so this is not a symbol flood.
+        expect(spamProblem("𝐜𝐚𝐭𝐬 𝐚𝐫𝐞 𝐠𝐫𝐞𝐚𝐭")).toBeNull();
     });
 
     it("allows ordinary comments", () => {
