@@ -27,12 +27,13 @@ import {
     ResponsiveDialogFooter,
 } from "@artisann-port/ui/components/responsive-dialog";
 import { Textarea } from "@artisann-port/ui/components/textarea";
-import { useAtomSet } from "@effect/atom-react";
+import { useAtomSet, useAtomValue } from "@effect/atom-react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import * as DateTime from "effect/DateTime";
 import * as Exit from "effect/Exit";
 import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
+import * as AsyncResult from "effect/unstable/reactivity/AsyncResult";
 import {
     Cancel01Icon,
     ChevronLeftIcon,
@@ -44,14 +45,17 @@ import {
     useEffect,
     useId,
     useLayoutEffect,
+    useMemo,
     useRef,
     useState,
+    useSyncExternalStore,
     type ComponentRef,
     type ReactNode,
 } from "react";
 import { SharedAtomRegistry } from "@/lib/atom-registry";
 import { useSiteContent } from "@/lib/content-client";
-import { NotesClient } from "@/lib/rpc-client";
+import { contentAtom, NotesClient, portfolioApiEndpoints } from "@/lib/rpc-client";
+import { reconcileOrder, shuffle } from "@/lib/shuffle";
 
 const NOTE_LIMIT = NOTE_BODY_MAX;
 const LOCAL_NOTES_KEY = "artisann:visitor-notes";
@@ -72,7 +76,75 @@ const LocalNote = Schema.Struct({
     submittedAt: VisitorNote.fields.submittedAt,
 });
 type LocalNote = typeof LocalNote.Type;
+/** A note shown in the carousel: a visitor's own draft or an approved server note. */
+type NoteEntry = LocalNote | VisitorNote;
 const decodeLocalNotes = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Array(LocalNote)));
+
+/**
+ * The page mounts two VisitorNotes placements (mobile and lg). Both must see a
+ * note the moment it is submitted — a visitor who posts on mobile and then
+ * crosses the lg breakpoint must not lose it until reload. localStorage alone
+ * does not notify same-tab writers, so the local list lives in a module store
+ * that persists on every write and notifies every mounted instance.
+ */
+interface LocalNotesState {
+    readonly notes: readonly LocalNote[];
+    readonly loaded: boolean;
+}
+
+const readStoredNotes = (): readonly LocalNote[] => {
+    try {
+        const stored = window.localStorage.getItem(LOCAL_NOTES_KEY);
+        if (stored === null) return [];
+        const decoded = decodeLocalNotes(stored);
+        return Option.isSome(decoded) ? decoded.value : [];
+    } catch {
+        // Storage may be blocked; notes submitted this visit still appear immediately.
+        return [];
+    }
+};
+
+let localNotesState: LocalNotesState = { notes: [], loaded: false };
+const localNotesListeners = new Set<() => void>();
+
+const setSharedLocalNotes = (update: (previous: readonly LocalNote[]) => readonly LocalNote[]) => {
+    const next = update(localNotesState.notes);
+    if (next === localNotesState.notes) return;
+    localNotesState = { notes: next, loaded: true };
+    try {
+        window.localStorage.setItem(LOCAL_NOTES_KEY, JSON.stringify(next));
+    } catch {
+        // Persistence failed, so the stored copy still names the reconciled
+        // ids. Drop it: a reload must not restore a note the server no longer
+        // has — or one it never saw.
+        try {
+            window.localStorage.removeItem(LOCAL_NOTES_KEY);
+        } catch {
+            // Storage stays unavailable; the in-memory state still applies.
+        }
+    }
+    for (const listener of localNotesListeners) listener();
+};
+
+const subscribeLocalNotes = (listener: () => void) => {
+    localNotesListeners.add(listener);
+    return () => localNotesListeners.delete(listener);
+};
+
+const useSharedLocalNotes = (): LocalNotesState => {
+    const state = useSyncExternalStore(
+        subscribeLocalNotes,
+        () => localNotesState,
+        () => localNotesState,
+    );
+    useEffect(() => {
+        if (localNotesState.loaded) return;
+        const stored = readStoredNotes();
+        localNotesState = { notes: stored, loaded: true };
+        for (const listener of localNotesListeners) listener();
+    }, []);
+    return state;
+};
 
 /**
  * The composer ships disabled until the owner publishes the Turnstile site key AND flips the
@@ -183,43 +255,45 @@ function VisitorNotesContent({ initial }: { initial: SiteContent }) {
     const id = useId();
     const content = useSiteContent(initial);
     const notes = content.notes;
-    const [localNotes, setLocalNotes] = useState<readonly LocalNote[]>([]);
-    useEffect(() => {
-        try {
-            const stored = window.localStorage.getItem(LOCAL_NOTES_KEY);
-            if (stored === null) return;
-            const decoded = decodeLocalNotes(stored);
-            if (Option.isSome(decoded)) setLocalNotes(decoded.value);
-        } catch {
-            // Storage may be blocked; notes submitted this visit still appear immediately.
-        }
-    }, []);
-    const allNotes = [
-        ...localNotes.filter((localNote) => !notes.some((note) => note.id === localNote.id)),
-        ...notes,
-    ];
+    // Read the same atom the content hook renders to tell "no notes" apart from "not known
+    // yet": an unresolved or failed document read must never be published as an empty list,
+    // which is what a first visit saw while the request was still in flight.
+    const contentResult = useAtomValue(contentAtom(portfolioApiEndpoints.rpcUrl));
+    const notesKnown = Option.isSome(AsyncResult.value(contentResult));
+    const { notes: localNotes, loaded: localNotesLoaded } = useSharedLocalNotes();
+    const allNotes = useMemo(
+        () => [
+            ...localNotes.filter((localNote) => !notes.some((note) => note.id === localNote.id)),
+            ...notes,
+        ],
+        [localNotes, notes],
+    );
+    /**
+     * The shuffled browse order, seeded from the first non-empty list before paint so which note
+     * greets a visitor varies per reload. Later documents reconcile by id — an approved local
+     * note, an owner edit or a fresh approval keeps the visited order and appends — so browsing
+     * never reshuffles mid-carousel.
+     */
+    const [orderedNotes, setOrderedNotes] = useState<readonly NoteEntry[]>([]);
+    useLayoutEffect(() => {
+        setOrderedNotes((previous) => {
+            if (allNotes.length === 0) return previous.length === 0 ? previous : [];
+            if (previous.length === 0) return shuffle(allNotes);
+            return reconcileOrder(previous, allNotes, (note) => note.id);
+        });
+    }, [allNotes]);
+    // The shuffle lands before paint, so the unshuffled list is only the server's first pass.
+    const displayNotes = orderedNotes.length > 0 ? orderedNotes : allNotes;
     // An approved note becomes server-authoritative under the same id. Prune the
     // local copy and persist the reduction: otherwise an owner deletion leaves no
     // server note, and a reload would resurrect the stale local record.
     useEffect(() => {
         if (notes.length === 0) return;
-        setLocalNotes((previous) => {
+        setSharedLocalNotes((previous) => {
             const remaining = previous.filter(
                 (localNote) => !notes.some((note) => note.id === localNote.id),
             );
             if (remaining.length === previous.length) return previous;
-            try {
-                window.localStorage.setItem(LOCAL_NOTES_KEY, JSON.stringify(remaining));
-            } catch {
-                // Persistence failed, so the stored copy still names the
-                // reconciled ids. Drop it: a reload must not restore a note the
-                // server no longer has.
-                try {
-                    window.localStorage.removeItem(LOCAL_NOTES_KEY);
-                } catch {
-                    // Storage stays unavailable; the in-memory reduction applies.
-                }
-            }
             return remaining;
         });
     }, [notes]);
@@ -235,9 +309,9 @@ function VisitorNotesContent({ initial }: { initial: SiteContent }) {
     const [noteHeight, setNoteHeight] = useState<number>();
     const activeIndex = Math.max(
         0,
-        allNotes.findIndex((note) => note.id === selectedId),
+        displayNotes.findIndex((note) => note.id === selectedId),
     );
-    const active = allNotes[activeIndex];
+    const active = displayNotes[activeIndex];
 
     useLayoutEffect(() => {
         const element = activeNoteRef.current;
@@ -265,7 +339,8 @@ function VisitorNotesContent({ initial }: { initial: SiteContent }) {
     const unavailableId = `${id}-unavailable`;
 
     const step = (delta: 1 | -1) => {
-        const next = allNotes[(activeIndex + delta + allNotes.length) % allNotes.length];
+        const next =
+            displayNotes[(activeIndex + delta + displayNotes.length) % displayNotes.length];
         if (next !== undefined) {
             setDirection(delta);
             setSelectedId(next.id);
@@ -333,17 +408,11 @@ function VisitorNotesContent({ initial }: { initial: SiteContent }) {
             body: trimmedBody,
             submittedAt: DateTime.formatIso(DateTime.nowUnsafe()),
         };
-        const nextLocalNotes = [
+        setSharedLocalNotes((previous) => [
             submitted,
-            ...localNotes.filter((localNote) => localNote.id !== id),
-        ];
-        setLocalNotes(nextLocalNotes);
+            ...previous.filter((localNote) => localNote.id !== id),
+        ]);
         setSelectedId(id);
-        try {
-            window.localStorage.setItem(LOCAL_NOTES_KEY, JSON.stringify(nextLocalNotes));
-        } catch {
-            // A storage failure must not hide an accepted note from this visit.
-        }
         setSubmitState("sent");
         setFeedback("Shown here and sent for review. It will be public after approval.");
     };
@@ -377,7 +446,7 @@ function VisitorNotesContent({ initial }: { initial: SiteContent }) {
             role="region"
             aria-labelledby={`${id}-heading`}
             data-portfolio-section="visitor-notes"
-            className="relative min-h-52.25 gap-3 overflow-hidden"
+            className="relative h-full min-h-52.25 gap-3 overflow-hidden"
         >
             <span
                 aria-hidden="true"
@@ -390,8 +459,12 @@ function VisitorNotesContent({ initial }: { initial: SiteContent }) {
                 {active === undefined ? (
                     <CardDescription>
                         A thought, a hello, or something kind.
-                        <br />
-                        Be the first to leave one.
+                        {notesKnown && localNotesLoaded ? (
+                            <>
+                                <br />
+                                Be the first to leave one.
+                            </>
+                        ) : null}
                     </CardDescription>
                 ) : (
                     // Plain text nodes only: notes are never interpreted as markup.
@@ -434,9 +507,9 @@ function VisitorNotesContent({ initial }: { initial: SiteContent }) {
                         variant="ghost"
                         size="icon-carousel"
                         className="size-11 lg:size-11"
-                        disabled={allNotes.length < 2}
+                        disabled={displayNotes.length < 2}
                         aria-label="Previous note"
-                        title={allNotes.length === 0 ? "No notes yet" : undefined}
+                        title={displayNotes.length === 0 ? "No notes yet" : undefined}
                         onClick={() => step(-1)}
                     >
                         <HugeiconsIcon icon={ChevronLeftIcon} aria-hidden="true" />
@@ -445,9 +518,9 @@ function VisitorNotesContent({ initial }: { initial: SiteContent }) {
                         variant="ghost"
                         size="icon-carousel"
                         className="size-11 lg:size-11"
-                        disabled={allNotes.length < 2}
+                        disabled={displayNotes.length < 2}
                         aria-label="Next note"
-                        title={allNotes.length === 0 ? "No notes yet" : undefined}
+                        title={displayNotes.length === 0 ? "No notes yet" : undefined}
                         onClick={() => step(1)}
                     >
                         <HugeiconsIcon icon={ChevronRightIcon} aria-hidden="true" />

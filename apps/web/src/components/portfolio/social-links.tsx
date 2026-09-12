@@ -11,7 +11,6 @@ import {
     YoutubeIcon,
 } from "@hugeicons-pro/core-solid-rounded";
 import type { SiteContent, SocialIcon } from "@artisann-port/presence/content";
-import { CardContent } from "@artisann-port/ui/components/card";
 import { SharedAtomRegistry } from "@/lib/atom-registry";
 import { useSiteContent } from "@/lib/content-client";
 
@@ -28,45 +27,37 @@ const ICONS = {
     link: Link01Icon,
 } satisfies Record<SocialIcon, typeof GithubIcon>;
 
-/** The "Elsewhere" card body: icon rows keyed by the content document's icon literal. */
+/** Compact icon-only strip keyed by the content document's icon literal. */
 function SocialLinksContent({ initial }: { initial: SiteContent }) {
     const content = useSiteContent(initial);
 
     if (content.socials.length === 0) {
-        return (
-            <CardContent>
-                <p className="text-caption text-muted-foreground">Nowhere else yet.</p>
-            </CardContent>
-        );
+        return <p className="text-caption text-muted-foreground">Nowhere else yet.</p>;
     }
 
     return (
-        <CardContent>
-            <ul className="flex min-h-11 flex-wrap items-center gap-3 lg:min-h-10">
-                {content.socials.map(({ id, icon, label, url }) => {
-                    const Icon = ICONS[icon];
-                    return (
-                        <li
-                            key={id}
-                            className="h-11 min-w-0 basis-[calc((100%_-_1.5rem)/3)] grow lg:h-10"
+        <ul aria-label="Elsewhere" className="flex flex-wrap items-center gap-3">
+            {content.socials.map(({ id, icon, label, url }) => {
+                const Icon = ICONS[icon];
+                return (
+                    <li key={id}>
+                        <a
+                            href={url}
+                            aria-label={label}
+                            title={label}
+                            className="flex size-11 items-center justify-center text-primary lg:size-9"
                         >
-                            <a
-                                href={url}
-                                className="flex h-full items-center gap-2 text-label leading-[1.375rem] font-medium text-primary lg:leading-5"
-                            >
-                                <HugeiconsIcon
-                                    icon={Icon}
-                                    size={16}
-                                    className="shrink-0"
-                                    aria-hidden="true"
-                                />
-                                <span className="truncate">{label}</span>
-                            </a>
-                        </li>
-                    );
-                })}
-            </ul>
-        </CardContent>
+                            <HugeiconsIcon
+                                icon={Icon}
+                                size={18}
+                                className="shrink-0"
+                                aria-hidden="true"
+                            />
+                        </a>
+                    </li>
+                );
+            })}
+        </ul>
     );
 }
 

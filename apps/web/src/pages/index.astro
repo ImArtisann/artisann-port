@@ -73,7 +73,7 @@ const navLink = "flex h-11 items-center px-1.5 text-sm leading-[1.5] lg:h-auto l
             id="main-content"
             data-portfolio-section="page-grid"
             data-design-node="rN8gr"
-            class="flex min-w-0 flex-col gap-6 lg:grid lg:grid-cols-[304px_minmax(0,352fr)_minmax(0,208fr)_minmax(0,400fr)] lg:gap-4"
+            class="flex min-w-0 flex-col gap-6 lg:grid lg:grid-cols-[304px_minmax(0,352fr)_minmax(240px,208fr)_minmax(0,400fr)] lg:gap-4"
         >
             <aside
                 aria-label="About Artisann"
@@ -136,8 +136,11 @@ const navLink = "flex h-11 items-center px-1.5 text-sm leading-[1.5] lg:h-auto l
                 class="flex min-w-0 flex-col gap-6 lg:col-start-2 lg:row-start-3 lg:gap-4"
             >
                 <MusicStatus client:load />
-                <VisitorNotes initial={content} client:load />
+                <div data-portfolio-section="socials" data-design-node="I7lMtH">
+                    <SocialLinks initial={content} client:load />
+                </div>
             </div>
+
 
             <Card
                 data-portfolio-section="open-source"
@@ -181,7 +184,7 @@ const navLink = "flex h-11 items-center px-1.5 text-sm leading-[1.5] lg:h-auto l
             <div
                 data-portfolio-section="experience-socials"
                 data-design-node="usrua"
-                class="grid min-w-0 gap-6 lg:col-span-2 lg:col-start-3 lg:row-start-3 lg:min-h-90 lg:grid-rows-[1fr_auto] lg:gap-4"
+                class="grid min-w-0 gap-6 lg:col-span-2 lg:col-start-3 lg:row-start-3 lg:gap-4"
             >
                 <Card
                     size="sm"
@@ -196,29 +199,28 @@ const navLink = "flex h-11 items-center px-1.5 text-sm leading-[1.5] lg:h-auto l
                     </CardHeader>
                     <WorkExperience initial={content} client:load />
                 </Card>
-
-                <Card
-                    size="sm"
-                    data-portfolio-section="socials"
-                    data-design-node="I7lMtH"
-                    className="gap-2"
-                >
-                    <CardHeader>
-                        <CardTitle>
-                            <h2 id="socials-heading">Elsewhere</h2>
-                        </CardTitle>
-                    </CardHeader>
-                    <SocialLinks initial={content} client:load />
-                </Card>
             </div>
 
             <div
                 data-portfolio-section="status-weather"
                 data-design-node="oaer3"
-                class="grid min-w-0 gap-6 lg:col-start-4 lg:row-start-2 lg:min-h-64 lg:grid-rows-[1fr_1fr] lg:gap-4"
+                class="grid min-w-0 gap-6 lg:col-start-4 lg:row-start-2 lg:min-h-64 lg:grid-rows-[auto_auto_1fr] lg:gap-4"
             >
                 <PresenceStatus client:load />
                 <WeatherWidget client:load />
+                <div class="h-full min-h-52.25 max-lg:hidden">
+                    <VisitorNotes initial={content} client:load />
+                </div>
+            </div>
+
+            {/*
+              Mobile placement only: on lg the notes card is the 1fr child of
+              the status-weather stack so it fills the tall open-source row
+              with the same 16px gap as every other card. Two instances, same
+              pattern as LifeGallery's desktop/mobile variants.
+            */}
+            <div class="min-w-0 lg:hidden">
+                <VisitorNotes initial={content} client:load />
             </div>
 
             <div
