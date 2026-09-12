@@ -24,9 +24,13 @@ The visitor note composer stays disabled during local development. Use
 `bun run dev:web` to start only the website when the bot is already running
 elsewhere.
 
-Run `bun run deploy --yes` to deploy the presence Worker and the Astro website
-to Cloudflare. The Discord container remains outside this deployment command;
-Coolify deploys it from GitHub webhooks.
+Run `bun run deploy --yes` to deploy the presence Worker, the Astro website, and
+the jakes.cat Worker to Cloudflare, each at `--stage prod`. The Discord
+container remains outside this deployment command; Coolify deploys it from
+GitHub webhooks. The shared deployment token is minted by `stacks/github.ts` and
+stored by the admin bootstrap (`bun run deploy:github`); widening its Cloudflare
+zone policy there does not touch already-stored Actions secrets until that
+bootstrap re-runs.
 
 ## jakes.cat
 
@@ -35,8 +39,9 @@ from the shared R2 bucket in a shuffled, looping deck, swipes right to heart
 one, sees the heart count, browses the most-hearted cats at `/top`, and leaves
 anonymous comments on `/photos/<id>`. Visitors are identified by an HttpOnly
 `jc_visitor` cookie, so a second heart from the same browser does not count. It
-is its own Alchemy stack (`JakesCats`) with its own deploy command, and it is
-not part of `bun run deploy`.
+is its own Alchemy stack (`JakesCats`) with its own deploy command;
+`bun run deploy` includes it, and `bun run deploy:cats --yes` still works
+standalone.
 
 Comments are checked for local spam patterns and sent to profanity.dev for
 moderation. Only the comment text is sent, not the visitor ID. Long comments use
@@ -60,8 +65,9 @@ Cloudflare Images binding for WebP conversion, an edge rate limiter for hearts
 and comments, and binds the existing assets bucket **by name**. It never creates
 or deletes the bucket. Deploy reads `CONTENT_WRITER_TOKEN` (shared with the
 presence Worker and the bot), `ASSETS_HOST`, and `ASSETS_BUCKET_NAME` from the
-process environment; the Cloudflare token needs D1 Write, Workers Scripts Write,
-and Zone/DNS access for the `jakes.cat` zone.
+process environment; the deployment token needs D1 Write and Workers Scripts
+Write at the account level, plus Zone Read, DNS Write, and Workers Routes Write
+on the `jakes.cat` zone.
 
 ### Uploading from an iPhone
 
@@ -169,9 +175,9 @@ interactive review buttons.
       environment and saved deployment secrets, including GitHub Actions, so a
       later deployment cannot restore the old value.
     - Deploy **both** Workers with the replacement:
-      `bun run deploy:presence --yes` and `bun run deploy:cats --yes`.
-      `bun run deploy` does not deploy the cats Worker. A failed cats deployment
-      leaves its token rotation unverified.
+      `bun run deploy:presence --yes` and `bun run deploy:cats --yes`, or one
+      `bun run deploy`. A failed cats deployment leaves its token rotation
+      unverified.
     - Replace the bot's `.env.discord` or container runtime value and the
       `Authorization` header in every installed Shortcut. Restart the bot with
       the new environment.

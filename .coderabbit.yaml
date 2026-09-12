@@ -27,6 +27,22 @@ reviews:
         - "!apps/jakes-cats/.tanstack/**"
         - "!apps/jakes-cats/.output/**"
         - "!apps/jakes-cats/.alchemy/**"
+    tools:
+        biome:
+            enabled: false
+        eslint:
+            enabled: false
+        github-checks:
+            enabled: true
+    path_instructions:
+        - path: "**"
+          instructions: >-
+              The root vite.config.ts is the sole lint/format authority for this
+              repo (vite-plus). CI runs `bun run check`, which runs Astro check
+              then `vp check` (type-aware Oxlint plus Effect and local plugins).
+              `bun run lint` is `vp lint` and `bun run format` is `vp fmt`. Do not
+              suggest Biome or ESLint configs, including to resolve Tailwind
+              syntax; rely on the GitHub Checks results from the real toolchain.
 
 chat:
     auto_reply: true

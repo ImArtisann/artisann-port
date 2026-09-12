@@ -47,6 +47,13 @@ export default Alchemy.Stack(
         if (!zone) {
             return yield* Effect.die(new Error('Cloudflare zone "artisann.dev" was not found'));
         }
+        const catsZone = yield* Cloudflare.Zone.findZoneByName({
+            accountId,
+            name: "jakes.cat",
+        }).pipe(Effect.orDie);
+        if (!catsZone) {
+            return yield* Effect.die(new Error('Cloudflare zone "jakes.cat" was not found'));
+        }
 
         const apiToken = yield* Cloudflare.ApiToken.AccountApiToken("DeploymentToken", {
             accountId,
@@ -74,6 +81,11 @@ export default Alchemy.Stack(
                         "Dynamic URL Redirects Write",
                     ],
                     resources: { [`com.cloudflare.api.account.zone.${zone.id}`]: "*" },
+                },
+                {
+                    effect: "allow",
+                    permissionGroups: ["Zone Read", "DNS Write", "Workers Routes Write"],
+                    resources: { [`com.cloudflare.api.account.zone.${catsZone.id}`]: "*" },
                 },
             ],
         });

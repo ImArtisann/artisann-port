@@ -81,11 +81,15 @@ Four Alchemy stacks, plus a one-shot GitHub bootstrap:
 - `apps/jakes-cats/alchemy.run.ts` — TanStack Start Worker, D1 (`photos`,
   `photo_hearts`, `photo_comments`), Images binding, visitor rate limiter, R2
   binding by name, prod-only `jakes.cat`.
-- `stacks/github.ts` — repo settings and the scoped Cloudflare token.
+- `stacks/github.ts` — repo settings and the Cloudflare deployment token, scoped
+  to the `artisann.dev` and `jakes.cat` zones.
 
 The presence and jakes-cats stacks **bind** the assets bucket by name. They must
 not provision it. Coolify deploys the Discord container; `bun run deploy`
-deploys neither the container nor jakes.cat (`bun run deploy:cats --yes`).
+deploys presence, the website, and jakes.cat (`bun run deploy:cats --yes` stays
+valid standalone). The GitHub bootstrap mints that token and writes the Actions
+secrets; re-run it (`bun run deploy:github`) to apply zone-policy changes,
+because editing the stack never rotates a stored secret.
 
 **jakes.cat.** Every server function resolves an anonymous visitor from the
 HttpOnly `jc_visitor` cookie (minted on first call). `getDeck` → R2 `list()` of
@@ -146,7 +150,7 @@ bun run build                       # vp run -r build (web + discord + assets)
 Deploy (production stage is mandatory):
 
 ```sh
-bun run deploy --yes                # presence then website, --stage prod
+bun run deploy --yes                # presence, website, then cats, --stage prod
 bun run deploy:presence --yes
 bun run deploy:website --yes
 bun run deploy:cats --yes           # jakes.cat stack, --stage prod
