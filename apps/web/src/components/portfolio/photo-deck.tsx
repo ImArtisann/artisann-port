@@ -1,4 +1,5 @@
 import { photoAtom, portfolioApiEndpoints } from "@/lib/rpc-client";
+import { reconcileOrder, shuffle } from "@/lib/shuffle";
 import type { Photo, PhotoTag } from "@artisann-port/presence/photos";
 import { cn } from "@artisann-port/ui/lib/utils";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -30,8 +31,10 @@ import {
 type GallerySelection = {
     /** Selection belongs to this gallery placement, not the shared atom. */
     readonly selectedKey: string | null;
-    /** Last successful ordering, used to select a successor after deletion. */
+    /** Shuffled browse order: the deck navigates this, never the shared atom value. */
     readonly priorOrdering: readonly Photo[];
+    /** The atom value this ordering was derived from; identity-compared to detect refreshes. */
+    readonly source: readonly Photo[] | null;
 };
 
 /** Preserve selection, then choose the first surviving successor, then newest. */
@@ -50,12 +53,12 @@ const selectPhotoKey = (
             .find((photo) => availableKeys.has(photo.key));
         if (successor !== undefined) return successor.key;
     }
-    return photos[0]?.key ?? null;
+    return priorOrdering[0]?.key ?? photos[0]?.key ?? null;
 };
 
 /**
  * Photos plus the local selection for one gallery placement. Each gallery owns its
- * selection; only the fetched list comes from the shared atom.
+ * selection and its browse order; only the fetched list comes from the shared atom.
  */
 export function useGallerySelection(
     tag: PhotoTag,
@@ -68,20 +71,30 @@ export function useGallerySelection(
     const [selection, setSelection] = useState<GallerySelection>({
         selectedKey: null,
         priorOrdering: [],
+        source: null,
     });
 
     // Atom refreshes are data lifecycle work; synchronize only local presentation state during
     // render. The aggregate returns a new array for each successful walk, including unchanged keys.
-    if (isSuccessful && selection.priorOrdering !== photos) {
-        setSelection({
-            selectedKey: selectPhotoKey(selection.priorOrdering, selection.selectedKey, photos),
-            priorOrdering: photos,
+    // The first walk shuffles the order once per placement; every later walk keeps that order for
+    // surviving keys and appends newly published photos.
+    if (isSuccessful && selection.source !== photos) {
+        setSelection((previous) => {
+            const ordering =
+                previous.priorOrdering.length === 0
+                    ? shuffle(photos)
+                    : reconcileOrder(previous.priorOrdering, photos, (photo) => photo.key);
+            return {
+                selectedKey: selectPhotoKey(ordering, previous.selectedKey, photos),
+                priorOrdering: ordering,
+                source: photos,
+            };
         });
     }
 
     const position = Math.max(
         0,
-        photos.findIndex((photo) => photo.key === selection.selectedKey),
+        selection.priorOrdering.findIndex((photo) => photo.key === selection.selectedKey),
     );
 
     // The next key is resolved inside the updater so step keeps a stable identity: the deck's
@@ -103,9 +116,9 @@ export function useGallerySelection(
     }, []);
 
     return {
-        photos,
+        photos: selection.priorOrdering,
         position,
-        current: photos[position],
+        current: selection.priorOrdering[position],
         unavailable: AsyncResult.isFailure(result),
         step,
     };
