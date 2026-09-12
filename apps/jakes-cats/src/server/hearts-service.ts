@@ -13,6 +13,7 @@ import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Schema from "effect/Schema";
+import { IsoTimestamp } from "@artisann-port/presence/content";
 import type { PhotoTag } from "@artisann-port/presence/photos";
 import type { PhotoComment } from "../contracts.ts";
 
@@ -104,13 +105,13 @@ const CommentRow = Schema.Struct({
     id: Schema.Int,
     visitor_id: Schema.String,
     body: Schema.String,
-    created_at: Schema.String,
+    created_at: IsoTimestamp,
 });
 
 const InsertedCommentRow = Schema.Struct({
     id: Schema.Int,
     body: Schema.String,
-    created_at: Schema.String,
+    created_at: IsoTimestamp,
 });
 
 const decodeCountRows = Schema.decodeUnknownEffect(Schema.Array(CountRow));

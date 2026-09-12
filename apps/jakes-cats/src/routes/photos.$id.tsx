@@ -110,7 +110,7 @@ function PhotoView({ detail }: { detail: PhotoDetail }) {
         <main className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-6 px-4 py-6">
             <Link
                 to="/"
-                className="text-pass hover:text-ink focus-visible:ring-ink self-start rounded-sm text-sm font-medium focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                className="text-pass hover:text-ink focus-visible:ring-ink self-start rounded-sm text-sm font-medium focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden"
             >
                 &larr; Back to the deck
             </Link>
@@ -143,7 +143,7 @@ function PhotoView({ detail }: { detail: PhotoDetail }) {
                         maxLength={MAX_COMMENT_LENGTH}
                         rows={3}
                         placeholder="Say something nice about this cat"
-                        className="border-line bg-card text-ink placeholder:text-pass focus-visible:ring-ink resize-none rounded-2xl border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
+                        className="border-line bg-card text-ink placeholder:text-pass focus-visible:ring-ink resize-none rounded-2xl border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-hidden"
                     />
                     <div className="flex items-center justify-between gap-3">
                         <span className="text-pass text-xs tabular-nums">
@@ -152,7 +152,7 @@ function PhotoView({ detail }: { detail: PhotoDetail }) {
                         <button
                             type="submit"
                             disabled={sending || body.trim().length === 0}
-                            className="bg-heart focus-visible:ring-ink focus-visible:ring-offset-cream rounded-full px-4 py-2 text-sm font-semibold text-white focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+                            className="bg-heart focus-visible:ring-ink focus-visible:ring-offset-cream rounded-full px-4 py-2 text-sm font-semibold text-white focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-60"
                         >
                             {sending ? "Posting…" : "Post comment"}
                         </button>

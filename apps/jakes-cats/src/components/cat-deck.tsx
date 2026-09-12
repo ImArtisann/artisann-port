@@ -195,7 +195,7 @@ export function CatDeck({
                         params={{ id: photoId }}
                         // Capture-stop so a tap on the link never becomes a card drag.
                         onPointerDownCapture={(event) => event.stopPropagation()}
-                        className="bg-card/90 text-ink focus-visible:ring-heart absolute right-3 bottom-3 rounded-full px-3 py-1 text-sm font-semibold focus-visible:ring-2 focus-visible:outline-none"
+                        className="bg-card/90 text-ink focus-visible:ring-heart absolute right-3 bottom-3 rounded-full px-3 py-1 text-sm font-semibold focus-visible:ring-2 focus-visible:outline-hidden"
                     >
                         Comments
                     </Link>

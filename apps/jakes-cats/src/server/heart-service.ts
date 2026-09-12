@@ -127,12 +127,12 @@ export const HeartLive = Layer.effect(
                 return yield* new HeartError({ reason: "Filtered" });
             }
 
+            yield* requireLiveCatPhoto(key);
+
             const profane = yield* moderation
                 .isProfane(trimmed)
                 .pipe(Effect.mapError(() => new HeartError({ reason: "Unavailable" })));
             if (profane) return yield* new HeartError({ reason: "Filtered" });
-
-            yield* requireLiveCatPhoto(key);
 
             const created = yield* hearts
                 .addComment(key, visitorId, trimmed)

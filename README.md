@@ -74,10 +74,11 @@ answers `201` with `{ key, url, tag, likes }`.
 
 The 20 MiB file limit also applies to streamed uploads. Multipart requests have
 a 64 KiB framing allowance and are capped before parsing, including unused
-fields. Writes create new R2 objects only. If D1 registration fails, the Worker
-deletes the object it just created before reporting failure. If that cleanup
-also fails, the object can remain public: inspect the `Upload rollback failed`
-log and its key before retrying.
+fields. Writes create new R2 objects only. A key collision retries with a new
+ID, up to three attempts; storage errors are not retried automatically. If D1
+registration fails, the Worker deletes the object it just created before
+reporting failure. If that cleanup also fails, the object can remain public:
+inspect the `Upload rollback failed` log and its key before retrying.
 
 iOS Shortcut recipe (Share Sheet → image):
 

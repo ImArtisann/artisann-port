@@ -1,7 +1,5 @@
 import { Link } from "@tanstack/react-router";
-
-/** The pixel-art cats, served content-addressed from the assets bucket. */
-const SITE_MARK_URL = "https://assets.artisann.dev/portfolio/cats.c1cf3281dc7962c9.webp";
+import { SITE_MARK_URL } from "../contracts.ts";
 
 /**
  * The shared site chrome: the pixel-cat mark links home, plus a small nav.
@@ -13,7 +11,7 @@ export function SiteHeader() {
             <Link
                 to="/"
                 aria-label="Jake's Cats — home"
-                className="focus-visible:ring-ink flex items-center rounded-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                className="focus-visible:ring-ink flex items-center rounded-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden"
             >
                 <img
                     src={SITE_MARK_URL}
@@ -26,14 +24,14 @@ export function SiteHeader() {
                 <Link
                     to="/"
                     activeOptions={{ exact: true }}
-                    className="text-pass hover:text-ink focus-visible:ring-ink rounded-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                    className="text-pass hover:text-ink focus-visible:ring-ink rounded-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden"
                     activeProps={{ className: "text-ink underline underline-offset-4" }}
                 >
                     Deck
                 </Link>
                 <Link
                     to="/top"
-                    className="text-pass hover:text-ink focus-visible:ring-ink rounded-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                    className="text-pass hover:text-ink focus-visible:ring-ink rounded-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden"
                     activeProps={{ className: "text-ink underline underline-offset-4" }}
                 >
                     Top cats

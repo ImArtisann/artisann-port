@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { HeadContent, Outlet, Scripts, createRootRoute } from "@tanstack/react-router";
 import { SiteHeader } from "../components/site-header.tsx";
-import { SITE_URL } from "../contracts.ts";
+import { SITE_MARK_URL, SITE_URL } from "../contracts.ts";
 import appCss from "../styles.css?url";
 
 const SITE_TITLE = "Jake's Cats";
@@ -63,7 +63,7 @@ export const Route = createRootRoute({
             {
                 rel: "icon",
                 type: "image/webp",
-                href: "https://assets.artisann.dev/portfolio/cats.c1cf3281dc7962c9.webp",
+                href: SITE_MARK_URL,
             },
         ],
     }),
@@ -90,7 +90,7 @@ function SiteFooter() {
                     href="https://www.artisann.dev"
                     target="_blank"
                     rel="noreferrer"
-                    className="text-ink hover:text-heart-ink focus-visible:ring-ink rounded-sm underline underline-offset-4 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                    className="text-ink hover:text-heart-ink focus-visible:ring-ink rounded-sm underline underline-offset-4 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden"
                 >
                     artisann.dev
                 </a>

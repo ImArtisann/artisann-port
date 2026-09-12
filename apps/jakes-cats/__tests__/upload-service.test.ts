@@ -12,6 +12,7 @@ import { describe, expect, it } from "vite-plus/test";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Logger from "effect/Logger";
+import * as Random from "effect/Random";
 import type { ImagesBinding } from "@cloudflare/workers-types";
 import type { PhotoTag, PhotosR2Page } from "@artisann-port/presence/photos";
 import { MAX_UPLOAD_BYTES } from "../src/contracts.ts";
@@ -35,12 +36,16 @@ const WEBP_BYTES = new Uint8Array([
 /**
  * An in-memory bucket with R2's create-only semantics: `alreadyHolds` models a
  * key that is already taken, where a conditional put resolves `null` and an
- * unconditional one would overwrite what is there.
+ * unconditional one would overwrite what is there. `putScript` orders the
+ * first writes when a test needs one collision or one outage rather than a
+ * bucket-wide state: `"collide"` resolves `null` like a taken key, `"fail"`
+ * rejects the way an R2 error does.
  */
 class FakeBucket implements PhotosR2MutationBinding {
     readonly objects = new Map<string, Uint8Array>();
     readonly putKeys: Array<string> = [];
     readonly deleteKeys: Array<string> = [];
+    readonly putScript: Array<"collide" | "fail"> = [];
     alreadyHolds = false;
     failDeletes = false;
 
@@ -56,10 +61,12 @@ class FakeBucket implements PhotosR2MutationBinding {
     put(key: string, value: Uint8Array, options?: R2PutOptions): Promise<R2Object>;
     async put(key: string, value: Uint8Array, options?: R2PutOptions): Promise<R2Object | null> {
         this.putKeys.push(key);
+        const scripted = this.putScript.shift();
+        if (scripted === "fail") throw new Error("R2 put failed.");
         const onlyIf = options?.onlyIf;
         const createOnly =
             onlyIf !== undefined && "etagDoesNotMatch" in onlyIf && onlyIf.etagDoesNotMatch === "*";
-        if (this.alreadyHolds && createOnly) return null;
+        if (scripted === "collide" || (this.alreadyHolds && createOnly)) return null;
         this.objects.set(key, Uint8Array.from(value));
         // SAFETY: `R2Object` is assignable to `{ key: string }`, so this narrows
         // to a shape the assertion cannot overstate; only `null` is ever read.
@@ -254,22 +261,56 @@ describe("UploadService rollback", () => {
         const stored = await runUpload(world, upload("cats", WEBP_BYTES));
 
         expect(world.bucket.putKeys).toHaveLength(2);
-        expect(world.bucket.putKeys[0]).not.toBe(world.bucket.putKeys[1]);
         expect(world.bucket.deleteKeys).toEqual([world.bucket.putKeys[0]]);
         expect(world.bucket.objects.size).toBe(1);
         expect(world.bucket.objects.has(stored.key)).toBe(true);
     });
 
-    it("refuses a key the bucket already holds without deleting it", async () => {
+    it("retries a colliding create-only write with a freshly minted id", async () => {
         const world = makeWorld();
+        world.bucket.putScript.push("collide");
+
+        // The seed fixes every id this upload mints, so the two attempts are
+        // asserted distinct by construction rather than by hoping the live
+        // clock and entropy happen to differ.
+        const stored = await runUpload(
+            world,
+            upload("cats", WEBP_BYTES).pipe(Random.withSeed("jakes-cats-collision")),
+        );
+
+        expect(world.bucket.putKeys).toHaveLength(2);
+        expect(world.bucket.putKeys[0]).not.toBe(world.bucket.putKeys[1]);
+        expect(stored.key).toBe(world.bucket.putKeys[1]);
+        expect(world.bucket.objects.has(stored.key)).toBe(true);
+        expect(world.bucket.deleteKeys).toEqual([]);
+        expect(world.hearts.registered.map((row) => row.key)).toEqual([stored.key]);
+    });
+
+    it("gives up after bounded collisions and never deletes the key it collided with", async () => {
+        const world = makeWorld();
+        const takenKey = "cats/000000000000000001.webp";
+        world.bucket.objects.set(takenKey, new Uint8Array([0x01]));
         world.bucket.alreadyHolds = true;
-        world.bucket.objects.set("cats/000000000000000001.webp", new Uint8Array([0x01]));
 
         const failure = await runUploadFailure(world, upload("cats", WEBP_BYTES));
 
         expect(failure.reason).toBe("Unavailable");
+        expect(world.bucket.putKeys).toHaveLength(3);
         expect(world.bucket.deleteKeys).toEqual([]);
-        expect(world.bucket.objects.has("cats/000000000000000001.webp")).toBe(true);
+        expect(world.bucket.objects.get(takenKey)).toEqual(new Uint8Array([0x01]));
+        expect(world.hearts.registered).toEqual([]);
+    });
+
+    it("does not retry a create-only write that threw", async () => {
+        const world = makeWorld();
+        world.bucket.putScript.push("fail");
+
+        const failure = await runUploadFailure(world, upload("cats", WEBP_BYTES));
+
+        expect(failure.reason).toBe("Unavailable");
+        expect(world.bucket.putKeys).toHaveLength(1);
+        expect(world.bucket.deleteKeys).toEqual([]);
+        expect(world.bucket.objects.size).toBe(0);
         expect(world.hearts.registered).toEqual([]);
     });
 

@@ -9,6 +9,7 @@
  * already buffered the whole body, which is exactly the bypass this closes.
  */
 import { describe, expect, it } from "vite-plus/test";
+import * as Effect from "effect/Effect";
 import { capRequestBody, isBodyTooLarge } from "../src/server/body-limit.ts";
 
 const UPLOAD_URL = "https://jakes.cat/api/photos";
@@ -58,6 +59,7 @@ function multipartBytes(fields: ReadonlyArray<MultipartField>): Uint8Array {
 function chunkedBody(bytes: Uint8Array, chunkSize: number) {
     let produced = 0;
     let cancelled = false;
+    const cancellation = Promise.withResolvers<void>();
     const stream = new ReadableStream<Uint8Array>({
         pull(controller) {
             if (produced >= bytes.byteLength) {
@@ -70,9 +72,29 @@ function chunkedBody(bytes: Uint8Array, chunkSize: number) {
         },
         cancel() {
             cancelled = true;
+            cancellation.resolve();
         },
     });
-    return { stream, produced: () => produced, cancelled: () => cancelled };
+    return {
+        stream,
+        produced: () => produced,
+        cancelled: () => cancelled,
+        cancellation: cancellation.promise,
+    };
+}
+
+/** How long teardown may take before it counts as hung. */
+const TEARDOWN_DEADLINE_MS = 1_000;
+
+/**
+ * `promise`, bounded. `pipeThrough` tears the source down asynchronously, so
+ * the cancellation the guard caused can land after the parser's rejection:
+ * waiting on the promise the stream exposes is exact. The deadline is only
+ * there for a hung operation — it never fires while teardown completes, and it
+ * is cleared either way.
+ */
+function settledWithin(ms: number, promise: Promise<void>): Promise<void> {
+    return Effect.runPromise(Effect.promise(() => promise).pipe(Effect.timeout(ms)));
 }
 
 type Body = ReadableStream<Uint8Array>;
@@ -128,6 +150,7 @@ describe("capRequestBody", () => {
         const unlimited = postRequest(source.stream, multipartHeaders());
 
         const failure = await formDataFailure(capRequestBody(unlimited, ceiling));
+        await settledWithin(TEARDOWN_DEADLINE_MS, source.cancellation);
 
         expect(isBodyTooLarge(failure)).toBe(true);
         // The parser never saw the whole body: the source was canceled, and
@@ -150,6 +173,7 @@ describe("capRequestBody", () => {
         );
 
         expect(isBodyTooLarge(failure)).toBe(true);
+        await settledWithin(TEARDOWN_DEADLINE_MS, source.cancellation);
         expect(source.produced()).toBeLessThan(body.byteLength);
     });
 
@@ -166,6 +190,7 @@ describe("capRequestBody", () => {
         const failure = await formDataFailure(capRequestBody(lying, 16 * 1024));
 
         expect(isBodyTooLarge(failure)).toBe(true);
+        await settledWithin(TEARDOWN_DEADLINE_MS, source.cancellation);
         expect(source.produced()).toBeLessThan(body.byteLength);
     });
 

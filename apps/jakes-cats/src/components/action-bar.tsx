@@ -25,7 +25,7 @@ export function ActionBar({
                 onClick={onSkip}
                 whileTap={press}
                 aria-label="Skip this cat"
-                className="border-line bg-card text-pass hover:border-pass focus-visible:ring-ink focus-visible:ring-offset-cream flex size-14 items-center justify-center rounded-full border shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                className="border-line bg-card text-pass hover:border-pass focus-visible:ring-ink focus-visible:ring-offset-cream flex size-14 items-center justify-center rounded-full border shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden"
             >
                 <svg
                     viewBox="0 0 24 24"

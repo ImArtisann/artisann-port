@@ -117,7 +117,7 @@ function Failed() {
                         // pending and repeat-failure states, and a fresh match resets
                         // this error boundary.
                         onClick={() => void router.invalidate()}
-                        className="bg-heart focus-visible:ring-ink focus-visible:ring-offset-cream mt-1 rounded-full px-5 py-2.5 text-sm font-semibold text-white focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                        className="bg-heart focus-visible:ring-ink focus-visible:ring-offset-cream mt-1 rounded-full px-5 py-2.5 text-sm font-semibold text-white focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden"
                     >
                         Try again
                     </button>

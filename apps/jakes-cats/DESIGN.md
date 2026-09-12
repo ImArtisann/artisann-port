@@ -73,8 +73,8 @@ is `shrink-0` and each route fills the rest. Safe-area insets via
 
 ## Site chrome
 
-- Pixel-cat mark: the content-addressed asset
-  `https://assets.artisann.dev/portfolio/cats.c1cf3281dc7962c9.webp`
+- Pixel-cat mark: `SITE_MARK_URL` derives the content-addressed URL for
+  `portfolio/cats.webp` from the assets manifest and configured default origin
   (`size-7 rounded-md`) with `image-rendering: pixelated`, alone inside the home
   link. It is decorative (`alt=""`) because the link's `aria-label` carries the
   name — no icon-font, no inline SVG, no local copy.
@@ -133,7 +133,8 @@ Constants live in `src/components/deck-config.ts` (mirrors the portfolio deck).
 - End of deck: **there is no end.** Advancing past the last card wraps to the
   first; the loop is the state.
 - Heart rejected (rate limit or server): toast "Slow down, tiger." for rate
-  limits, otherwise the server's own message; the optimistic +1 reverts.
+  limits, otherwise an approved server message or the generic fallback. The
+  optimistic +1 reverts; only the toast announces the failure.
 - Already hearted (server-side, per visitor cookie): the heart button is filled
   and disabled with a "Hearted" caption under it — a second heart is impossible
   from the UI.
@@ -148,6 +149,8 @@ Constants live in `src/components/deck-config.ts` (mirrors the portfolio deck).
   right-aligned, `tabular-nums`), 96px square thumbnail
   (`size-24 rounded-xl object-cover`), then `♥ n` as text.
 - Empty state: "No hearts yet — go swipe." with "go swipe" linking to `/`.
+- Loader error: fixed local copy and a "Try again" action that invalidates the
+  route and reruns the leaderboard loader.
 
 ## Photo page (`/photos/$id`)
 
@@ -183,6 +186,8 @@ Constants live in `src/components/deck-config.ts` (mirrors the portfolio deck).
 - Keyboard: `←` skip, `→` or `Enter` heart — same exit animation as a drag.
 - `focus-visible` rings on every interactive element (`ring-heart` /
   `ring-ink`), including nav links, leaderboard rows, and the footer link.
+  `focus-visible:outline-hidden` preserves an outline in forced-colors mode,
+  where the custom ring may not render.
 
 ## Copy voice
 

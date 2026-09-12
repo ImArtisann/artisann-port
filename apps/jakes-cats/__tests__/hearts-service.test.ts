@@ -63,6 +63,8 @@ class FakeHeartsDatabase implements HeartsD1Binding {
     readonly photos = new Map<string, { readonly tag: string; readonly uploadedAt: string }>();
     readonly comments: FakeComment[] = [];
     private readonly scriptedTallies = new Map<string, ReadonlyArray<HeartsRawRow>>();
+    private readonly scriptedComments = new Map<string, ReadonlyArray<HeartsRawRow>>();
+    private scriptedInsertedComment: HeartsRawRow | null = null;
     private nextCommentId = 1;
 
     prepare(query: string): HeartsStatement {
@@ -72,6 +74,16 @@ class FakeHeartsDatabase implements HeartsD1Binding {
     /** Replace one collection's raw counts, for the decoding tests. */
     scriptTallies(tag: string, rows: ReadonlyArray<HeartsRawRow>): void {
         this.scriptedTallies.set(tag, rows);
+    }
+
+    /** Replace one photo's raw comment rows, for the decoding tests. */
+    scriptComments(photoKey: string, rows: ReadonlyArray<HeartsRawRow>): void {
+        this.scriptedComments.set(photoKey, rows);
+    }
+
+    /** Answer the next comment insert with a corrupt row, for the decoding tests. */
+    scriptInsertedComment(row: HeartsRawRow | null): void {
+        this.scriptedInsertedComment = row;
     }
 
     /** `HEARTS_HEART_SQL`: one heart per visitor, never a second row. */
@@ -117,6 +129,9 @@ class FakeHeartsDatabase implements HeartsD1Binding {
 
     /** `COMMENTS_FOR_SQL`: the newest comments of one photo, newest first. */
     commentsOf(photoKey: string, limit: number): ReadonlyArray<HeartsRawRow> {
+        const scripted = this.scriptedComments.get(photoKey);
+        if (scripted !== undefined) return scripted;
+
         return this.comments
             .filter((comment) => comment.photoKey === photoKey)
             .sort((left, right) => right.id - left.id)
@@ -136,6 +151,8 @@ class FakeHeartsDatabase implements HeartsD1Binding {
         body: string,
         createdAt: string,
     ): HeartsRawRow {
+        if (this.scriptedInsertedComment !== null) return this.scriptedInsertedComment;
+
         const id = this.nextCommentId++;
         this.comments.push({ id, photoKey, visitorId, body, createdAt });
         return { id, body, created_at: createdAt };
@@ -283,6 +300,31 @@ describe("HeartsService", () => {
         expect(missing).toBeInstanceOf(HeartsError);
     });
 
+    it("fails the comment read on a corrupt stored timestamp instead of passing it on", async () => {
+        const database = new FakeHeartsDatabase();
+        database.scriptComments(CATS_KEY, [
+            { id: 1, visitor_id: VISITOR_A, body: "hello", created_at: "yesterday" },
+        ]);
+
+        const error = await runHearts(Effect.flip(commentsFor(CATS_KEY, 10, VISITOR_A)), database);
+
+        expect(error).toBeInstanceOf(HeartsError);
+        expect(error.operation).toBe("comments");
+    });
+
+    it("fails a comment insert that comes back with a corrupt timestamp", async () => {
+        const database = new FakeHeartsDatabase();
+        database.scriptInsertedComment({ id: 1, body: "hello", created_at: "yesterday" });
+
+        const error = await runHearts(
+            Effect.flip(addComment(CATS_KEY, VISITOR_A, "hello")),
+            database,
+        );
+
+        expect(error).toBeInstanceOf(HeartsError);
+        expect(error.operation).toBe("comment");
+    });
+
     it("claims an uploaded photo once and never rewrites the row", async () => {
         const database = new FakeHeartsDatabase();
         const uploadedAt = "2026-09-12T00:00:00.000Z";
@@ -365,13 +407,15 @@ function runComment<A, E>(
     effect: Effect.Effect<A, E, HeartService>,
     database: FakeHeartsDatabase,
     answer: () => Response,
+    findPhoto: (key: string) => Promise<{ readonly key: string } | null> = (key) =>
+        Promise.resolve({ key }),
 ) {
     const peer = scriptedModeration(answer);
     const probed: Array<string> = [];
     const headOnly = {
         head: (key: string) => {
             probed.push(key);
-            return Promise.resolve({});
+            return findPhoto(key);
         },
     };
     // SAFETY: the comment action only calls `head`; no other R2 member is reached.
@@ -394,7 +438,7 @@ const postComment = (key: string, visitorId: string, body: string) =>
     );
 
 describe("HeartService comments", () => {
-    it("refuses a comment the moderation provider flags, before any storage write", async () => {
+    it("refuses a flagged comment on a live photo before any storage write", async () => {
         const database = new FakeHeartsDatabase();
         const body = "dang, look at that cat";
         const { result, peer, probed } = runComment(
@@ -408,11 +452,46 @@ describe("HeartService comments", () => {
         expect(error).toBeInstanceOf(HeartError);
         expect(error.reason).toBe("Filtered");
         expect(database.comments).toEqual([]);
-        expect(probed).toEqual([]);
+        expect(probed).toEqual([CATS_KEY]);
         expect(peer.requests.map((request) => request.url)).toEqual([
             "https://vector.profanity.dev/",
         ]);
         expect(JSON.parse(peer.requests[0]?.body ?? "{}")).toEqual({ message: body });
+    });
+
+    it("refuses an unmanaged key before the provider is asked", async () => {
+        const database = new FakeHeartsDatabase();
+        const { result, peer, probed } = runComment(
+            Effect.flip(postComment(LIFE_KEY, VISITOR_A, "hello from a visitor")),
+            database,
+            () => Response.json({ isProfanity: false, score: 0 }),
+        );
+
+        const error = await result;
+
+        expect(error).toBeInstanceOf(HeartError);
+        expect(error.reason).toBe("InvalidKey");
+        expect(probed).toEqual([]);
+        expect(peer.requests).toEqual([]);
+        expect(database.comments).toEqual([]);
+    });
+
+    it("refuses a managed key with no live object before the provider is asked", async () => {
+        const database = new FakeHeartsDatabase();
+        const { result, peer, probed } = runComment(
+            Effect.flip(postComment(CATS_KEY, VISITOR_A, "hello from a visitor")),
+            database,
+            () => Response.json({ isProfanity: false, score: 0 }),
+            () => Promise.resolve(null),
+        );
+
+        const error = await result;
+
+        expect(error).toBeInstanceOf(HeartError);
+        expect(error.reason).toBe("NotFound");
+        expect(probed).toEqual([CATS_KEY]);
+        expect(peer.requests).toEqual([]);
+        expect(database.comments).toEqual([]);
     });
 
     it("stores a comment the moderation provider clears, judged on the trimmed body", async () => {

@@ -33,6 +33,12 @@ const WEBP_QUALITY = 82;
 /** R2 cache directive for stored photos: short, revalidated. */
 const PHOTO_CACHE_CONTROL = "public, max-age=60, must-revalidate";
 
+/**
+ * Create-only writes allowed per upload: the first id plus two fresh ones for
+ * keys the bucket already holds.
+ */
+const STORE_ATTEMPTS = 3;
+
 /** The first twelve bytes of any WebP file, big-endian `RIFF….WEBP`. */
 function isWebp(bytes: Uint8Array): boolean {
     return (
@@ -161,45 +167,55 @@ export const UploadLive = Layer.effect(
             const stored = new Uint8Array(encoded);
             if (!isWebp(stored)) return yield* new UploadError({ reason: "InvalidImage" });
 
-            const id = yield* makePhotoId;
-            const key = photoKey(tag, id);
-            if (key === null) return yield* new UploadError({ reason: "InvalidImage" });
-
-            const url = photoUrl(key, config.assetsHost);
-            if (url === null) return yield* new UploadError({ reason: "Unavailable" });
-
             // Create-only: a key that already exists is a collision, not a
-            // silent overwrite. Nothing this upload wrote then needs undoing,
-            // and the rollback below can only ever delete its own object.
-            const written = yield* Effect.tryPromise({
-                try: () =>
-                    photos.put(key, stored, {
-                        onlyIf: { etagDoesNotMatch: "*" },
-                        httpMetadata: {
-                            contentType: "image/webp",
-                            cacheControl: PHOTO_CACHE_CONTROL,
-                        },
-                    }),
-                catch: () => new UploadError({ reason: "Unavailable" }),
+            // silent overwrite, so a `null` write mints a fresh id and tries
+            // again, bounded by `STORE_ATTEMPTS`. A thrown R2 error is an
+            // outage and is never retried, and neither is a registration
+            // failure below: only the id is re-rolled, never the write's luck.
+            const created = yield* Effect.gen(function* () {
+                for (let attempt = 0; attempt < STORE_ATTEMPTS; attempt += 1) {
+                    const id = yield* makePhotoId;
+                    const key = photoKey(tag, id);
+                    if (key === null) return yield* new UploadError({ reason: "InvalidImage" });
+
+                    const url = photoUrl(key, config.assetsHost);
+                    if (url === null) return yield* new UploadError({ reason: "Unavailable" });
+
+                    const written = yield* Effect.tryPromise({
+                        try: () =>
+                            photos.put(key, stored, {
+                                onlyIf: { etagDoesNotMatch: "*" },
+                                httpMetadata: {
+                                    contentType: "image/webp",
+                                    cacheControl: PHOTO_CACHE_CONTROL,
+                                },
+                            }),
+                        catch: () => new UploadError({ reason: "Unavailable" }),
+                    });
+                    if (written !== null) return { key, url };
+                }
+                return yield* new UploadError({ reason: "Unavailable" });
             });
-            if (written === null) return yield* new UploadError({ reason: "Unavailable" });
+            const { key, url } = created;
 
             const uploadedAt = DateTime.formatIso(yield* DateTime.now);
             // The object is already live under its key; a photo D1 never
-            // claimed must not outlive the registration that failed, so the
-            // rollback deletes it. The delete names exactly the key this upload
-            // created, so no other object — in particular none that predates
-            // the create-only put — can be caught in the rollback.
+            // claimed should not stay there, so the rollback deletes it. The
+            // delete names exactly the key this upload created, so no other
+            // object — in particular none that predates the create-only put —
+            // can be caught in the rollback.
             const rollback = Effect.tryPromise({
                 try: () => photos.delete(key),
                 catch: () => new UploadError({ reason: "Unavailable" }),
             }).pipe(
                 Effect.tapError(() => Effect.logError("Upload rollback failed", key)),
-                // The client still gets `Unavailable`: this photo was never
-                // registered, so the site does not publish it. If the delete
-                // failed too, the object can remain reachable under its key —
-                // the log is the trace of that, and it is never reported as
-                // success nor silently discarded.
+                // The client still gets `Unavailable`: nothing registered the
+                // photo, so no heart or comment can point at it. The delete is
+                // best effort, and the deck lists straight from the bucket —
+                // so if it fails, the object stays reachable under its key and
+                // appears there with no likes. The log is the trace of that
+                // orphan; the failure is never reported as success nor
+                // silently discarded.
                 Effect.ignore,
             );
 

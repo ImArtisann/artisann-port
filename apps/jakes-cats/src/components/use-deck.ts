@@ -60,7 +60,6 @@ export function useDeck(initial: readonly DeckPhoto[]): DeckController {
                     ),
                 );
                 setToast(message);
-                setAnnouncement(message);
             });
     }, []);
 

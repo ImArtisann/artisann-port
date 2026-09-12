@@ -4,6 +4,9 @@
  * this module is bundled into the client.
  */
 import * as Schema from "effect/Schema";
+import * as SchemaGetter from "effect/SchemaGetter";
+import { DEFAULT_ASSETS_HOST } from "@artisann-port/assets/config";
+import { assetUrl } from "@artisann-port/assets/urls";
 import { PhotoTag, photoKey } from "@artisann-port/presence/photos";
 
 /** The photo collection this site serves. */
@@ -11,6 +14,9 @@ export const SITE_PHOTO_TAG: PhotoTag = "cats";
 
 /** Canonical origin this site is served from; absolute URLs are built from it. */
 export const SITE_URL = "https://jakes.cat";
+
+/** Absolute URL of the site mark image on the assets host (favicon, header). */
+export const SITE_MARK_URL = assetUrl("portfolio/cats.webp", `https://${DEFAULT_ASSETS_HOST}`);
 
 /** Discord-style snowflake: the id part of a managed key. */
 export const PhotoId = Schema.String.check(Schema.isPattern(/^[0-9]{17,20}$/u));
@@ -86,6 +92,39 @@ export type LeaderboardPayload = typeof LeaderboardPayload.Type;
 /** Longest comment body, after trimming. */
 export const MAX_COMMENT_LENGTH = 280;
 
+/**
+ * Every phrase a server function may put in a `ServerFailure`. The client
+ * shows a rejected call's own phrase only when it appears here, so a framework,
+ * transport, or validator message that leaks through is replaced by a generic
+ * fallback. Matching is by message text on purpose: serialization strips the
+ * `ServerFailure` class, and class identity is not a trust boundary.
+ */
+export const SERVER_FAILURE_MESSAGES = {
+    deckUnavailable: "Deck unavailable",
+    leaderboardUnavailable: "Leaderboard unavailable",
+    photoUnavailable: "Photo unavailable",
+    unknownPhoto: "Unknown photo",
+    rateLimited: "Rate limited",
+    heartsUnavailable: "Hearts unavailable",
+    commentsUnavailable: "Comments unavailable",
+    emptyComment: "Comment can't be empty",
+    commentTooLong: "Comment is too long",
+    notAllowed: "Not allowed",
+    commentNotAllowed: "That comment isn't allowed.",
+} as const;
+
+export type ServerFailureMessage =
+    (typeof SERVER_FAILURE_MESSAGES)[keyof typeof SERVER_FAILURE_MESSAGES];
+
+const APPROVED_SERVER_FAILURE_MESSAGES: Readonly<Record<string, true>> = Object.fromEntries(
+    Object.values(SERVER_FAILURE_MESSAGES).map((message) => [message, true] as const),
+);
+
+/** True when `message` is one of the phrases this site's server functions send. */
+export function isServerFailureMessage(message: string): message is ServerFailureMessage {
+    return APPROVED_SERVER_FAILURE_MESSAGES[message] === true;
+}
+
 /** How many comments a photo page loads, newest first. */
 export const MAX_COMMENTS_PER_PHOTO = 100;
 
@@ -112,9 +151,21 @@ export const PhotoDetail = Schema.Struct({
 
 export type PhotoDetail = typeof PhotoDetail.Type;
 
+/**
+ * A comment body: whitespace-trimmed first, then bounded. Trimming before
+ * bounding means a max-length comment survives surrounding whitespace while a
+ * body that only fits padded — or is whitespace alone — is refused.
+ */
+const CommentBody = Schema.String.pipe(
+    Schema.decode({
+        decode: SchemaGetter.transform((body) => body.trim()),
+        encode: SchemaGetter.transform((body) => body.trim()),
+    }),
+).check(Schema.isMinLength(1), Schema.isMaxLength(MAX_COMMENT_LENGTH));
+
 export const CommentInput = Schema.Struct({
     key: Schema.String.check(Schema.isMaxLength(64)),
-    body: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(MAX_COMMENT_LENGTH)),
+    body: CommentBody,
 });
 
 export type CommentInput = typeof CommentInput.Type;

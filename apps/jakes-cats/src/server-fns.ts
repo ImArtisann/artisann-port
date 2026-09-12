@@ -14,8 +14,10 @@ import {
     CommentInput,
     LikeInput,
     PhotoInput,
+    SERVER_FAILURE_MESSAGES,
     type LikeResult,
     type PhotoDetail,
+    type ServerFailureMessage,
 } from "./contracts.ts";
 import { DeckService } from "./server/deck-service.ts";
 import { HeartError, HeartService } from "./server/heart-service.ts";
@@ -27,23 +29,41 @@ export class ServerFailure extends Schema.TaggedError<ServerFailure>()("Jakes.Se
     message: Schema.String,
 }) {}
 
+/**
+ * The site's failure copy, unpacked so every table below draws from the one
+ * shared allowlist the client also trusts.
+ */
+const {
+    commentNotAllowed,
+    commentTooLong,
+    commentsUnavailable,
+    deckUnavailable,
+    emptyComment,
+    heartsUnavailable,
+    leaderboardUnavailable,
+    notAllowed,
+    photoUnavailable,
+    rateLimited,
+    unknownPhoto,
+} = SERVER_FAILURE_MESSAGES;
+
 /** One message per heart failure class; nothing else leaves the server. */
 const HEART_FAILURE_MESSAGES = {
-    InvalidKey: "Unknown photo",
-    NotFound: "Unknown photo",
-    RateLimited: "Rate limited",
-    Unavailable: "Hearts unavailable",
-    EmptyComment: "Comment can't be empty",
-    CommentTooLong: "Comment is too long",
-    Filtered: "Not allowed",
-} satisfies Record<HeartError["reason"], string>;
+    InvalidKey: unknownPhoto,
+    NotFound: unknownPhoto,
+    RateLimited: rateLimited,
+    Unavailable: heartsUnavailable,
+    EmptyComment: emptyComment,
+    CommentTooLong: commentTooLong,
+    Filtered: notAllowed,
+} satisfies Record<HeartError["reason"], ServerFailureMessage>;
 
 /** The comment action's table: the same classes, its own storage message. */
 const COMMENT_FAILURE_MESSAGES = {
     ...HEART_FAILURE_MESSAGES,
-    Unavailable: "Comments unavailable",
-    Filtered: "That comment isn't allowed.",
-} satisfies Record<HeartError["reason"], string>;
+    Unavailable: commentsUnavailable,
+    Filtered: commentNotAllowed,
+} satisfies Record<HeartError["reason"], ServerFailureMessage>;
 
 /** What one photo page request produced, so `notFound()` is thrown outside the Effect. */
 type PhotoOutcome =
@@ -58,7 +78,7 @@ export const getDeck = createServerFn({ method: "GET" }).handler(() =>
             const deck = yield* DeckService;
             const visitor = yield* currentVisitor;
             return yield* deck.shuffled(visitor);
-        }).pipe(Effect.mapError(() => new ServerFailure({ message: "Deck unavailable" }))),
+        }).pipe(Effect.mapError(() => new ServerFailure({ message: deckUnavailable }))),
     ),
 );
 
@@ -69,7 +89,7 @@ export const getLeaderboard = createServerFn({ method: "GET" }).handler(() =>
             const deck = yield* DeckService;
             const visitor = yield* currentVisitor;
             return yield* deck.leaderboard(visitor);
-        }).pipe(Effect.mapError(() => new ServerFailure({ message: "Leaderboard unavailable" }))),
+        }).pipe(Effect.mapError(() => new ServerFailure({ message: leaderboardUnavailable }))),
     ),
 );
 
@@ -96,7 +116,7 @@ export const getPhoto = createServerFn({ method: "GET" })
         ).then((outcome) => {
             if (outcome._tag === "Missing") throw notFound();
             if (outcome._tag === "Failed") {
-                throw new ServerFailure({ message: "Photo unavailable" });
+                throw new ServerFailure({ message: photoUnavailable });
             }
             return outcome.detail;
         }),

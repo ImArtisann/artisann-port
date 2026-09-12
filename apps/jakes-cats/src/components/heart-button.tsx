@@ -18,7 +18,7 @@ export function HeartButton({ hearted, onHeart }: { hearted: boolean; onHeart: (
                 whileTap={hearted ? undefined : press}
                 disabled={hearted}
                 aria-label={hearted ? "Hearted" : "Heart this cat"}
-                className="bg-heart focus-visible:ring-ink focus-visible:ring-offset-cream flex size-14 items-center justify-center rounded-full text-white shadow-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+                className="bg-heart focus-visible:ring-ink focus-visible:ring-offset-cream flex size-14 items-center justify-center rounded-full text-white shadow-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-60"
             >
                 <svg
                     viewBox="0 0 24 24"
