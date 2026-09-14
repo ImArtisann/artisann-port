@@ -1,7 +1,8 @@
 /**
  * The jakes.cat stack: one TanStack Start Website Worker serving the swipe
  * deck, one D1 database holding per-photo heart counts, and a Cloudflare
- * Images binding that transcodes secret-gated uploads to WebP.
+ * Images binding that transcodes secret-gated uploads to WebP. In production
+ * the same Worker also answers on `www.jakes.cat`.
  *
  * The photo gallery reads the assets stack's existing physical bucket through
  * a native `r2_bucket` binding — this stack never owns or provisions a
@@ -56,7 +57,11 @@ export default Alchemy.Stack(
                     Config.withDefault(DEFAULT_ASSETS_HOST),
                 ),
             },
-            domain: stage === "prod" ? "jakes.cat" : undefined,
+            // Production answers on both hostnames: the apex is canonical and
+            // `www` serves the same Worker through a second managed custom
+            // domain (DNS record and edge certificate included).
+            domain:
+                stage === "prod" ? { name: "jakes.cat", aliases: ["www.jakes.cat"] } : undefined,
         });
 
         const bucketName = yield* Config.nonEmptyString("ASSETS_BUCKET_NAME").pipe(

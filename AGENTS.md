@@ -80,7 +80,8 @@ Four Alchemy stacks, plus a one-shot GitHub bootstrap:
 - `packages/assets/alchemy.run.ts` — R2 bucket + custom domain.
 - `apps/jakes-cats/alchemy.run.ts` — TanStack Start Worker, D1 (`photos`,
   `photo_hearts`, `photo_comments`), Images binding, visitor rate limiter, R2
-  binding by name, prod-only `jakes.cat`.
+  binding by name, prod-only `jakes.cat` with `www.jakes.cat` as a second custom
+  domain on the same Worker.
 - `stacks/github.ts` — repo settings and the Cloudflare deployment token, scoped
   to the `artisann.dev` and `jakes.cat` zones.
 
@@ -189,8 +190,9 @@ docker compose -f apps/discord/compose.yaml config --quiet
 
 `vp check` does not typecheck Astro. Always use `bun run check`.
 
-`packages/presence`'s and `apps/jakes-cats`'s own `deploy` scripts have **no**
-`--stage prod`. Do not use them to ship production.
+`packages/presence`'s own `deploy` script has **no** `--stage prod`; do not use
+it to ship production. `apps/jakes-cats`'s own `deploy` script pins
+`--stage prod` and is equivalent to `bun run deploy:cats`.
 
 ## Code Conventions & Common Patterns
 
