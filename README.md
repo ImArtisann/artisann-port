@@ -32,6 +32,11 @@ stored by the admin bootstrap (`bun run deploy:github`); widening its Cloudflare
 zone policy there does not touch already-stored Actions secrets until that
 bootstrap re-runs.
 
+Do not append `--help` or `--dry-run` to `bun run deploy`: vite-plus forwards
+extra arguments only to the last command, so the earlier stacks still deploy.
+For a dry run, invoke each `deploy:presence`, `deploy:website`, or `deploy:cats`
+script directly with `--dry-run`.
+
 ## jakes.cat
 
 `apps/jakes-cats` is a public, for-fun site: a visitor gets the `cats/` photos
@@ -43,6 +48,10 @@ is its own Alchemy stack (`JakesCats`) with its own deploy command;
 `bun run deploy` includes it, and `bun run deploy:cats --yes` still works
 standalone.
 
+In production the same Worker answers on both `jakes.cat` and `www.jakes.cat`:
+the apex is canonical and `www` is attached as a second managed custom domain
+(DNS record and edge certificate included). Non-prod stages bind no domain.
+
 Comments are checked for local spam patterns and sent to profanity.dev for
 moderation. Only the comment text is sent, not the visitor ID. Long comments use
 overlapping requests of at most 35 words, with at most two in flight and an
@@ -51,7 +60,7 @@ prevents the write.
 
 ```sh
 bun run dev:cats             # alchemy dev: local D1, but the LIVE assets bucket
-bun run deploy:cats --yes    # --stage prod: jakes.cat domain, D1 migrations, bindings
+bun run deploy:cats --yes    # --stage prod: jakes.cat + www.jakes.cat, D1 migrations, bindings
 ```
 
 Under `alchemy dev` the by-name `r2_bucket` binding is remote: the deck reads
