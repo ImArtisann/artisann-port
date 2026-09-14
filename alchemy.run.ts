@@ -26,6 +26,15 @@ export default Alchemy.Stack(
                 : undefined;
         const website = yield* Cloudflare.Website.Astro("Website", {
             rootDir: "apps/web",
+            // Hash workspace dependencies relative to this checkout, not paths
+            // auto-detected and persisted by a deploy on another machine.
+            memo: {
+                workspaces: [
+                    { cwd: "../../packages/assets" },
+                    { cwd: "../../packages/presence" },
+                    { cwd: "../../packages/ui" },
+                ],
+            },
             astro: { output: "static" },
             // Vite 8 emits a Rolldown runtime chunk that calls
             // `createRequire(import.meta.url)` at module scope. The local
