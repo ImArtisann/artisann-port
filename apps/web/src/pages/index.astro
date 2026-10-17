@@ -5,6 +5,8 @@ import {
     CardTitle,
 } from "@artisann-port/ui/components/card";
 import { requireAssetPath } from "@artisann-port/assets/urls";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowUpRight01Icon } from "@hugeicons-pro/core-solid-rounded";
 import AssetImage from "@/components/AssetImage.astro";
 import { loadSiteContent } from "@/lib/site-content";
 import { PersonalRecords } from "@/components/portfolio/personal-records";
@@ -27,6 +29,18 @@ const content = await loadSiteContent();
 
 const profilePicture = requireAssetPath("portfolio/profile-picture.jpg");
 const pixelCats = requireAssetPath("portfolio/cats.webp");
+
+const domains = [
+    "editor.so",
+    "fym.me",
+    "jtw.lol",
+    "kyros.gg",
+    "leftover.app",
+    "purio.me",
+    "rate.cat",
+    "twisted.to",
+    "workflo.so",
+];
 
 const navLink = "flex h-11 items-center px-1.5 text-sm leading-[1.5] lg:h-auto lg:px-0";
 ---
@@ -112,6 +126,32 @@ const navLink = "flex h-11 items-center px-1.5 text-sm leading-[1.5] lg:h-auto l
                         <h3 class="text-aside text-muted-foreground">Personal records</h3>
                         <PersonalRecords initial={content} client:load />
                     </div>
+                </section>
+
+                <section
+                    aria-labelledby="domains-heading"
+                    data-portfolio-section="domains"
+                    class="flex flex-col gap-2"
+                >
+                    <h2 id="domains-heading" class="text-heading font-semibold">Domain list</h2>
+                    <ul class="grid grid-cols-2 gap-x-4">
+                        {domains.map((domain) => (
+                            <li>
+                                <a
+                                    href={`https://${domain}`}
+                                    class="flex min-h-11 items-center gap-1 text-label font-medium text-primary"
+                                >
+                                    {domain}
+                                    <HugeiconsIcon
+                                        icon={ArrowUpRight01Icon}
+                                        size={12}
+                                        className="shrink-0 text-muted-foreground"
+                                        aria-hidden="true"
+                                    />
+                                </a>
+                            </li>
+                        ))}
+                    </ul>
                 </section>
 
                 <LifeGallery

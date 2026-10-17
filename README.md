@@ -37,6 +37,12 @@ extra arguments only to the last command, so the earlier stacks still deploy.
 For a dry run, invoke each `deploy:presence`, `deploy:website`, or `deploy:cats`
 script directly with `--dry-run`.
 
+## Update the domain list
+
+Edit `domains` in `apps/web/src/pages/index.astro` to change **Domain list**.
+The section appears below **Personal records** in the desktop sidebar and mobile
+layout. The domain list is static and is not managed by the Discord CMS.
+
 ## jakes.cat
 
 `apps/jakes-cats` is a public, for-fun site: a visitor gets the `cats/` photos
