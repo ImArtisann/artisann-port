@@ -57,16 +57,16 @@ export class BotConfig extends Context.Service<BotConfig, BotConfigService>()(
 ) {}
 
 const rawConfig = Config.all({
-    token: Config.redacted("DISCORD_BOT_TOKEN"),
-    clientId: Config.string("DISCORD_BOT_CLIENT_ID"),
-    serverId: Config.string("DISCORD_SERVER_ID"),
-    userId: Config.string("DISCORD_USER_ID"),
-    notesChannelId: Config.string("DISCORD_NOTES_CHANNEL_ID"),
-    notesWebhookId: Config.string("DISCORD_NOTES_WEBHOOK_ID"),
-    notesWebhookUrl: Config.redacted("DISCORD_NOTES_WEBHOOK_URL"),
-    portfolioApiUrl: Config.string("PORTFOLIO_API_URL"),
-    contentWriterToken: Config.redacted("CONTENT_WRITER_TOKEN"),
-    assetsHost: Config.string("ASSETS_HOST").pipe(Config.withDefault(DEFAULT_ASSETS_HOST)),
+    token: Config.Redacted("DISCORD_BOT_TOKEN"),
+    clientId: Config.String("DISCORD_BOT_CLIENT_ID"),
+    serverId: Config.String("DISCORD_SERVER_ID"),
+    userId: Config.String("DISCORD_USER_ID"),
+    notesChannelId: Config.String("DISCORD_NOTES_CHANNEL_ID"),
+    notesWebhookId: Config.String("DISCORD_NOTES_WEBHOOK_ID"),
+    notesWebhookUrl: Config.Redacted("DISCORD_NOTES_WEBHOOK_URL"),
+    portfolioApiUrl: Config.String("PORTFOLIO_API_URL"),
+    contentWriterToken: Config.Redacted("CONTENT_WRITER_TOKEN"),
+    assetsHost: Config.String("ASSETS_HOST").pipe(Config.withDefault(DEFAULT_ASSETS_HOST)),
 });
 
 /**

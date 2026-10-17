@@ -221,10 +221,10 @@ runtime stage containing only production dependencies, the app manifest and
 registries (for example the Hugeicons tarball used by `apps/web`/`packages/ui`)
 are never fetched and no `.npmrc`/registry credential is required in the build.
 
-The version-locked Distilled core patch remains for Alchemy and asset tooling.
-Both Bun source exports and Node ESM exports are patched. The Docker dependency
-stages copy `patches/` before installing. Bot photo uploads use binary RPC and
-the Worker’s native R2 binding instead of the Cloudflare management API.
+Distilled core `1.0.0-rc.15` preserves explicit content types for binary request
+bodies in both Bun source exports and Node ESM exports. No local patch is
+required. Bot photo uploads use binary RPC and the Worker’s native R2 binding
+instead of the Cloudflare management API.
 
 Photo commands accept regular and ephemeral Discord attachments. The bot
 downloads the supplied signed attachment URL, normalizes the image to WebP, and
@@ -320,6 +320,9 @@ Existing Alchemy resource identities, the `PORT_GITHUB_TOKEN` binding and the
 GitHub cron are preserved by this work.
 
 ### Local verification
+
+Keep `apps/web` on TypeScript 6 for `astro check`; its peer dependency excludes
+TypeScript 7. The root compiler remains TypeScript 7 for vite-plus and Effect.
 
 ```sh
 bun run test --run

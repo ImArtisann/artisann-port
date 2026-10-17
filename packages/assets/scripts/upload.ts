@@ -25,10 +25,10 @@ import * as Path from "effect/Path";
 import * as Redacted from "effect/Redacted";
 import * as Schema from "effect/Schema";
 import * as Stream from "effect/Stream";
-import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
-import * as HttpClient from "effect/unstable/http/HttpClient";
-import * as HttpClientRequest from "effect/unstable/http/HttpClientRequest";
-import * as HttpClientResponse from "effect/unstable/http/HttpClientResponse";
+import * as FetchHttpClient from "effect/http/FetchHttpClient";
+import * as HttpClient from "effect/http/HttpClient";
+import * as HttpClientRequest from "effect/http/HttpClientRequest";
+import * as HttpClientResponse from "effect/http/HttpClientResponse";
 import { ASSET_CACHE_CONTROL, DEFAULT_ASSETS_BUCKET_NAME } from "../src/config.ts";
 import { collectAssets, hashedKey, type CollectedAsset } from "../src/sources.ts";
 
@@ -56,10 +56,10 @@ interface Transport {
 
 /** Empty `.env` placeholders are absence, matching the previous `|| ""` checks. */
 const optionalText = (name: string) =>
-    Config.option(Config.string(name)).pipe(Config.map(Option.filter((value) => value.length > 0)));
+    Config.option(Config.String(name)).pipe(Config.map(Option.filter((value) => value.length > 0)));
 
 const optionalSecret = (name: string) =>
-    Config.option(Config.redacted(name)).pipe(
+    Config.option(Config.Redacted(name)).pipe(
         Config.map(Option.filter((secret) => Redacted.value(secret).length > 0)),
     );
 

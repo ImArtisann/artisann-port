@@ -3,12 +3,12 @@ import * as Cause from "effect/Cause";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Schema from "effect/Schema";
-import * as AtomRegistry from "effect/unstable/reactivity/AtomRegistry";
-import * as AtomRpc from "effect/unstable/reactivity/AtomRpc";
-import * as HttpClient from "effect/unstable/http/HttpClient";
-import type * as RpcClient from "effect/unstable/rpc/RpcClient";
-import type { RpcClientError } from "effect/unstable/rpc/RpcClientError";
-import type * as RpcGroup from "effect/unstable/rpc/RpcGroup";
+import * as AtomRegistry from "effect/reactivity/AtomRegistry";
+import * as AtomRpc from "effect/reactivity/AtomRpc";
+import * as HttpClient from "effect/http/HttpClient";
+import type * as RpcClient from "effect/rpc/RpcClient";
+import type { RpcClientError } from "effect/rpc/RpcClientError";
+import type * as RpcGroup from "effect/rpc/RpcGroup";
 import {
     ApiUnavailable,
     ContentWriteError,

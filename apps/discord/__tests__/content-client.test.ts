@@ -4,7 +4,7 @@ import * as Fiber from "effect/Fiber";
 import * as Layer from "effect/Layer";
 import * as Result from "effect/Result";
 import * as TestClock from "effect/testing/TestClock";
-import * as RpcTest from "effect/unstable/rpc/RpcTest";
+import * as RpcTest from "effect/rpc/RpcTest";
 import { MemoryRateLimitStoreLive, RateLimiterLive } from "dfx/RateLimit";
 import { ApiUnavailable, ContentWriteError } from "@artisann-port/presence/api-errors";
 import { DEFAULT_SITE_CONTENT } from "@artisann-port/presence/content";

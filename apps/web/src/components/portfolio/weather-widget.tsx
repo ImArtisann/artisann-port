@@ -5,7 +5,7 @@ import {
     CardHeader,
     CardTitle,
 } from "@artisann-port/ui/components/card";
-import * as AsyncResult from "effect/unstable/reactivity/AsyncResult";
+import * as AsyncResult from "effect/reactivity/AsyncResult";
 import { useAtomValue } from "@effect/atom-react";
 import { SunCloud02Icon } from "@hugeicons-pro/core-solid-rounded";
 import { HugeiconsIcon } from "@hugeicons/react";

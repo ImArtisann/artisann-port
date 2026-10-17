@@ -12,8 +12,8 @@
     "dependencies": {
         "@base-ui/react": "catalog:",
         "@fontsource-variable/geist": "catalog:",
-        "@hugeicons-pro/core-solid-rounded": "^4.2.0",
-        "@hugeicons/react": "^1.1.9",
+        "@hugeicons-pro/core-solid-rounded": "catalog:",
+        "@hugeicons/react": "catalog:",
         "class-variance-authority": "catalog:",
         "cn": "catalog:",
         "react": "catalog:",

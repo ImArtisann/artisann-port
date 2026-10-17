@@ -52,8 +52,8 @@ export default Alchemy.Stack(
             env: {
                 LIKES: likes,
                 IMAGES: Cloudflare.Images.Images("IMAGES"),
-                CONTENT_WRITER_TOKEN: Config.redacted("CONTENT_WRITER_TOKEN"),
-                ASSETS_HOST: Config.nonEmptyString("ASSETS_HOST").pipe(
+                CONTENT_WRITER_TOKEN: Config.Redacted("CONTENT_WRITER_TOKEN"),
+                ASSETS_HOST: Config.NonEmptyString("ASSETS_HOST").pipe(
                     Config.withDefault(DEFAULT_ASSETS_HOST),
                 ),
             },
@@ -64,7 +64,7 @@ export default Alchemy.Stack(
                 stage === "prod" ? { name: "jakes.cat", aliases: ["www.jakes.cat"] } : undefined,
         });
 
-        const bucketName = yield* Config.nonEmptyString("ASSETS_BUCKET_NAME").pipe(
+        const bucketName = yield* Config.NonEmptyString("ASSETS_BUCKET_NAME").pipe(
             Config.withDefault(DEFAULT_ASSETS_BUCKET_NAME),
         );
         yield* website.bind("photos:r2", {
