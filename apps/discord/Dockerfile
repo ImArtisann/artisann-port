@@ -18,7 +18,6 @@ WORKDIR /app
 # Manifests only, so dependency layers cache until they change. Every workspace
 # manifest keeps its original relative path, which the lockfile resolves against.
 COPY package.json bun.lock ./
-COPY patches patches
 COPY apps/discord/package.json apps/discord/package.json
 COPY apps/web/package.json apps/web/package.json
 COPY packages/presence/package.json packages/presence/package.json

@@ -1,8 +1,8 @@
 import { RegistryContext, scheduleTask } from "@effect/atom-react/RegistryContext";
-import * as AtomRegistry from "effect/unstable/reactivity/AtomRegistry";
+import * as AtomRegistry from "effect/reactivity/AtomRegistry";
 import { useState, type ReactNode } from "react";
 
-// rc.112 derives a zero timeout-wheel resolution from idle TTL zero unless overridden.
+// A zero default idle TTL derives a zero timeout-wheel resolution unless overridden.
 const browserRegistry = import.meta.env.SSR
     ? null
     : AtomRegistry.make({ scheduleTask, defaultIdleTTL: 0, timeoutResolution: 1 });

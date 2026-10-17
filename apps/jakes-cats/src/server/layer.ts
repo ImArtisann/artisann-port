@@ -5,7 +5,7 @@
  */
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
-import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
+import * as FetchHttpClient from "effect/http/FetchHttpClient";
 import { env, type CatsWorkerEnv } from "../env.ts";
 import { DeckLive, DeckService, PhotosBinding, PhotosConfig } from "./deck-service.ts";
 import { HeartLive, HeartService, RateLimitBinding } from "./heart-service.ts";

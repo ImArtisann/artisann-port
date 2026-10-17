@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import * as Effect from "effect/Effect";
-import * as HttpClient from "effect/unstable/http/HttpClient";
+import * as HttpClient from "effect/http/HttpClient";
 import { DEFAULT_SITE_CONTENT, type DeployedApp } from "../src/content.ts";
 import { isPublicDnsHostname, parseOgImageHosts } from "../src/project-hosts.ts";
 import { projectPreviewResponse, type ProjectImageCache } from "../src/project-preview.ts";

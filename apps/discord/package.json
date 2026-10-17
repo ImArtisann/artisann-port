@@ -11,9 +11,9 @@
         "@artisann-port/assets": "workspace:*",
         "@artisann-port/presence": "workspace:*",
         "@effect/platform-bun": "catalog:",
-        "dfx": "1.0.15",
+        "dfx": "1.1.0",
         "effect": "catalog:",
-        "sharp": "0.35.4"
+        "sharp": "0.35.5"
     },
     "devDependencies": {
         "@artisann-port/typescript-config": "workspace:*",

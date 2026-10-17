@@ -283,7 +283,7 @@ export const makePresenceWorker = Effect.fn("Presence.makeWorker")(function* (
             Effect.gen(function* () {
                 const current = yield* Ref.get(state);
                 if (!current.guildAvailable) return Option.none<string>();
-                const nonce = (yield* cryptography.randomUUIDv4.pipe(Effect.orDie)).replaceAll(
+                const nonce = (yield* cryptography.randomUUIDv4().pipe(Effect.orDie)).replaceAll(
                     "-",
                     "",
                 );

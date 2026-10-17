@@ -8,8 +8,8 @@
 import { describe, expect, it } from "vite-plus/test";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
-import * as HttpClient from "effect/unstable/http/HttpClient";
-import * as HttpClientResponse from "effect/unstable/http/HttpClientResponse";
+import * as HttpClient from "effect/http/HttpClient";
+import * as HttpClientResponse from "effect/http/HttpClientResponse";
 import type { PhotoTag } from "@artisann-port/presence/photos";
 import type { PhotosR2MutationBinding } from "../src/env.ts";
 import { PhotosBinding } from "../src/server/deck-service.ts";

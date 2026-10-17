@@ -230,8 +230,8 @@ In React event/animation handlers, prefix with
 
 ### Effect, errors, async
 
-Effect **4.0.0-rc.112**. Import `effect/unstable/*` (`rpc`, `http`,
-`reactivity`, `socket`). Do not use Effect 3 paths.
+Effect **4.0.5**. Import `effect/http/*`, `effect/rpc/*`, `effect/reactivity/*`,
+and `effect/socket/*`. Do not use Effect 3 paths.
 
 - Named functions: `Effect.fn("Name")`. Service methods: `Effect.withSpan`.
 - No `fetch`. Use `HttpClient` / `FetchHttpClient.layer`.
@@ -284,7 +284,7 @@ composition root provides everything.
 5. **Fail closed** at the boundary: custom-id grammars (`cms:`, `photos:`,
    `notes:`), origin/host allow-lists, WebP magic bytes, streamed body caps (32
    MiB / 16 KiB / 8 KiB).
-6. **Redact structurally.** `Config.redacted`. Startup errors name the variable,
+6. **Redact structurally.** `Config.Redacted`. Startup errors name the variable,
    never the value.
 7. **Adding an RPC.** Touch `rpc.ts`, the handler layer in `rpc-server.ts`, and
    `rpc-transport.ts` if serialization changes. `Uint8Array` belongs on the
@@ -331,8 +331,6 @@ Dynamic injection fails with “Could not find Turnscript tag.”
 - `alchemy.run.ts`, `packages/presence/alchemy.run.ts`,
   `packages/assets/alchemy.run.ts`, `apps/jakes-cats/alchemy.run.ts`,
   `stacks/github.ts`
-- `patches/@distilled.cloud%2Fcore@1.0.0-rc.8.patch` — keep `patches/` in every
-  install context (Docker copies it before `bun install`).
 
 **Generated**
 

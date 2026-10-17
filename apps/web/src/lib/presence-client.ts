@@ -5,9 +5,9 @@ import * as Queue from "effect/Queue";
 import * as Schedule from "effect/Schedule";
 import type * as Schema from "effect/Schema";
 import * as Stream from "effect/Stream";
-import * as Atom from "effect/unstable/reactivity/Atom";
-import * as AsyncResult from "effect/unstable/reactivity/AsyncResult";
-import * as Socket from "effect/unstable/socket/Socket";
+import * as Atom from "effect/reactivity/Atom";
+import * as AsyncResult from "effect/reactivity/AsyncResult";
+import * as Socket from "effect/socket/Socket";
 import { useAtomValue } from "@effect/atom-react";
 import { portfolioApiEndpoints } from "@/lib/rpc-client";
 
@@ -39,16 +39,11 @@ const presenceStream = (endpoint: string, publishFailure: (state: PresenceState)
         const attempt = Stream.callback<PresenceSnapshot, Socket.SocketError | Schema.SchemaError>(
             (queue) =>
                 Effect.gen(function* () {
-                    // makeWebSocket uses Effect.map/sync for construction/close in
-                    // rc.112. Supply typed acquisition and best-effort release instead.
+                    // Keep constructor errors retryable and tolerate close during a failed handshake.
                     const socket = yield* Socket.fromWebSocket(
                         Effect.acquireRelease(
                             Effect.try({
-                                try: () => {
-                                    const ws = new WebSocket(endpoint);
-                                    ws.binaryType = "arraybuffer";
-                                    return ws;
-                                },
+                                try: () => new WebSocket(endpoint),
                                 catch: (cause) =>
                                     new Socket.SocketError({
                                         reason: new Socket.SocketOpenError({
@@ -65,11 +60,18 @@ const presenceStream = (endpoint: string, publishFailure: (state: PresenceState)
                         // Quiet feeds have no periodic server heartbeat.
                         { openTimeout: Duration.infinity },
                     );
-                    yield* socket.runRaw((frame) =>
-                        decodePresenceDocument(frame).pipe(
-                            Effect.flatMap((value) => Queue.offer(queue, value)),
-                        ),
-                    );
+                    const { pull } = yield* socket.reader;
+                    while (true) {
+                        const frames = yield* pull;
+                        let latest = yield* decodePresenceDocument(frames[0]);
+                        for (let index = 1; index < frames.length; index++) {
+                            latest = yield* decodePresenceDocument(frames[index]).pipe(
+                                // Retain valid data that precedes a malformed frame in this batch.
+                                Effect.tapError(() => Queue.offer(queue, latest)),
+                            );
+                        }
+                        yield* Queue.offer(queue, latest);
+                    }
                 }).pipe(Queue.into(queue)),
             { bufferSize: 1, strategy: "sliding" },
         );

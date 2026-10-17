@@ -1,12 +1,12 @@
 /**
  * The visitor id: its grammar, its byte renderer, and the cookie round trip.
- * The request-scoped parts run inside a real Start request context (the same
- * `requestHandler` the Worker uses), so what is proven here is the deployed
- * behavior: a hand-edited cookie never becomes an identity, a fresh visitor
- * gets an HttpOnly cookie, and a known visitor is left alone.
+ * The request-scoped parts use Start's server entry, so cookie reads and writes
+ * run in the framework's request context: a hand-edited cookie never becomes an
+ * identity, a fresh visitor gets an HttpOnly cookie, and a known visitor is
+ * left alone.
  */
 import { describe, expect, it } from "vite-plus/test";
-import { requestHandler } from "@tanstack/react-start/server";
+import { createServerEntry, getResponseHeaders } from "@tanstack/react-start/server";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
 import {
@@ -20,12 +20,14 @@ import {
 
 const KNOWN_ID = "0123456789abcdef0123456789abcdef";
 
-/** Run one request through the Start context and read what came back. */
 async function getWithVisitor(request: Request): Promise<{ id: string; setCookie: string | null }> {
-    const handler = requestHandler(() =>
-        Effect.runPromise(currentVisitor).then((id) => new Response(id)),
-    );
-    const response = await handler(request, {});
+    const handler = createServerEntry({
+        fetch: async () => {
+            const id = await Effect.runPromise(currentVisitor);
+            return new Response(id, { headers: Array.from(getResponseHeaders()) });
+        },
+    });
+    const response = await handler.fetch(request);
     return { id: await response.text(), setCookie: response.headers.get("set-cookie") };
 }
 
@@ -98,7 +100,8 @@ describe("rate limit key", () => {
             headers: { "cf-connecting-ip": "203.0.113.7" },
         });
 
-        const response = await requestHandler(() => new Response(clientKey()))(request, {});
+        const handler = createServerEntry({ fetch: () => new Response(clientKey()) });
+        const response = await handler.fetch(request);
 
         expect(await response.text()).toBe("203.0.113.7");
     });

@@ -5,7 +5,7 @@ import { cn } from "@artisann-port/ui/lib/utils";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ImageNotFound01Icon } from "@hugeicons-pro/core-solid-rounded";
 import { useAtomValue } from "@effect/atom-react";
-import * as AsyncResult from "effect/unstable/reactivity/AsyncResult";
+import * as AsyncResult from "effect/reactivity/AsyncResult";
 import {
     animate,
     motion,

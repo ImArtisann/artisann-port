@@ -24,7 +24,7 @@ import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Schedule from "effect/Schedule";
 import * as Schema from "effect/Schema";
-import type * as HttpClient from "effect/unstable/http/HttpClient";
+import type * as HttpClient from "effect/http/HttpClient";
 import { DiscordREST, Ix, IxHelpers } from "dfx";
 import { DiscordGateway, interactionsSync, runIx } from "dfx/gateway";
 import type { DiscordRESTError } from "dfx/DiscordREST";

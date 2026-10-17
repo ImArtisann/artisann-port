@@ -8,7 +8,7 @@ import {
     type PhotoPage,
     type PhotoTag,
 } from "@artisann-port/presence/photos";
-import type { RpcClientError } from "effect/unstable/rpc/RpcClientError";
+import type { RpcClientError } from "effect/rpc/RpcClientError";
 import { BotRpcClients, boundedRpcOperation, type BotStorageError } from "./rpc-client.ts";
 
 export interface BotPhotoClientService {

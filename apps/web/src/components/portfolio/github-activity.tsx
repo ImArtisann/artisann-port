@@ -1,7 +1,7 @@
 import type { GithubSnapshot } from "@artisann-port/presence/github-schema";
 import { Card, CardContent } from "@artisann-port/ui/components/card";
 import { cn } from "@artisann-port/ui/lib/utils";
-import * as AsyncResult from "effect/unstable/reactivity/AsyncResult";
+import * as AsyncResult from "effect/reactivity/AsyncResult";
 import * as DateTime from "effect/DateTime";
 import { useAtomValue } from "@effect/atom-react";
 import type { CSSProperties } from "react";

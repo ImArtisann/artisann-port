@@ -1,6 +1,6 @@
 import type { SiteContent } from "@artisann-port/presence/content";
-import * as AsyncResult from "effect/unstable/reactivity/AsyncResult";
-import * as Atom from "effect/unstable/reactivity/Atom";
+import * as AsyncResult from "effect/reactivity/AsyncResult";
+import * as Atom from "effect/reactivity/Atom";
 import { useState } from "react";
 import { useAtomValue } from "@effect/atom-react";
 import { contentAtom, portfolioApiEndpoints } from "@/lib/rpc-client";

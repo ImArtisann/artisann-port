@@ -1,8 +1,8 @@
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
-import * as Atom from "effect/unstable/reactivity/Atom";
-import * as AtomRpc from "effect/unstable/reactivity/AtomRpc";
-import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
+import * as Atom from "effect/reactivity/Atom";
+import * as AtomRpc from "effect/reactivity/AtomRpc";
+import * as FetchHttpClient from "effect/http/FetchHttpClient";
 import {
     isPortfolioApiOrigin,
     PORTFOLIO_API_ORIGIN,

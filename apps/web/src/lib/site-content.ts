@@ -1,6 +1,6 @@
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
-import * as AtomRegistry from "effect/unstable/reactivity/AtomRegistry";
+import * as AtomRegistry from "effect/reactivity/AtomRegistry";
 import { DEFAULT_SITE_CONTENT, type SiteContent } from "@artisann-port/presence/content";
 import { portfolioApiEndpoints, publicClientFor } from "@/lib/rpc-client";
 

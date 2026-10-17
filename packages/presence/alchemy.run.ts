@@ -36,15 +36,15 @@ export default Alchemy.Stack(
             main: fileURLToPath(new URL("./src/worker.ts", import.meta.url)),
             env: {
                 PRESENCE_KV: snapshots,
-                PORT_GITHUB_TOKEN: Config.redacted("PORT_GITHUB_TOKEN"),
-                DISCORD_NOTES_WEBHOOK_URL: Config.redacted("DISCORD_NOTES_WEBHOOK_URL"),
-                TURNSTILE_SECRET_KEY: Config.redacted("TURNSTILE_SECRET_KEY"),
-                DISCORD_NOTES_CHANNEL_ID: Config.string("DISCORD_NOTES_CHANNEL_ID"),
-                WEBSITE_ORIGIN: Config.nonEmptyString("WEBSITE_ORIGIN").pipe(
+                PORT_GITHUB_TOKEN: Config.Redacted("PORT_GITHUB_TOKEN"),
+                DISCORD_NOTES_WEBHOOK_URL: Config.Redacted("DISCORD_NOTES_WEBHOOK_URL"),
+                TURNSTILE_SECRET_KEY: Config.Redacted("TURNSTILE_SECRET_KEY"),
+                DISCORD_NOTES_CHANNEL_ID: Config.String("DISCORD_NOTES_CHANNEL_ID"),
+                WEBSITE_ORIGIN: Config.NonEmptyString("WEBSITE_ORIGIN").pipe(
                     Config.withDefault("https://www.artisann.dev"),
                 ),
-                CONTENT_WRITER_TOKEN: Config.redacted("CONTENT_WRITER_TOKEN"),
-                ASSETS_HOST: Config.nonEmptyString("ASSETS_HOST").pipe(
+                CONTENT_WRITER_TOKEN: Config.Redacted("CONTENT_WRITER_TOKEN"),
+                ASSETS_HOST: Config.NonEmptyString("ASSETS_HOST").pipe(
                     Config.withDefault(DEFAULT_ASSETS_HOST),
                 ),
             },
@@ -53,7 +53,7 @@ export default Alchemy.Stack(
             compatibility: { flags: ["nodejs_compat"] },
         });
 
-        const bucketName = yield* Config.nonEmptyString("ASSETS_BUCKET_NAME").pipe(
+        const bucketName = yield* Config.NonEmptyString("ASSETS_BUCKET_NAME").pipe(
             Config.withDefault(DEFAULT_ASSETS_BUCKET_NAME),
         );
         yield* worker.bind("photos:r2", {
