@@ -15,6 +15,7 @@ const socialHost = assetHost(import.meta.env.PUBLIC_ASSETS_HOST || "") || DEFAUL
 const socialImage = assetUrl(socialAsset, `https://${socialHost}`);
 const socialDimensions = assetDimensions(socialAsset);
 const socialImageAlt = "Artisann — developer and automation architect in Dallas, with two pixel-art cats on a dark background.";
+const traksSiteKey: string = (import.meta.env.TRAKS_SITE_KEY ?? "").trim();
 ---
 
 <!doctype html>
@@ -42,6 +43,12 @@ const socialImageAlt = "Artisann — developer and automation architect in Dalla
     <meta name="theme-color" content="#111214" />
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <script is:inline defer src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"></script>
+    {traksSiteKey && (
+      <Fragment>
+        <script is:inline>window.traks=window.traks||function(){(window.traks.q=window.traks.q||[]).push(arguments)}</script>
+        <script is:inline defer data-site={traksSiteKey} src="https://analytics-collect.artisann.dev/t.js"></script>
+      </Fragment>
+    )}
     <script is:inline>
       try {
         const dark = localStorage.getItem("theme") !== "light";

@@ -30,7 +30,14 @@ container remains outside this deployment command; Coolify deploys it from
 GitHub webhooks. The shared deployment token is minted by `stacks/github.ts` and
 stored by the admin bootstrap (`bun run deploy:github`); widening its Cloudflare
 zone policy there does not touch already-stored Actions secrets until that
-bootstrap re-runs.
+bootstrap re-runs. The same bootstrap copies the workflow values listed in
+`WORKFLOW_SECRET_NAMES` (registry tokens, Worker secrets, `TRAKS_SITE_KEY`) into
+Actions secrets. Each value comes from the shell or `.env`, else from
+`.env.discord`. A missing value, or one that differs between the two files,
+fails the bootstrap. Re-run it after you change one of those values locally.
+
+The website renders the Traks analytics snippet only when `TRAKS_SITE_KEY` is
+set at build time, so local builds stay untracked.
 
 Do not append `--help` or `--dry-run` to `bun run deploy`: vite-plus forwards
 extra arguments only to the last command, so the earlier stacks still deploy.

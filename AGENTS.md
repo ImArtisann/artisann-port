@@ -82,15 +82,17 @@ Four Alchemy stacks, plus a one-shot GitHub bootstrap:
   `photo_hearts`, `photo_comments`), Images binding, visitor rate limiter, R2
   binding by name, prod-only `jakes.cat` with `www.jakes.cat` as a second custom
   domain on the same Worker.
-- `stacks/github.ts` — repo settings and the Cloudflare deployment token, scoped
-  to the `artisann.dev` and `jakes.cat` zones.
+- `stacks/github.ts` — repo settings, the Cloudflare deployment token (scoped to
+  the `artisann.dev` and `jakes.cat` zones), and the workflow Actions secrets
+  copied from the shell / `.env` / `.env.discord`.
 
 The presence and jakes-cats stacks **bind** the assets bucket by name. They must
 not provision it. Coolify deploys the Discord container; `bun run deploy`
 deploys presence, the website, and jakes.cat (`bun run deploy:cats --yes` stays
 valid standalone). The GitHub bootstrap mints that token and writes the Actions
-secrets; re-run it (`bun run deploy:github`) to apply zone-policy changes,
-because editing the stack never rotates a stored secret.
+secrets; re-run it (`bun run deploy:github`) to apply zone-policy changes or
+local value changes, because editing the stack never rotates a stored secret.
+Add a new workflow secret to `WORKFLOW_SECRET_NAMES` and to the workflow `env`.
 
 **jakes.cat.** Every server function resolves an anonymous visitor from the
 HttpOnly `jc_visitor` cookie (minted on first call). `getDeck` → R2 `list()` of
@@ -301,6 +303,13 @@ Tailwind v4 utilities. Preserve `data-design-node` / `data-portfolio-section` on
 (`<script is:inline>` to
 `https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit`).
 Dynamic injection fails with “Could not find Turnscript tag.”
+
+Traks analytics (<https://traks.dev/docs>) loads from
+`apps/web/src/layouts/base-layout.astro`: an `is:inline` queue stub plus
+`https://analytics-collect.artisann.dev/t.js`, rendered only when the build has
+`TRAKS_SITE_KEY` (public by design; CI reads it from Actions secrets). The key
+accepts only the registered domain, its subdomains, and localhost. Custom events
+use `window.traks(name, props?, value?)`.
 
 ## Important Files
 
