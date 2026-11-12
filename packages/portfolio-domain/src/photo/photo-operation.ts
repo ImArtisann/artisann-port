@@ -39,6 +39,7 @@ export const PhotoOperationState = Schema.Struct({
     status: Schema.Literals([
         "pending",
         "uncertain",
+        "resumable",
         "uploaded",
         "deleted",
         "collision",

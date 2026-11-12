@@ -523,7 +523,10 @@ Authorization checks the raw header before the body is read.
 Managed keys match `^(life|cats)/[0-9]{17,20}\.webp$`. Operation IDs match
 `^[A-Za-z0-9][A-Za-z0-9:._/-]{0,159}$`. Reusing an ID with a different request
 is a conflict. A retry must retain the key, operation ID, writer, mode, and
-bytes. Do not create a new operation to bypass an uncertain previous one.
+bytes. Do not create a new operation to bypass an uncertain previous one. An
+identical retry never executes an uncertain operation again before the owner's
+`resume`. Until then it can only complete an upload that R2 metadata confirms,
+or a deletion whose object is already absent.
 
 Follow this sequence after a typed uncertain result, timeout, or failed cleanup.
 
@@ -543,10 +546,11 @@ Follow this sequence after a typed uncertain result, timeout, or failed cleanup.
 5. Only after that confirmation, include
    `"confirmation": "original-writer-stopped"` with one of those actions. This
    literal records your assertion. The route cannot prove it for you. `resume`
-   advances the generation so the original request can be retried. `abort` ends
-   the workflow without undoing an R2 write. It refuses an upload already
-   confirmed by metadata. `confirm-deleted` requires a Delete operation and
-   current object absence.
+   advances the generation and marks the operation `resumable`. The next
+   identical retry then executes the original request again. `abort` ends the
+   workflow without undoing an R2 write. It refuses an upload already confirmed
+   by metadata. `confirm-deleted` requires a Delete operation and current object
+   absence.
 6. Inspect again and check the typed outcome. `unknown` is not success. A
    `PhotoMutationError`, `503`, or timeout can leave public storage changed. Do
    not claim deletion, completion, or rollback without the required evidence.

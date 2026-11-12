@@ -126,7 +126,27 @@ it("recovers a lost upload response without overwriting, then distinguishes coll
     );
 });
 
-it("retries a refused write, but rejects another operation while the key is reserved", async () => {
+/** The operator's recovery after asserting the original writer and its R2 calls stopped. */
+const ownerResume = (photos: typeof PhotosService.Service, operationId: string) =>
+    Effect.gen(function* () {
+        const inspection = yield* photos.reconcile({
+            key: KEY,
+            operationId,
+            actor: "owner",
+            action: "inspect",
+        });
+        return yield* photos.reconcile({
+            key: KEY,
+            operationId,
+            actor: "owner",
+            action: "resume",
+            expectedGeneration: inspection.generation,
+            expectedEtag: inspection.storageEtag,
+            confirmation: "original-writer-stopped",
+        });
+    });
+
+it("re-executes a refused write only after the owner resumes it, and keeps the key reserved", async () => {
     const bucket = new MemoryBucket();
     bucket.failPut = "before";
     await Effect.runPromise(
@@ -140,6 +160,12 @@ it("retries a refused write, but rejects another operation while the key is rese
                 .pipe(Effect.flip);
             expect(competing.reason).toBe("OperationConflict");
             bucket.failPut = null;
+            const unconfirmed = yield* photos.upload(upload).pipe(Effect.flip);
+            expect(unconfirmed).toMatchObject({ reason: "Uncertain", outcome: "unknown" });
+            expect(bucket.puts).toBe(1);
+            expect(yield* ownerResume(photos, upload.operationId)).toMatchObject({
+                status: "resumable",
+            });
             yield* photos.upload(upload);
             expect(bucket.objects.has(KEY)).toBe(true);
             expect(bucket.puts).toBe(2);
@@ -211,7 +237,7 @@ it("recovers a lost delete response and cannot later delete a replacement", asyn
     );
 });
 
-it("retries a failed deletion and still lists externally added managed photos", async () => {
+it("retries a failed deletion after owner resume and still lists externally added managed photos", async () => {
     const bucket = new MemoryBucket();
     await Effect.runPromise(
         Effect.gen(function* () {
@@ -228,6 +254,9 @@ it("retries a failed deletion and still lists externally added managed photos", 
             expect(failed.reason).toBe("Uncertain");
             expect(bucket.objects.has(KEY)).toBe(true);
             bucket.failDelete = null;
+            expect((yield* photos.delete(deletion).pipe(Effect.flip)).reason).toBe("Uncertain");
+            expect(bucket.deletes).toBe(1);
+            yield* ownerResume(photos, deletion.operationId);
             yield* photos.delete(deletion);
             expect(bucket.objects.has(KEY)).toBe(false);
             bucket.objects.set(KEY, {
@@ -296,7 +325,7 @@ it("lets an authenticated operator recover a crash before writing without expiri
                     .pipe(Effect.flip)).reason,
             ).toBe("OperationConflict");
             const resumed = yield* photos.reconcile(resume);
-            expect(resumed).toMatchObject({ status: "uncertain", outcome: "unknown" });
+            expect(resumed).toMatchObject({ status: "resumable", outcome: "unknown" });
             expect((yield* photos.reconcile(resume).pipe(Effect.flip)).reason).toBe(
                 "OperationConflict",
             );

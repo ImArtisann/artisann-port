@@ -95,7 +95,8 @@ export class PhotoOperations extends Domain.Aggregate("PhotoOperations", {
             const previous = operationAt(state, command.operationId);
             if (previous !== undefined) {
                 if (!sameRequest(previous.request, request)) return new PhotoOperationConflict();
-                return previous.status === "uncertain"
+                // Only the owner's confirmed resume makes an uncertain operation executable again.
+                return previous.status === "resumable"
                     ? [
                           new PhotoOperationResumed({
                               operationId: command.operationId,
@@ -113,7 +114,7 @@ export class PhotoOperations extends Domain.Aggregate("PhotoOperations", {
             if (previous !== undefined) {
                 if (!sameRequest(previous.request, command.request))
                     return new PhotoOperationConflict();
-                return previous.status === "uncertain"
+                return previous.status === "resumable"
                     ? [
                           new PhotoOperationResumed({
                               operationId: command.operationId,
@@ -164,7 +165,9 @@ export class PhotoOperations extends Domain.Aggregate("PhotoOperations", {
             }
             if (
                 state.active !== command.operationId ||
-                (operation.status !== "pending" && operation.status !== "uncertain")
+                (operation.status !== "pending" &&
+                    operation.status !== "uncertain" &&
+                    operation.status !== "resumable")
             )
                 return new PhotoOperationConflict();
             return [new PhotoOperationCompleted({ operationId: command.operationId, outcome })];
@@ -202,7 +205,9 @@ export class PhotoOperations extends Domain.Aggregate("PhotoOperations", {
                 operation === undefined ||
                 operation.generation !== command.expectedGeneration ||
                 state.active !== command.operationId ||
-                (operation.status !== "pending" && operation.status !== "uncertain")
+                (operation.status !== "pending" &&
+                    operation.status !== "uncertain" &&
+                    operation.status !== "resumable")
             )
                 return new PhotoOperationConflict();
             return [
@@ -276,7 +281,7 @@ export class PhotoOperations extends Domain.Aggregate("PhotoOperations", {
                 ...update(state, event.operationId, {
                     ...operation,
                     generation: event.generationAfter,
-                    status: event.disposition === "abort" ? "aborted" : "uncertain",
+                    status: event.disposition === "abort" ? "aborted" : "resumable",
                 }),
                 active:
                     event.disposition === "abort" && state.active === event.operationId
