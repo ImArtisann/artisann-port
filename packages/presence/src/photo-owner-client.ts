@@ -36,6 +36,7 @@ const DeleteInput = Schema.Struct({
     key: ManagedPhotoKey,
     operationId: PhotoOperationId,
     expectedEtag: Schema.optionalKey(Schema.NonEmptyString),
+    expectedUploadOperationId: Schema.optionalKey(PhotoOperationId),
 });
 
 export interface PhotoOwnerUploadInput extends Schema.Schema.Type<typeof UploadInput> {
@@ -58,6 +59,11 @@ export class PhotoOwnerClient extends Context.Service<
 >()("PhotoOwner.Client") {}
 
 const uncertain = () => new PhotoMutationError({ reason: "Uncertain", outcome: "unknown" });
+const LOOPBACK_HOSTS = {
+    localhost: true,
+    "127.0.0.1": true,
+    "[::1]": true,
+} as const;
 
 export const PhotoOwnerClientLive = Layer.effect(
     PhotoOwnerClient,
@@ -69,7 +75,11 @@ export const PhotoOwnerClientLive = Layer.effect(
             catch: () => new PhotoMutationError({ reason: "Unavailable", outcome: "not-applied" }),
         });
         if (
-            (base.protocol !== "https:" && base.protocol !== "http:") ||
+            // The writer token rides on every request; plaintext is acceptable only on loopback.
+            !(
+                base.protocol === "https:" ||
+                (base.protocol === "http:" && Object.hasOwn(LOOPBACK_HOSTS, base.hostname))
+            ) ||
             base.username !== "" ||
             base.password !== "" ||
             base.pathname !== "/" ||
@@ -156,6 +166,12 @@ export const PhotoOwnerClientLive = Layer.effect(
                 );
                 if (input.expectedEtag !== undefined)
                     request = HttpClientRequest.setHeader(request, "if-match", input.expectedEtag);
+                if (input.expectedUploadOperationId !== undefined)
+                    request = HttpClientRequest.setHeader(
+                        request,
+                        "x-photo-expected-operation-id",
+                        input.expectedUploadOperationId,
+                    );
                 const response = yield* execute(request);
                 const receipt = yield* HttpClientResponse.schemaBodyJson(DeleteReceipt)(
                     response,

@@ -16,7 +16,12 @@ export interface BotPhotoClientService {
         interactionId: string,
         bytes: Uint8Array,
     ) => Effect.Effect<string, BotStorageError>;
-    readonly deletePhoto: (tag: PhotoTag, photoId: string) => Effect.Effect<void, BotStorageError>;
+    /** `etag` is the listed version the owner confirmed; it also names the deletion operation. */
+    readonly deletePhoto: (
+        tag: PhotoTag,
+        photoId: string,
+        etag: string,
+    ) => Effect.Effect<void, BotStorageError>;
 }
 
 export class BotPhotoClient extends Context.Service<BotPhotoClient, BotPhotoClientService>()(
@@ -49,11 +54,14 @@ export const BotPhotoClientLive: Layer.Layer<BotPhotoClient, never, BotPortfolio
             const deletePhoto = Effect.fn("BotPhotoClient.deletePhoto")(function* (
                 tag: PhotoTag,
                 photoId: string,
+                etag: string,
             ) {
-                const operationId = `discord:delete:${yield* Effect.sync(() => crypto.randomUUID())}`;
+                // One confirmed object version is one operation: a retry after owner
+                // reconciliation must reuse the reserved ID, and a changed object gets a new one.
+                const operationId = `discord:delete:${tag}:${photoId}:${etag}`;
                 yield* boundedApiOperation(
                     "deletePhoto",
-                    clients.deletePhoto(tag, photoId, operationId),
+                    clients.deletePhoto(tag, photoId, operationId, etag),
                 ).pipe(
                     // Unknown outcomes can keep the key reserved; reconciliation needs this ID.
                     Effect.mapError((error) =>

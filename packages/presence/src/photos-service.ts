@@ -65,6 +65,8 @@ export interface PhotoDeletionInput {
     readonly operationId: string;
     readonly actor: typeof PhotoWriter.Type;
     readonly expectedEtag?: string;
+    /** Only an object written by this upload operation may be deleted. */
+    readonly expectedUploadOperationId?: string;
 }
 export const PhotoUploadReceipt = Schema.Struct({
     key: ManagedPhotoKey,
@@ -357,12 +359,14 @@ export const PhotosLive = Layer.effect(
         const deletePhoto = Effect.fn("PhotosService.delete")(function* (
             input: PhotoDeletionInput,
         ) {
-            const { key, operationId, actor, expectedEtag } = input;
+            const { key, operationId, actor, expectedEtag, expectedUploadOperationId } = input;
             if (
                 !isManagedKey(key) ||
                 !isOperationId(operationId) ||
                 !isWriter(actor) ||
-                expectedEtag === ""
+                expectedEtag === "" ||
+                (expectedUploadOperationId !== undefined &&
+                    !isOperationId(expectedUploadOperationId))
             ) {
                 return yield* new PhotoMutationError({
                     reason: "InvalidKey",
@@ -374,6 +378,7 @@ export const PhotosLive = Layer.effect(
                 key,
                 actor,
                 expectedEtag: expectedEtag ?? null,
+                expectedUploadOperationId: expectedUploadOperationId ?? null,
             });
             if (state.status === "deleted") return { key, operationId };
             if (state.status === "aborted") {
@@ -413,7 +418,9 @@ export const PhotosLive = Layer.effect(
             }
             if (
                 current.etag !== prepared.deletionEtag ||
-                (expectedEtag !== undefined && current.etag !== expectedEtag)
+                (expectedEtag !== undefined && current.etag !== expectedEtag) ||
+                (expectedUploadOperationId !== undefined &&
+                    current.customMetadata?.photoOperationId !== expectedUploadOperationId)
             ) {
                 yield* domain.complete(key, operationId, state.generation, { _tag: "Changed" });
                 return yield* new PhotoMutationError({

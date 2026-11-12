@@ -57,7 +57,11 @@ import {
     type DurableObjectStateLike,
     type ReplaceAction,
 } from "./content-writer.ts";
-import { ContentSourceJournal, ContentMigrationFailure } from "./content-migration-source.ts";
+import {
+    ContentSourceJournal,
+    ContentMigrationFailure,
+    type ContentMigrationResult,
+} from "./content-migration-source.ts";
 
 /** Internal storage keys. Marker payloads hold only the id and the decision. */
 const STATE_KEY = "state";
@@ -115,11 +119,25 @@ export class ContentWriterController {
         return Effect.runPromise(this.lock.withPermits(1)(effect));
     }
 
+    private migration<A, E>(effect: Effect.Effect<A, E>): Promise<ContentMigrationResult<A>> {
+        return this.run(
+            effect.pipe(
+                Effect.map((value): ContentMigrationResult<A> => ({ ok: true, value })),
+                Effect.catchIf(Schema.is(ContentMigrationFailure), (failure) =>
+                    Effect.succeed<ContentMigrationResult<A>>({
+                        ok: false,
+                        reason: failure.reason,
+                    }),
+                ),
+            ),
+        );
+    }
+
     getState(): Promise<ContentWriterState> {
         return this.run(this.serveState());
     }
     migrationPrepare(epoch: string) {
-        return this.run(
+        return this.migration(
             Effect.gen({ self: this }, function* () {
                 yield* this.ensureState();
                 return yield* this.journal.prepare(epoch);
@@ -128,7 +146,7 @@ export class ContentWriterController {
     }
 
     migrationStatus() {
-        return this.run(
+        return this.migration(
             Effect.gen({ self: this }, function* () {
                 yield* this.ensureState();
                 return yield* this.journal.status;
@@ -137,19 +155,19 @@ export class ContentWriterController {
     }
 
     migrationBaseline() {
-        return this.run(this.journal.baseline);
+        return this.migration(this.journal.baseline);
     }
 
     migrationEntries(after: number, take: number) {
-        return this.run(this.journal.entries(after, take));
+        return this.migration(this.journal.entries(after, take));
     }
 
     migrationDecisions(after: string | null, take: number) {
-        return this.run(this.journal.decisions(after, take));
+        return this.migration(this.journal.decisions(after, take));
     }
 
     migrationFence(epoch: string, sequence: number) {
-        return this.run(
+        return this.migration(
             Effect.gen({ self: this }, function* () {
                 yield* this.pump();
                 const current = yield* this.readStored();
@@ -162,7 +180,7 @@ export class ContentWriterController {
     }
 
     migrationComplete(epoch: string, sequence: number) {
-        return this.run(this.journal.complete(epoch, sequence));
+        return this.migration(this.journal.complete(epoch, sequence));
     }
 
     apply(action: ContentWriterAction): Promise<WriterOutcome> {

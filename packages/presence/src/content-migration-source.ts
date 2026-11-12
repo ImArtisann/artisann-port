@@ -53,19 +53,51 @@ export const ContentDecisionPage = Schema.Struct({
 });
 export type ContentDecisionPage = typeof ContentDecisionPage.Type;
 
+export const ContentMigrationReason = Schema.Literals([
+    "unavailable",
+    "conflict",
+    "not-prepared",
+    "fenced",
+    "invalid",
+]);
 export class ContentMigrationFailure extends Schema.TaggedError<ContentMigrationFailure>()(
     "ContentMigrationFailure",
-    { reason: Schema.Literals(["unavailable", "conflict", "not-prepared", "fenced", "invalid"]) },
+    { reason: ContentMigrationReason },
 ) {}
 
+/**
+ * Durable Object RPC keeps only an error's message, so typed migration
+ * failures cross the boundary as values; a rejection means the call itself failed.
+ */
+export type ContentMigrationResult<A> =
+    | { readonly ok: true; readonly value: A }
+    | { readonly ok: false; readonly reason: typeof ContentMigrationReason.Type };
+export const contentMigrationResult = <A, I>(value: Schema.Codec<A, I>) =>
+    Schema.Union([
+        Schema.Struct({ ok: Schema.Literal(true), value }),
+        Schema.Struct({ ok: Schema.Literal(false), reason: ContentMigrationReason }),
+    ]);
+
 export interface ContentMigrationSource extends ContentWriterStub {
-    migrationPrepare(epoch: string): Promise<ContentMigrationRecord>;
-    migrationStatus(): Promise<ContentMigrationStatus>;
-    migrationBaseline(): Promise<ContentMigrationRecord>;
-    migrationEntries(after: number, take: number): Promise<ContentMigrationPage>;
-    migrationDecisions(after: string | null, take: number): Promise<ContentDecisionPage>;
-    migrationFence(epoch: string, sequence: number): Promise<ContentMigrationRecord>;
-    migrationComplete(epoch: string, sequence: number): Promise<ContentMigrationControl>;
+    migrationPrepare(epoch: string): Promise<ContentMigrationResult<ContentMigrationRecord>>;
+    migrationStatus(): Promise<ContentMigrationResult<ContentMigrationStatus>>;
+    migrationBaseline(): Promise<ContentMigrationResult<ContentMigrationRecord>>;
+    migrationEntries(
+        after: number,
+        take: number,
+    ): Promise<ContentMigrationResult<ContentMigrationPage>>;
+    migrationDecisions(
+        after: string | null,
+        take: number,
+    ): Promise<ContentMigrationResult<ContentDecisionPage>>;
+    migrationFence(
+        epoch: string,
+        sequence: number,
+    ): Promise<ContentMigrationResult<ContentMigrationRecord>>;
+    migrationComplete(
+        epoch: string,
+        sequence: number,
+    ): Promise<ContentMigrationResult<ContentMigrationControl>>;
 }
 
 export interface ContentMigrationBinding extends ContentWriterBinding {
@@ -75,7 +107,11 @@ export interface ContentMigrationBinding extends ContentWriterBinding {
 function call<A>(evaluate: () => Promise<A>) {
     return Effect.tryPromise({
         try: evaluate,
-        catch: () => new ContentMigrationFailure({ reason: "unavailable" }),
+        // A transaction rejects with its body's typed failure; keep that reason.
+        catch: (cause) =>
+            Schema.is(ContentMigrationFailure)(cause)
+                ? cause
+                : new ContentMigrationFailure({ reason: "unavailable" }),
     }).pipe(
         Effect.timeoutOrElse({
             duration: "5 seconds",

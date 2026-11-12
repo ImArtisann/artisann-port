@@ -50,7 +50,19 @@ export const Message = Schema.Union([
     Swiped,
     Schema.TaggedStruct("Heart", {}),
     Schema.TaggedStruct("HeartSucceeded", { key: Schema.String, likes: Schema.Number }),
-    Schema.TaggedStruct("HeartFailed", { key: Schema.String, message: Schema.String }),
+    /** `uncertain`: the server may have stored the heart (timeout or 5xx). */
+    Schema.TaggedStruct("HeartFailed", {
+        key: Schema.String,
+        message: Schema.String,
+        uncertain: Schema.Boolean,
+    }),
+    /** The visitor's stored heart, read back after an uncertain failure. */
+    Schema.TaggedStruct("HeartReconciled", {
+        key: Schema.String,
+        hearted: Schema.Boolean,
+        likes: Schema.Number,
+        message: Schema.String,
+    }),
     Schema.TaggedStruct("CountChanged", { key: Schema.String, likes: Schema.Number }),
     Schema.TaggedStruct("DraftChanged", { body: Schema.String }),
     Schema.TaggedStruct("PostComment", {}),

@@ -14,7 +14,7 @@ export const WEBP_BYTES = new Uint8Array([
 export function uploadWorld() {
     const base = catsWorld();
     base.installCapture();
-    const objects = new Map<string, { bytes: Uint8Array; etag: string }>();
+    const objects = new Map<string, { bytes: Uint8Array; etag: string; operationId: string }>();
     // Like the real owner, a reused operation ID replays its receipt or conflicts.
     const operations = new Map<string, { bytes: Uint8Array; receipt: PhotoOwnerUploadReceipt }>();
     const outputs: Array<Uint8Array> = [];
@@ -48,7 +48,11 @@ export function uploadWorld() {
                           );
                 if (script.collideOnce) {
                     script.collideOnce = false;
-                    objects.set(input.key, { bytes: new Uint8Array([9, 8, 7]), etag: "original" });
+                    objects.set(input.key, {
+                        bytes: new Uint8Array([9, 8, 7]),
+                        etag: "original",
+                        operationId: "external-upload",
+                    });
                     base.objects.set(input.key, new Date());
                 }
                 if (objects.has(input.key))
@@ -56,7 +60,11 @@ export function uploadWorld() {
                         new PhotoMutationError({ reason: "Collision", outcome: "not-applied" }),
                     );
                 const etag = `etag-${input.key}`;
-                objects.set(input.key, { bytes: Uint8Array.from(input.bytes), etag });
+                objects.set(input.key, {
+                    bytes: Uint8Array.from(input.bytes),
+                    etag,
+                    operationId: input.operationId,
+                });
                 base.objects.set(input.key, new Date());
                 if (script.uncertainOnce) {
                     script.uncertainOnce = false;
@@ -81,7 +89,11 @@ export function uploadWorld() {
                     return Effect.fail(
                         new PhotoMutationError({ reason: "Unavailable", outcome: "not-applied" }),
                     );
-                if (objects.get(input.key)?.etag !== input.expectedEtag)
+                const current = objects.get(input.key);
+                if (
+                    current?.etag !== input.expectedEtag ||
+                    current?.operationId !== input.expectedUploadOperationId
+                )
                     return Effect.fail(
                         new PhotoMutationError({
                             reason: "OperationConflict",

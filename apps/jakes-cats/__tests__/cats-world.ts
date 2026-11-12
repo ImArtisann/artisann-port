@@ -35,7 +35,9 @@ class SqlStatement implements HeartsStatement {
     all() {
         return Promise.resolve({ results: this.db.prepare(this.query).all(...this.values) });
     }
-    first() {
+    async first() {
+        // `INSERT ... RETURNING` writes through `first()`; it must cross the same fence hook.
+        if (!/^\s*SELECT\b/iu.test(this.query)) await this.ready();
         return Schema.decodeUnknownPromise(Schema.Json)(
             this.db.prepare(this.query).get(...this.values) ?? null,
         );
@@ -115,7 +117,7 @@ export function catsWorld() {
             Promise.resolve({
                 objects: [...objects]
                     .filter(([key]) => key.startsWith(prefix ?? ""))
-                    .map(([key, uploaded]) => ({ key, uploaded })),
+                    .map(([key, uploaded]) => ({ key, uploaded, etag: `etag-${key}` })),
                 truncated: false,
             }),
         head: (key) =>

@@ -204,8 +204,10 @@ export const UploadLive = Layer.effect(
             const rollback = photos
                 .delete({
                     key,
-                    operationId: `cats-rollback:${key}`,
+                    operationId: `cats-rollback:${created.operationId}`,
                     expectedEtag: created.etag,
+                    // Identical bytes share an ETag; only this upload's object may be removed.
+                    expectedUploadOperationId: created.operationId,
                 })
                 .pipe(
                     Effect.tapError(() => Effect.logError("Upload rollback failed", key)),

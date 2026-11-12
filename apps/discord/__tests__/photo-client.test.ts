@@ -15,6 +15,7 @@ const KEY = "life/123456789012345678.webp";
 interface Exchange {
     readonly method: string;
     readonly operationId: string | undefined;
+    readonly ifMatch: string | undefined;
 }
 
 const photoWorld = (exchanges: Array<Exchange>) => {
@@ -23,6 +24,7 @@ const photoWorld = (exchanges: Array<Exchange>) => {
             exchanges.push({
                 method: request.method,
                 operationId: request.headers["x-photo-operation-id"],
+                ifMatch: request.headers["if-match"],
             });
             if (url.pathname !== "/api/writer/photos")
                 return HttpClientResponse.fromWeb(request, new Response(null, { status: 404 }));
@@ -94,17 +96,45 @@ describe("Discord photo owner client", () => {
         expect(photoUrl(key, "assets.example.com")).toBe(`https://assets.example.com/${KEY}`);
     });
 
-    it("reports the sent operation ID when a deletion outcome is unknown", async () => {
+    it("reuses one operation ID per confirmed version so a reconciled retry can resume it", async () => {
         const exchanges: Array<Exchange> = [];
-        const failure = await Effect.runPromise(
+        const failures = await Effect.runPromise(
             Effect.gen(function* () {
                 const photos = yield* BotPhotoClient;
-                return yield* photos.deletePhoto("life", "123456789012345678").pipe(Effect.flip);
+                const first = yield* photos
+                    .deletePhoto("life", "123456789012345678", "etag-1")
+                    .pipe(Effect.flip);
+                const retry = yield* photos
+                    .deletePhoto("life", "123456789012345678", "etag-1")
+                    .pipe(Effect.flip);
+                const changed = yield* photos
+                    .deletePhoto("life", "123456789012345678", "etag-2")
+                    .pipe(Effect.flip);
+                return { first, retry, changed };
             }).pipe(Effect.provide(photoWorld(exchanges))),
         );
-        const sent = exchanges.find((exchange) => exchange.method === "DELETE")?.operationId;
-        expect(sent).toMatch(/^discord:delete:[0-9a-f-]{36}$/u);
-        expect(failure.operationId).toBe(sent);
-        expect(describeError(failure)).toContain(`reconcile operation ${sent}`);
+        const deletes = exchanges.filter((exchange) => exchange.method === "DELETE");
+        expect(deletes).toEqual([
+            {
+                method: "DELETE",
+                operationId: "discord:delete:life:123456789012345678:etag-1",
+                ifMatch: "etag-1",
+            },
+            {
+                method: "DELETE",
+                operationId: "discord:delete:life:123456789012345678:etag-1",
+                ifMatch: "etag-1",
+            },
+            {
+                method: "DELETE",
+                operationId: "discord:delete:life:123456789012345678:etag-2",
+                ifMatch: "etag-2",
+            },
+        ]);
+        expect(failures.first.operationId).toBe(deletes[0]?.operationId);
+        expect(failures.retry.operationId).toBe(deletes[0]?.operationId);
+        expect(describeError(failures.first)).toContain(
+            `reconcile operation ${deletes[0]?.operationId}`,
+        );
     });
 });

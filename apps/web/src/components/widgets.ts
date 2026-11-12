@@ -19,6 +19,7 @@ const CALENDAR_DATE = new Intl.DateTimeFormat("en-US", {
     year: "numeric",
     timeZone: "UTC",
 });
+const GRAPHEMES = new Intl.Segmenter(undefined, { granularity: "grapheme" });
 
 export function projectCarousel(
     model: Model,
@@ -202,9 +203,7 @@ export function musicWidget(model: Model, h: HtmlBuilder<Message>): Html {
         song?.title ??
         (!settled ? "Checking playback" : failed ? "Playback unavailable" : "Between songs");
     if (song !== null) {
-        const segments = [
-            ...new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(title),
-        ];
+        const segments = [...GRAPHEMES.segment(title)];
         if (segments.length > 40)
             title = `${segments
                 .slice(0, 40)

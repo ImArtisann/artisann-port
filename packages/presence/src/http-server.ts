@@ -18,7 +18,7 @@ import { ContentMigrationFailure } from "./content-migration-source.ts";
 import { GithubService } from "./github.ts";
 import { HttpRequestFailure, readJsonRequest, readRequestBody } from "./http-body.ts";
 import { NotesService, originAllowed } from "./notes-service.ts";
-import { RawNoteSubmission } from "./notes.ts";
+import { RawNoteSubmission, type NoteSubmissionAccepted } from "./notes.ts";
 import { PhotoMutationError } from "./photo-domain-service.ts";
 import { PhotosService, PhotoReconciliationRequest } from "./photos-service.ts";
 import { PhotoTag } from "./photos.ts";
@@ -185,13 +185,24 @@ export const handlePortfolioHttp = Effect.fn("Portfolio.http")(
                 RawNoteSubmission.annotate({ parseOptions: { onExcessProperty: "error" } }),
                 8 * 1024,
             );
+            const reviewFailure = () => new NoteSubmissionError({ reason: "unavailable" });
+            // The composer retries with the same id; a recorded review means the note is already
+            // delivered, so answer as accepted instead of posting a second review message.
+            if (yield* cms.reviewQueued(input.id).pipe(Effect.mapError(reviewFailure)))
+                return jsonResponse(
+                    { status: "pending", id: input.id } satisfies NoteSubmissionAccepted,
+                    200,
+                    {
+                        ...publicCorsHeaders,
+                        "access-control-allow-origin": origin ?? "",
+                        vary: "Origin",
+                    },
+                );
             const submitted = yield* (yield* NotesService).submit(input, {
                 origin,
                 ip: request.headers.get("cf-connecting-ip"),
             });
-            yield* cms
-                .recordReview(submitted.id)
-                .pipe(Effect.mapError(() => new NoteSubmissionError({ reason: "unavailable" })));
+            yield* cms.recordReview(submitted.id).pipe(Effect.mapError(reviewFailure));
             return jsonResponse(submitted, 200, {
                 ...publicCorsHeaders,
                 "access-control-allow-origin": origin ?? "",
@@ -243,12 +254,17 @@ export const handlePortfolioHttp = Effect.fn("Portfolio.http")(
             const key = url.searchParams.get("key") ?? "";
             if (request.method === "DELETE") {
                 const etag = request.headers.get("if-match");
+                const expectedUpload = request.headers.get("x-photo-expected-operation-id");
                 return jsonResponse(
                     yield* photos.delete({
                         key,
                         operationId: id,
                         actor,
                         expectedEtag: etag ?? undefined,
+                        expectedUploadOperationId:
+                            expectedUpload === null
+                                ? undefined
+                                : yield* parameter(PhotoOperationId, expectedUpload),
                     }),
                     200,
                     { "cache-control": "no-store" },

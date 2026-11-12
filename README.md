@@ -104,9 +104,10 @@ prevents the write.
 `bun run dev:cats` starts the Cats Alchemy development stack. Do not use it as
 an isolated mutation check. Its by-name `PHOTOS` binding can read the live R2
 bucket, and uploads call the configured Portfolio photo owner. The default
-`PORTFOLIO_ORIGIN` is `https://presence.artisann.dev`. Local D1 does not make
-those photo writes local. Use isolated storage and an isolated Portfolio owner
-before testing uploads or deletions.
+`PORTFOLIO_ORIGIN` is `https://presence.artisann.dev`. It must use HTTPS unless
+its host is `localhost`, `127.0.0.1`, or `[::1]`. Local D1 does not make those
+photo writes local. Use isolated storage and an isolated Portfolio owner before
+testing uploads or deletions.
 
 The `JakesCats` stack contains separate `CatsBackend` and Foldkit `Website`
 Workers. It keeps the `Likes` D1 resource and production database name
@@ -158,8 +159,16 @@ presence Worker alone does not revoke access to the cats upload endpoint.
 
 Portfolio clients use same-origin `GET /api/content`, `GET /api/photos`,
 `GET /api/github`, and `GET /api/weather`. Photos require `tag=life` or
-`tag=cats`, with an optional pagination cursor. Notes use `POST /api/notes`. The
-browser keeps the native `/presence` WebSocket and project OG-image routes.
+`tag=cats`, with an optional pagination cursor. Each listed photo carries its R2
+`etag`. Notes use `POST /api/notes`. The browser keeps the native `/presence`
+WebSocket and project OG-image routes.
+
+A note submission posts one private Discord review message and then records the
+review. A retry with an already recorded note ID returns the accepted result
+without posting again. Discord webhooks have no idempotency key, so a retry
+after a delivered but unrecorded review can post a second message for the same
+note ID. Review buttons act on the note ID, so the second message resolves to
+the first decision.
 
 Cats uses `GET /api/deck`, `GET /api/top`, `GET /api/photo/:id`,
 `POST /api/hearts`, and `POST /api/comments`. Its visitor cookie stays
@@ -523,8 +532,10 @@ Authorization checks the raw header before the body is read.
   selects create-only. Without it, the request is a replacement. The `201`
   receipt contains `key`, `url`, `tag`, `operationId`, and `etag`.
 - `DELETE /api/writer/photos?key=<managed-key>` uses the same operation-ID
-  header. Optional `If-Match` supplies the expected ETag. A successful receipt
-  contains `key` and `operationId`.
+  header. Optional `If-Match` supplies the expected ETag. Optional
+  `x-photo-expected-operation-id` names the upload whose object may be removed.
+  Identical bytes share an ETag, so Cats rollback sends both. A successful
+  receipt contains `key` and `operationId`.
 - `POST /api/writer/photos/reconcile` accepts `PhotoReconciliationRequest` from
   `packages/presence/src/photos-service.ts`. It has an 8 KiB JSON cap. Only this
   owner control can inspect or authorize manual recovery.
@@ -536,6 +547,15 @@ bytes. Do not create a new operation to bypass an uncertain previous one. An
 identical retry never executes an uncertain operation again before the owner's
 `resume`. Until then it can only complete an upload that R2 metadata confirms,
 or a deletion whose object is already absent.
+
+Discord deletion uses `discord:delete:<tag>:<id>:<etag>` with the confirmed ETag
+as `If-Match`. Confirming the same photo version again after `resume` retries
+the original operation. A changed photo gets a new confirmation and operation
+ID.
+
+Request bodies fail with `408` after five seconds without a new chunk, or when
+the total read exceeds five seconds plus one second per 256 KiB of the route
+limit.
 
 Follow this sequence after a typed uncertain result, timeout, or failed cleanup.
 

@@ -37,6 +37,9 @@ const Deck = Schema.Struct({
     exitDelta: Direction,
     pauseNonce: Schema.Number,
     pausedUntil: Schema.Number,
+    /** Pointer over or focus inside the carousel: automatic rotation waits for both to end. */
+    hovered: Schema.Boolean,
+    focused: Schema.Boolean,
 });
 type Deck = typeof Deck.Type;
 
@@ -59,6 +62,8 @@ export const Message = defineMessageUnion({
     },
     ChangedEnvironment: { documentVisible: Schema.Boolean, reducedMotion: Schema.Boolean },
     ChangedVisibility: { placement: Placement, visible: Schema.Boolean },
+    ChangedHover: { placement: Placement, hovered: Schema.Boolean },
+    ChangedFocus: { placement: Placement, focused: Schema.Boolean },
     StartedPointer: {
         placement: Placement,
         pointerId: Schema.Number,
@@ -114,6 +119,8 @@ const emptyDeck = (): Deck => ({
     exitDelta: 1,
     pauseNonce: 0,
     pausedUntil: 0,
+    hovered: false,
+    focused: false,
 });
 
 export const init = (): Update.Return<Model, Message> => ({
@@ -299,6 +306,12 @@ export const update = (model: Model, message: Message): Update.Return<Model, Mes
                 ),
             };
         },
+        ChangedHover: ({ placement, hovered }) => ({
+            model: replaceDeck(model, placement, { ...model[placement], hovered }),
+        }),
+        ChangedFocus: ({ placement, focused }) => ({
+            model: replaceDeck(model, placement, { ...model[placement], focused }),
+        }),
         StartedPointer: ({ placement, pointerId, x, y, at }) => {
             const deck = model[placement];
             if (
@@ -600,18 +613,27 @@ const autoStream = (placement: Placement) =>
         ),
     );
 
+/** Whether the carousel is advancing on its own; it never moves under the pointer or focus. */
+const rotating = (model: Model, placement: Placement): boolean => {
+    const deck = model[placement];
+    return (
+        model.documentVisible &&
+        !model.reducedMotion &&
+        deck.visible &&
+        deck.photos.length > 1 &&
+        !deck.shuffling &&
+        !deck.hovered &&
+        !deck.focused
+    );
+};
+
 export const subscriptions = Subscription.make<Model, Message>()((entry) => {
     const rotation = (placement: Placement) =>
         entry(
             { active: Schema.Boolean, pauseNonce: Schema.Number },
             {
                 modelToDependencies: (model) => ({
-                    active:
-                        model.documentVisible &&
-                        !model.reducedMotion &&
-                        model[placement].visible &&
-                        model[placement].photos.length > 1 &&
-                        !model[placement].shuffling,
+                    active: rotating(model, placement),
                     pauseNonce: model[placement].pauseNonce,
                 }),
                 dependenciesToStream: ({ active }) =>
@@ -771,6 +793,10 @@ const keyboardAttributes = (
     placement: Placement,
     h: HtmlBuilder<Message>,
 ): Attribute<Message>[] => [
+    h.OnMouseEnter(Message.ChangedHover({ placement, hovered: true })),
+    h.OnMouseLeave(Message.ChangedHover({ placement, hovered: false })),
+    h.OnFocus(Message.ChangedFocus({ placement, focused: true })),
+    h.OnBlur(Message.ChangedFocus({ placement, focused: false })),
     h.Tabindex(0),
     h.AriaKeyshortcuts("ArrowLeft ArrowRight"),
     h.OnKeyDownSelfPreventDefault((key) => {
@@ -831,7 +857,8 @@ export const view = defineView<Model, Message, ViewInputs>((model, { placement }
     const liveStatus = h.p(
         [
             h.Role("status"),
-            h.AriaLive("polite"),
+            // Automatic advances stay silent; arrow keys and swipes pause rotation and are announced.
+            h.AriaLive(rotating(model, placement) && !deck.unavailable ? "off" : "polite"),
             h.Class(
                 cats
                     ? "sr-only"

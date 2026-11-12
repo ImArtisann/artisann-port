@@ -30,6 +30,8 @@ export const PhotoDeletionRequest = Schema.TaggedStruct("Delete", {
     key: ManagedPhotoKey,
     actor: PhotoWriter,
     expectedEtag: Schema.NullOr(Schema.NonEmptyString),
+    /** Upload whose object this deletion may remove; ETags repeat for identical bytes. */
+    expectedUploadOperationId: Schema.NullOr(PhotoOperationId),
 });
 export const PhotoOperationRequest = Schema.Union([PhotoUploadRequest, PhotoDeletionRequest]);
 export type PhotoOperationRequest = typeof PhotoOperationRequest.Type;

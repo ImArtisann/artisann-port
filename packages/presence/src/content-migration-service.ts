@@ -22,7 +22,9 @@ import {
     ContentMigrationPage,
     ContentMigrationRecord,
     ContentMigrationStatus,
+    contentMigrationResult,
     sourceSnapshotMatches,
+    type ContentMigrationResult,
 } from "./content-migration-source.ts";
 
 export const PortfolioMigrationStatus = Schema.Struct({
@@ -50,16 +52,22 @@ export class PortfolioMigration extends Context.Service<
     }
 >()("Portfolio/Migration") {}
 
-function native<A, I>(schema: Schema.Codec<A, I>, run: () => Promise<I>) {
-    return Effect.tryPromise({
-        try: run,
-        catch: () => new ContentMigrationFailure({ reason: "unavailable" }),
-    }).pipe(
-        Effect.flatMap(Schema.decodeEffect(schema)),
-        Effect.mapError(() => new ContentMigrationFailure({ reason: "unavailable" })),
+function native<A, I>(schema: Schema.Codec<A, I>, run: () => Promise<ContentMigrationResult<I>>) {
+    const unavailable = () => new ContentMigrationFailure({ reason: "unavailable" });
+    return Effect.tryPromise({ try: run, catch: unavailable }).pipe(
+        Effect.flatMap((result) =>
+            Schema.decodeUnknownEffect(contentMigrationResult(schema))(result).pipe(
+                Effect.mapError(unavailable),
+            ),
+        ),
+        Effect.flatMap((result) =>
+            result.ok
+                ? Effect.succeed(result.value)
+                : Effect.fail(new ContentMigrationFailure({ reason: result.reason })),
+        ),
         Effect.timeoutOrElse({
             duration: "15 seconds",
-            orElse: () => Effect.fail(new ContentMigrationFailure({ reason: "unavailable" })),
+            orElse: () => Effect.fail(unavailable()),
         }),
     );
 }

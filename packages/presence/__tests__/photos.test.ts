@@ -15,6 +15,7 @@ const photo = (id: string, uploadedAt: string): Photo => ({
     key: `life/${id}.webp`,
     url: `https://assets.artisann.dev/life/${id}.webp`,
     uploadedAt,
+    etag: `etag-${id}`,
 });
 
 describe("complete photo traversal", () => {
@@ -96,7 +97,7 @@ describe("complete photo traversal", () => {
 describe("native R2 page adapter", () => {
     it("filters unmanaged keys while preserving a continuation cursor", async () => {
         const uploaded = new Date("2026-09-08T03:00:00.000Z");
-        const unmanaged: PhotosR2Object = { key: "life/notes.txt", uploaded };
+        const unmanaged: PhotosR2Object = { key: "life/notes.txt", uploaded, etag: "unmanaged" };
         const seen: Array<{ prefix: string; limit: number }> = [];
         const namespace: PhotosR2Binding = {
             list: (options) => {
@@ -127,6 +128,7 @@ describe("native R2 page adapter", () => {
                         {
                             key: "life/1234567890123456789.webp",
                             uploaded: new Date("2026-09-08T03:00:00.000Z"),
+                            etag: "0123abcd",
                         },
                     ],
                     truncated: false,
@@ -143,6 +145,7 @@ describe("native R2 page adapter", () => {
                     key: "life/1234567890123456789.webp",
                     url: `https://${HOST}/life/1234567890123456789.webp`,
                     uploadedAt: "2026-09-08T03:00:00.000Z",
+                    etag: "0123abcd",
                 },
             ],
             nextCursor: null,
@@ -157,6 +160,7 @@ describe("native R2 page adapter", () => {
                         {
                             key: "life/1234567890123456789.webp",
                             uploaded: new Date("2026-09-08T03:00:00.000Z"),
+                            etag: "0123abcd",
                         },
                     ],
                     truncated: true,

@@ -43,4 +43,46 @@ describe("Cats page state", () => {
         ]);
         expect(model.failedImages).toEqual([]);
     });
+
+    it("keeps an uncertain heart pending and reads it back instead of undoing it", () => {
+        const failed = update(run([{ _tag: "Heart" }]), {
+            _tag: "HeartFailed",
+            key: photo.key,
+            message: "Request unavailable",
+            uncertain: true,
+        });
+        expect(failed.commands?.map((command) => command.name)).toEqual(["ReconcileHeart"]);
+        expect(failed.model.page.photos).toEqual([{ ...photo, hearted: true, likes: 2 }]);
+        expect(failed.model.toast).toBeNull();
+        // A count update alone cannot settle the uncertainty.
+        const counted = update(failed.model, { _tag: "CountChanged", key: photo.key, likes: 2 });
+        expect(Object.keys(counted.model.pendingHearts)).toEqual([photo.key]);
+        const stored = update(counted.model, {
+            _tag: "HeartReconciled",
+            key: photo.key,
+            hearted: true,
+            likes: 2,
+            message: "Request unavailable",
+        }).model;
+        expect(stored.page.photos).toEqual([{ ...photo, hearted: true, likes: 2 }]);
+        expect(stored.pendingHearts).toEqual({});
+        const missing = update(failed.model, {
+            _tag: "HeartReconciled",
+            key: photo.key,
+            hearted: false,
+            likes: 1,
+            message: "Request unavailable",
+        }).model;
+        expect(missing.page.photos).toEqual([photo]);
+        expect(missing.toast).toBe("Request unavailable");
+    });
+
+    it("never lowers a confirmed count when an older count arrives", () => {
+        const model = run([
+            { _tag: "Heart" },
+            { _tag: "HeartSucceeded", key: photo.key, likes: 3 },
+            { _tag: "CountChanged", key: photo.key, likes: 2 },
+        ]);
+        expect(model.page.photos).toEqual([{ ...photo, hearted: true, likes: 3 }]);
+    });
 });

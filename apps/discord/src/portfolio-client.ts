@@ -65,6 +65,7 @@ export interface BotPortfolioClientService {
         tag: PhotoTag,
         photoId: string,
         operationId: string,
+        etag: string,
     ) => Effect.Effect<void, ClientFailure>;
     readonly presence: Effect.Effect<PresenceSnapshot, ClientFailure>;
     readonly publishPresence: (
@@ -194,11 +195,14 @@ export const BotPortfolioClientLive = Layer.effect(
             tag: PhotoTag,
             photoId: string,
             operationId: string,
+            etag: string,
         ) {
             const request = auth(HttpClientRequest.delete(photosUrl)).pipe(
                 HttpClientRequest.setUrlParam("key", `${tag}/${photoId}.webp`),
                 HttpClientRequest.setHeader("x-photo-operation-id", operationId),
                 HttpClientRequest.setHeader("x-photo-writer", "discord"),
+                // The owner refuses deletion when the object changed after it was confirmed.
+                HttpClientRequest.setHeader("if-match", etag),
             );
             yield* decode(request, DeletedPhoto, "photo");
         });

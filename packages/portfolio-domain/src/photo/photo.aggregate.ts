@@ -39,7 +39,8 @@ function sameRequest(left: PhotoOperationRequest, right: PhotoOperationRequest):
     return (
         left._tag === "Delete" &&
         right._tag === "Delete" &&
-        left.expectedEtag === right.expectedEtag
+        left.expectedEtag === right.expectedEtag &&
+        left.expectedUploadOperationId === right.expectedUploadOperationId
     );
 }
 

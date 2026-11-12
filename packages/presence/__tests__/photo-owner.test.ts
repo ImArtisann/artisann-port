@@ -22,6 +22,11 @@ interface StoredPhoto extends PhotoStoredObject {
     readonly uploaded: Date;
 }
 
+/** Like a single-part R2 ETag, identical bytes always produce the same value. */
+function contentEtag(bytes: Uint8Array): string {
+    return `etag-${bytes.join(".")}`;
+}
+
 class MemoryBucket implements PhotosR2MutationBinding {
     readonly objects = new Map<string, StoredPhoto>();
     puts = 0;
@@ -39,7 +44,7 @@ class MemoryBucket implements PhotosR2MutationBinding {
             objects: [...this.objects.entries()]
                 .filter(([key]) => key.startsWith(options.prefix))
                 .slice(0, options.limit)
-                .map(([key, object]) => ({ key, uploaded: object.uploaded })),
+                .map(([key, object]) => ({ key, uploaded: object.uploaded, etag: object.etag })),
             truncated: false as const,
         };
     }
@@ -54,7 +59,7 @@ class MemoryBucket implements PhotosR2MutationBinding {
         if (options.onlyIf !== undefined && this.objects.has(key)) return null;
         const object = {
             bytes: bytes.slice(),
-            etag: `etag-${this.puts}`,
+            etag: contentEtag(bytes),
             customMetadata: options.customMetadata,
             uploaded: new Date("2026-09-10T12:00:00.000Z"),
         };
@@ -109,7 +114,7 @@ it("recovers a lost upload response without overwriting, then distinguishes coll
             const recovered = yield* photos.upload(upload);
             expect(recovered).toMatchObject({
                 key: KEY,
-                etag: "etag-1",
+                etag: contentEtag(WEBP),
                 url: `https://assets.artisann.dev/${KEY}`,
             });
             expect(bucket.puts).toBe(1);
@@ -203,7 +208,7 @@ it("does not repeat a pending upload or let deletion race it", async () => {
     );
 });
 
-it("recovers a lost delete response and cannot later delete a replacement", async () => {
+it("recovers a lost delete response and cannot later delete a same-byte replacement", async () => {
     const bucket = new MemoryBucket();
     await Effect.runPromise(
         Effect.gen(function* () {
@@ -214,6 +219,7 @@ it("recovers a lost delete response and cannot later delete a replacement", asyn
                 operationId: "cats-rollback:12345678901234567",
                 actor: "cats" as const,
                 expectedEtag: original.etag,
+                expectedUploadOperationId: upload.operationId,
             };
             bucket.failDelete = "after";
             const lost = yield* photos.delete(deletion).pipe(Effect.flip);
@@ -226,6 +232,7 @@ it("recovers a lost delete response and cannot later delete a replacement", asyn
                 ...upload,
                 operationId: "replacement-upload",
             });
+            expect(replacement.etag).toBe(original.etag);
             yield* photos.delete(deletion);
             expect(bucket.objects.get(KEY)?.etag).toBe(replacement.etag);
             const late = yield* photos
@@ -233,6 +240,9 @@ it("recovers a lost delete response and cannot later delete a replacement", asyn
                 .pipe(Effect.flip);
             expect(late.reason).toBe("OperationConflict");
             expect(bucket.deletes).toBe(1);
+            expect(bucket.objects.get(KEY)?.customMetadata?.photoOperationId).toBe(
+                "replacement-upload",
+            );
         }).pipe(Effect.provide(world(bucket))),
     );
 });
@@ -270,6 +280,7 @@ it("retries a failed deletion after owner resume and still lists externally adde
                     key: KEY,
                     url: `https://assets.artisann.dev/${KEY}`,
                     uploadedAt: "2026-09-11T00:00:00.000Z",
+                    etag: "external",
                 },
             ]);
         }).pipe(Effect.provide(world(bucket))),
@@ -343,6 +354,7 @@ it("lets an authenticated operator recover a crash before writing without expiri
                 key: KEY,
                 actor: "owner",
                 expectedEtag: null,
+                expectedUploadOperationId: null,
             });
             const beforeAbort = yield* photos.reconcile({
                 key: KEY,
@@ -398,7 +410,7 @@ it("confirms R2 evidence after a writer crash without another upload", async () 
             expect(inspection).toMatchObject({
                 status: "pending",
                 evidence: "upload-confirmed",
-                storageEtag: "etag-1",
+                storageEtag: contentEtag(WEBP),
             });
             const discardConfirmed = yield* photos
                 .reconcile({
@@ -423,7 +435,7 @@ it("confirms R2 evidence after a writer crash without another upload", async () 
             expect(recovered).toMatchObject({ status: "uploaded", outcome: "applied" });
             yield* Deferred.succeed(release, undefined);
             const retry = yield* photos.upload(upload);
-            expect(retry.etag).toBe("etag-1");
+            expect(retry.etag).toBe(contentEtag(WEBP));
             expect(bucket.puts).toBe(1);
         }).pipe(Effect.scoped, Effect.provide(world(bucket))),
     );

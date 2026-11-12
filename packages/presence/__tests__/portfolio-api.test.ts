@@ -130,6 +130,14 @@ it("keeps acknowledged source writes across copy, restart, a racing fence and fo
             const resumed = yield* migration("prepare", { epoch: EPOCH });
             expect(resumed.target.sourceSequence).toBe(0);
             expect(resumed.converged).toBe(false);
+            const otherEpoch = yield* ownerRequest("/api/migration/prepare", {
+                epoch: `${EPOCH}-other`,
+            });
+            expect(otherEpoch.status).toBe(409);
+            expect(yield* Effect.promise(() => otherEpoch.json())).toEqual({
+                _tag: "ContentMigrationFailure",
+                reason: "conflict",
+            });
             const exported = yield* ownerRequest("/api/migration/export", {
                 after: 0,
                 take: 100,
@@ -182,7 +190,8 @@ it("keeps acknowledged source writes across copy, restart, a racing fence and fo
                 });
             };
             const raced = yield* ownerRequest("/api/migration/handoff", {});
-            expect(raced.status).toBe(503);
+            // The source moved past the converged sequence: a typed conflict, not an outage.
+            expect(raced.status).toBe(409);
             const afterRace = yield* migration("status");
             expect(afterRace).toMatchObject({
                 converged: false,
@@ -633,23 +642,37 @@ it("keeps pending and rejected text in private review delivery and refuses publi
         Effect.gen(function* () {
             const client = yield* activate(world.published);
             const privateText = "Private rejected note, never public.";
-            const submission = yield* handlePortfolioHttp(
-                new Request("https://portfolio.invalid/api/notes", {
-                    method: "POST",
-                    headers: {
-                        origin: ORIGIN,
-                        "content-type": "application/json",
-                        "cf-connecting-ip": "192.0.2.7",
-                    },
-                    body: JSON.stringify({
-                        id: noteId(201),
-                        name: "Private visitor",
-                        body: privateText,
-                        turnstileToken: "isolated-turnstile-proof",
+            const submit = () =>
+                handlePortfolioHttp(
+                    new Request("https://portfolio.invalid/api/notes", {
+                        method: "POST",
+                        headers: {
+                            origin: ORIGIN,
+                            "content-type": "application/json",
+                            "cf-connecting-ip": "192.0.2.7",
+                        },
+                        body: JSON.stringify({
+                            id: noteId(201),
+                            name: "Private visitor",
+                            body: privateText,
+                            turnstileToken: "isolated-turnstile-proof",
+                        }),
                     }),
-                }),
-            );
+                );
+            const submission = yield* submit();
             expect(submission.status).toBe(200);
+            const reviewPosts = () =>
+                world.outgoing.filter((request) => request.url.startsWith("https://discord.com/"))
+                    .length;
+            expect(reviewPosts()).toBe(1);
+            // A retry after a lost response is answered from the recorded review, not reposted.
+            const retried = yield* submit();
+            expect(retried.status).toBe(200);
+            expect(yield* Effect.promise(() => retried.json())).toEqual({
+                status: "pending",
+                id: noteId(201),
+            });
+            expect(reviewPosts()).toBe(1);
             const review = world.outgoing.find((request) =>
                 request.url.startsWith("https://discord.com/"),
             );
@@ -881,12 +904,19 @@ describe("HTTP guards and permanent binary photo route", () => {
                     ),
                 ).toEqual({
                     tag: "cats",
-                    photos: [{ key, url: `https://assets.artisann.dev/${key}`, uploadedAt: NOW }],
+                    photos: [
+                        {
+                            key,
+                            url: `https://assets.artisann.dev/${key}`,
+                            uploadedAt: NOW,
+                            etag: receipt.etag,
+                        },
+                    ],
                     nextCursor: null,
                 });
                 expect((yield* upload("http-photo-collision")).status).toBe(409);
                 expect(world.photos.puts).toBe(1);
-                const remove = (id: string, etag: string) =>
+                const remove = (id: string, etag: string, expectedUpload: string) =>
                     handlePortfolioHttp(
                         new Request(`https://portfolio.invalid/api/writer/photos?key=${key}`, {
                             method: "DELETE",
@@ -895,12 +925,23 @@ describe("HTTP guards and permanent binary photo route", () => {
                                 "x-photo-operation-id": id,
                                 "x-photo-writer": "cats",
                                 "if-match": etag,
+                                "x-photo-expected-operation-id": expectedUpload,
                             },
                         }),
                     );
-                expect((yield* remove("wrong-object-delete", "stale-etag")).status).toBe(409);
+                expect(
+                    (yield* remove("wrong-object-delete", "stale-etag", "http-photo-upload"))
+                        .status,
+                ).toBe(409);
+                expect(
+                    (yield* remove("wrong-upload-delete", receipt.etag, "another-upload")).status,
+                ).toBe(409);
                 expect(world.photos.deletes).toBe(0);
-                const deleted = yield* remove("http-photo-delete", receipt.etag);
+                const deleted = yield* remove(
+                    "http-photo-delete",
+                    receipt.etag,
+                    "http-photo-upload",
+                );
                 expect(deleted.status).toBe(200);
                 expect(world.photos.objects.has(key)).toBe(false);
                 expect(world.photos.deletes).toBe(1);

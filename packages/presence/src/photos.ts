@@ -63,6 +63,8 @@ export const Photo = Schema.Struct({
     url: HttpsUrl,
     /** When the object was uploaded, serialized as an ISO timestamp. */
     uploadedAt: IsoTimestamp,
+    /** The listed object version; deletion sends it as `If-Match`. */
+    etag: Schema.NonEmptyString,
 });
 
 export type Photo = typeof Photo.Type;
@@ -80,6 +82,7 @@ export type PhotoPage = typeof PhotoPage.Type;
 export interface PhotosR2Object {
     readonly key: string;
     readonly uploaded: Date;
+    readonly etag: string;
 }
 
 /**
@@ -106,6 +109,7 @@ const PhotosR2PageBoundary = Schema.Struct({
         Schema.Struct({
             key: Schema.String,
             uploaded: Schema.Date,
+            etag: Schema.String,
         }),
     ),
     truncated: Schema.Boolean,
@@ -197,13 +201,18 @@ export const readPhotos = Effect.fn("Photos.read")(function* (
         if (!object.key.startsWith(`${tag}/`)) continue;
         if (!MANAGED_PHOTO_KEY_PATTERN.test(object.key)) continue;
         const url = photoUrl(object.key, host);
-        if (url === null) {
+        if (url === null || object.etag === "") {
             return yield* new PhotosError({
                 operation: "r2.list",
                 cause: `R2 object ${object.key} is not a usable managed photo`,
             });
         }
-        photos.push({ key: object.key, url, uploadedAt: object.uploaded.toISOString() });
+        photos.push({
+            key: object.key,
+            url,
+            uploadedAt: object.uploaded.toISOString(),
+            etag: object.etag,
+        });
     }
     if (page.truncated && (page.cursor === undefined || page.cursor === "")) {
         return yield* new PhotosError({

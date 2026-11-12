@@ -9,8 +9,8 @@ import {
     DRAG_ELASTIC,
     DRAG_ROTATE_DEG,
     DRAG_ROTATE_RANGE_PX,
-    EXIT_DISTANCE_PX,
     EXIT_SPRING,
+    exitTranslation,
     SNAP_BACK_SPRING,
     SWIPE_OFFSET_PX,
     type SwipeDirection,
@@ -145,7 +145,17 @@ export const exitCard = (
         }
         card.dataset.exiting = "true";
         card.dispatchEvent(new Event("cats:exit"));
-        const x = direction === "right" ? EXIT_DISTANCE_PX : -EXIT_DISTANCE_PX;
+        // The rect includes the live drag; rotation keeps the center, so only translation moves it.
+        const rect = card.getBoundingClientRect();
+        const transform = getComputedStyle(card).transform;
+        const dragged = transform === "none" ? 0 : new DOMMatrixReadOnly(transform).m41;
+        const x = exitTranslation(
+            direction,
+            rect.left + rect.width / 2 - dragged,
+            card.offsetWidth,
+            card.offsetHeight,
+            document.documentElement.clientWidth,
+        );
         const rotation = direction === "right" ? DRAG_ROTATE_DEG : -DRAG_ROTATE_DEG;
         const stamp = card.querySelector<HTMLElement>(
             `[data-stamp='${direction === "right" ? "like" : "skip"}']`,

@@ -208,3 +208,41 @@ it("rejects an old-source write that read source mode before the atomic fence", 
         world.db.sqlite.close();
     }
 });
+
+it("rejects an old-source comment that read source mode before the atomic fence", async () => {
+    const world = catsWorld();
+    world.installCapture();
+    const reachedInsert = Promise.withResolvers<void>();
+    const releaseInsert = Promise.withResolvers<void>();
+    world.db.beforeWrite = (sql) => {
+        if (!sql.startsWith("INSERT INTO photo_comments")) return Promise.resolve();
+        reachedInsert.resolve();
+        return releaseInsert.promise;
+    };
+    try {
+        await Effect.runPromise(
+            Effect.gen(function* () {
+                const migration = yield* MigrationService;
+                yield* migration.prepare;
+                const source = yield* HeartsService;
+                const racingWriter = yield* Effect.forkScoped(
+                    source.addComment(PHOTO_A, VISITOR_A, "Written across the fence"),
+                );
+                yield* Effect.promise(() => reachedInsert.promise);
+                expect((yield* migration.fence).mode).toBe("fenced");
+                releaseInsert.resolve();
+                expect((yield* Fiber.join(racingWriter).pipe(Effect.flip))._tag).toBe(
+                    "Hearts.Error",
+                );
+                expect((yield* migration.status).capturedThrough).toBe(0);
+                expect(
+                    world.db.sqlite.prepare("SELECT COUNT(*) AS count FROM photo_comments").get(),
+                ).toEqual({ count: 0 });
+                expect((yield* migration.handoff).mode).toBe("domain");
+            }).pipe(Effect.scoped, Effect.provide(world.layer)),
+        );
+    } finally {
+        releaseInsert.resolve();
+        world.db.sqlite.close();
+    }
+});

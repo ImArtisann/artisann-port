@@ -49,6 +49,8 @@ export class CmsContentService extends Context.Service<
             commandId: string,
         ) => Effect.Effect<ContentWriterResult, ContentWriteError | ApiUnavailable>;
         readonly recordReview: (id: string) => Effect.Effect<void, ApiUnavailable>;
+        /** Whether a review message for this note was already delivered and recorded. */
+        readonly reviewQueued: (id: string) => Effect.Effect<boolean, ApiUnavailable>;
     }
 >()("Cms.ContentService") {}
 
@@ -328,6 +330,17 @@ export const CmsContentLive = Layer.effect(
             Effect.catchDefect(() => Effect.fail(unavailable())),
         );
 
-        return CmsContentService.of({ get, readState, apply, recordReview });
+        const reviewQueued = Effect.fn("Cms.reviewQueued")(
+            function* (id: string) {
+                return (yield* reviews.state(id).pipe(Effect.mapError(unavailable))).queued;
+            },
+            Effect.timeoutOrElse({
+                duration: "10 seconds",
+                orElse: () => Effect.fail(unavailable()),
+            }),
+            Effect.catchDefect(() => Effect.fail(unavailable())),
+        );
+
+        return CmsContentService.of({ get, readState, apply, recordReview, reviewQueued });
     }),
 );

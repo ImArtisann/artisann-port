@@ -167,7 +167,11 @@ export class MemoryPhotos implements PhotosR2MutationBinding {
         const selected = eligible.slice(0, options.limit);
         const truncated = eligible.length > selected.length;
         const page = {
-            objects: selected.map(([key, object]) => ({ key, uploaded: object.uploaded })),
+            objects: selected.map(([key, object]) => ({
+                key,
+                uploaded: object.uploaded,
+                etag: object.etag,
+            })),
             truncated,
         };
         return Promise.resolve(truncated ? { ...page, cursor: selected.at(-1)?.[0] } : page);

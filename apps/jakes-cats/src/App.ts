@@ -16,7 +16,7 @@ import {
     type Message,
     type Page,
 } from "./app-state.ts";
-import { MAX_COMMENTS_PER_PHOTO, type DeckPhoto } from "./contracts.ts";
+import { MAX_COMMENTS_PER_PHOTO, photoIdFromKey, type DeckPhoto } from "./contracts.ts";
 import { exitCard } from "./components/deck-motion.ts";
 import { failureMessage } from "./components/toast-message.ts";
 import { loadPage, pageFailure } from "./page.ts";
@@ -83,11 +83,39 @@ const heart = (model: Model, photo: DeckPhoto): AppUpdate => {
                             _tag: "HeartFailed",
                             key: photo.key,
                             message: failureMessage(error),
+                            uncertain: error.status === 0 || error.status >= 500,
                         }),
                     }),
                 ),
             },
         ],
+    };
+};
+
+/** Read the visitor's stored heart back; a failed read leaves nothing proven. */
+const reconcileHeart = (
+    key: string,
+    message: string,
+): Command.Command<Message, never, HttpClient.HttpClient> => {
+    const id = photoIdFromKey(key);
+    const unresolved: Message = { _tag: "HeartFailed", key, message, uncertain: false };
+    return {
+        name: "ReconcileHeart",
+        effect:
+            id === null
+                ? Effect.succeed(unresolved)
+                : catsHttp.photo(id).pipe(
+                      Effect.match({
+                          onSuccess: ({ photo }): Message => ({
+                              _tag: "HeartReconciled",
+                              key,
+                              hearted: photo.hearted,
+                              likes: photo.likes,
+                              message,
+                          }),
+                          onFailure: () => unresolved,
+                      }),
+                  ),
     };
 };
 
@@ -164,6 +192,9 @@ export const update = (model: Model, message: Message): AppUpdate => {
         case "HeartFailed": {
             const pending = model.pendingHearts[message.key];
             if (pending === undefined) return { model };
+            // The heart may already be stored: keep it pending until the read-back decides.
+            if (message.uncertain)
+                return { model, commands: [reconcileHeart(message.key, message.message)] };
             const pendingHearts = { ...model.pendingHearts };
             delete pendingHearts[message.key];
             return {
@@ -183,6 +214,15 @@ export const update = (model: Model, message: Message): AppUpdate => {
                 },
             };
         }
+        case "HeartReconciled":
+            return message.hearted
+                ? update(model, { _tag: "HeartSucceeded", key: message.key, likes: message.likes })
+                : update(model, {
+                      _tag: "HeartFailed",
+                      key: message.key,
+                      message: message.message,
+                      uncertain: false,
+                  });
         case "CountChanged": {
             const pending = model.pendingHearts[message.key];
             return {
@@ -195,15 +235,10 @@ export const update = (model: Model, message: Message): AppUpdate => {
                                   ...model.pendingHearts,
                                   [message.key]: { ...pending, latest: message.likes },
                               },
+                    // Hearts are append-only, so a late count can never lower the displayed one.
                     page: mapPhotos(model.page, (photo) =>
                         photo.key === message.key
-                            ? {
-                                  ...photo,
-                                  likes:
-                                      pending === undefined
-                                          ? message.likes
-                                          : Math.max(pending.before.likes + 1, message.likes),
-                              }
+                            ? { ...photo, likes: Math.max(photo.likes, message.likes) }
                             : photo,
                     ),
                 },
