@@ -302,7 +302,8 @@ export const handlePortfolioHttp = Effect.fn("Portfolio.http")(
                 );
             }
         }
-        if (path.startsWith("/projects/") && request.method === "GET")
+        // The preview handler owns its method contract: GET, HEAD, otherwise 405.
+        if (path.startsWith("/projects/"))
             return yield* projectPreviewResponse(request, caches.default, yield* cms.get).pipe(
                 Effect.mapError(() => new ApiUnavailable({ operation: "projects.og-image" })),
             );

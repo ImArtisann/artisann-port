@@ -605,6 +605,35 @@ it("keeps pending and rejected text in private review delivery and refuses publi
 });
 
 describe("HTTP guards and permanent binary photo route", () => {
+    it("answers project preview HEAD requests with image headers and no body", async () => {
+        const world = portfolioWorld();
+        vi.stubGlobal("caches", {
+            default: {
+                match: async () =>
+                    new Response(new Uint8Array([1, 2]), {
+                        headers: { "content-type": "image/png" },
+                    }),
+                put: async () => undefined,
+            },
+        });
+        try {
+            await Effect.runPromise(
+                Effect.gen(function* () {
+                    const url = "https://portfolio.invalid/projects/blocky/og-image";
+                    const head = yield* handlePortfolioHttp(new Request(url, { method: "HEAD" }));
+                    expect(head.status).toBe(200);
+                    expect(head.headers.get("content-type")).toBe("image/png");
+                    expect(head.headers.get("x-preview-cache")).toBe("HIT");
+                    expect(head.body).toBeNull();
+                    const post = yield* handlePortfolioHttp(new Request(url, { method: "POST" }));
+                    expect(post.status).toBe(405);
+                }).pipe(Effect.scoped, Effect.provide(world.layer)),
+            );
+        } finally {
+            vi.unstubAllGlobals();
+        }
+    });
+
     it("authorizes before consuming bodies and caps actual bytes before any mutation", async () => {
         const world = portfolioWorld();
         await Effect.runPromise(
