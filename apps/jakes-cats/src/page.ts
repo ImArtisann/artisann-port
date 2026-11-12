@@ -14,7 +14,7 @@ export const loadPage = Effect.fn("CatsPage.load")((
     if (page.kind === "Top")
         return api.top().pipe(Effect.map((data): Page => ({ ...page, entries: data.entries })));
     if (page.kind === "Photo")
-        return api.photo(path.slice("/photos/".length)).pipe(
+        return api.photo(page.path.slice("/photos/".length)).pipe(
             Effect.map((detail): Page => ({ ...page, detail })),
             Effect.catchTag("CatsApiFailure", (error) =>
                 error.status === 404

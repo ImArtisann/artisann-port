@@ -69,22 +69,26 @@ export const Message = Schema.Union([
 ]);
 export type Message = typeof Message.Type;
 
-export const emptyPage = (path: string, now: number): Page => ({
-    path,
-    kind:
-        path === "/"
-            ? "Home"
-            : path === "/top"
-              ? "Top"
-              : /^\/photos\/[0-9]{17,20}$/u.test(path)
-                ? "Photo"
-                : "NotFound",
-    phase: "Ready",
-    photos: [],
-    entries: [],
-    detail: null,
-    now,
-});
+export const emptyPage = (rawPath: string, now: number): Page => {
+    // Like the retired router, a non-root trailing slash does not change the route.
+    const path = rawPath.replace(/(?<=.)\/+$/u, "");
+    return {
+        path,
+        kind:
+            path === "/"
+                ? "Home"
+                : path === "/top"
+                  ? "Top"
+                  : /^\/photos\/[0-9]{17,20}$/u.test(path)
+                    ? "Photo"
+                    : "NotFound",
+        phase: "Ready",
+        photos: [],
+        entries: [],
+        detail: null,
+        now,
+    };
+};
 
 export const currentPhoto = (model: Model) =>
     model.page.kind === "Home"
