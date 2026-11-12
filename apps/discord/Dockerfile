@@ -21,6 +21,7 @@ COPY package.json bun.lock ./
 COPY apps/discord/package.json apps/discord/package.json
 COPY apps/web/package.json apps/web/package.json
 COPY packages/presence/package.json packages/presence/package.json
+COPY packages/portfolio-domain/package.json packages/portfolio-domain/package.json
 COPY packages/assets/package.json packages/assets/package.json
 COPY packages/ui/package.json packages/ui/package.json
 COPY packages/typescript-config/package.json packages/typescript-config/package.json
@@ -41,6 +42,7 @@ RUN bun install --frozen-lockfile --ignore-scripts --production --filter @artisa
 # Bundle inside Linux with the app's own build script.
 FROM build-deps AS builder
 COPY packages/presence packages/presence
+COPY packages/portfolio-domain packages/portfolio-domain
 COPY packages/assets packages/assets
 COPY apps/discord apps/discord
 RUN bun run --cwd apps/discord build
