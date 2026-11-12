@@ -26,4 +26,6 @@ jobs:
                   MOTION_TOKEN: ${{ secrets.MOTION_TOKEN }}
             - run: bun run check
             - run: bun run test
-            - run: bun run build
+            # The portfolio build reads published content. CI serves the compiled seed
+            # document on loopback so the check never depends on the deployed backend.
+            - run: bun apps/web/scripts/with-seed-content.ts bun run build

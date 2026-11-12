@@ -37,7 +37,9 @@ proxy changes the configured backend's data.
 
 The portfolio build requires a successful published content read. An unavailable
 or invalid response fails the build instead of embedding seed data. Deploy the
-backend before building the website during the cutover.
+backend before building the website during the cutover. CI builds through
+`apps/web/scripts/with-seed-content.ts`, which serves the compiled seed document
+on `127.0.0.1:4319`, so the CI check never reads the deployed backend.
 
 `bun run dev` also starts the Discord bot. Do not use it for safe verification
 or when another bot process is running. `bun run discord` loads `.env.discord`

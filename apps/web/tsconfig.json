@@ -1,6 +1,6 @@
 {
     "extends": "@artisann-port/typescript-config/base.json",
-    "include": ["src/**/*.ts", "__tests__/**/*.ts", "vite.config.ts"],
+    "include": ["src/**/*.ts", "__tests__/**/*.ts", "scripts/**/*.ts", "vite.config.ts"],
     "exclude": ["dist", "node_modules"],
     "compilerOptions": {
         "lib": ["ESNext", "DOM", "DOM.Iterable"],
