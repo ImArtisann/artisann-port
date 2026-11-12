@@ -50,6 +50,7 @@ describe("Cats page state", () => {
             key: photo.key,
             message: "Request unavailable",
             uncertain: true,
+            observedLikes: null,
         });
         expect(failed.commands?.map((command) => command.name)).toEqual(["ReconcileHeart"]);
         expect(failed.model.page.photos).toEqual([{ ...photo, hearted: true, likes: 2 }]);
@@ -66,15 +67,28 @@ describe("Cats page state", () => {
         }).model;
         expect(stored.page.photos).toEqual([{ ...photo, hearted: true, likes: 2 }]);
         expect(stored.pendingHearts).toEqual({});
+        // Not stored: drop the optimistic heart but keep other visitors' hearts from the read-back.
         const missing = update(failed.model, {
             _tag: "HeartReconciled",
             key: photo.key,
             hearted: false,
-            likes: 1,
+            likes: 4,
             message: "Request unavailable",
         }).model;
-        expect(missing.page.photos).toEqual([photo]);
+        expect(missing.page.photos).toEqual([{ ...photo, likes: 4 }]);
         expect(missing.toast).toBe("Request unavailable");
+        // A newer observed count than the read-back still wins.
+        const newer = update(
+            update(failed.model, { _tag: "CountChanged", key: photo.key, likes: 5 }).model,
+            {
+                _tag: "HeartReconciled",
+                key: photo.key,
+                hearted: false,
+                likes: 4,
+                message: "Request unavailable",
+            },
+        ).model;
+        expect(newer.page.photos).toEqual([{ ...photo, likes: 5 }]);
     });
 
     it("never lowers a confirmed count when an older count arrives", () => {

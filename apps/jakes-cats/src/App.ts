@@ -84,6 +84,7 @@ const heart = (model: Model, photo: DeckPhoto): AppUpdate => {
                             key: photo.key,
                             message: failureMessage(error),
                             uncertain: error.status === 0 || error.status >= 500,
+                            observedLikes: null,
                         }),
                     }),
                 ),
@@ -98,7 +99,13 @@ const reconcileHeart = (
     message: string,
 ): Command.Command<Message, never, HttpClient.HttpClient> => {
     const id = photoIdFromKey(key);
-    const unresolved: Message = { _tag: "HeartFailed", key, message, uncertain: false };
+    const unresolved: Message = {
+        _tag: "HeartFailed",
+        key,
+        message,
+        uncertain: false,
+        observedLikes: null,
+    };
     return {
         name: "ReconcileHeart",
         effect:
@@ -206,7 +213,11 @@ export const update = (model: Model, message: Message): AppUpdate => {
                         photo.key === message.key
                             ? {
                                   ...photo,
-                                  likes: pending.latest ?? pending.before.likes,
+                                  // Hearts are append-only: keep the newest count observed.
+                                  likes: Math.max(
+                                      pending.latest ?? pending.before.likes,
+                                      message.observedLikes ?? 0,
+                                  ),
                                   hearted: false,
                               }
                             : photo,
@@ -222,6 +233,7 @@ export const update = (model: Model, message: Message): AppUpdate => {
                       key: message.key,
                       message: message.message,
                       uncertain: false,
+                      observedLikes: message.likes,
                   });
         case "CountChanged": {
             const pending = model.pendingHearts[message.key];

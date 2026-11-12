@@ -55,6 +55,8 @@ export const Message = Schema.Union([
         key: Schema.String,
         message: Schema.String,
         uncertain: Schema.Boolean,
+        /** The stored count when a read-back proved the heart absent. */
+        observedLikes: Schema.NullOr(Schema.Number),
     }),
     /** The visitor's stored heart, read back after an uncertain failure. */
     Schema.TaggedStruct("HeartReconciled", {
