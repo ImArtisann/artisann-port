@@ -12,6 +12,14 @@ import { projectImageSource } from "../lib/project-image.ts";
 import { AdoptImage, Message, type Model } from "../main.ts";
 import { card, CARD_CONTENT, CARD_HEADER, icon, ICON_BUTTON } from "./ui.ts";
 
+/** Built once: views rerender on every animation frame, and formatters are expensive. */
+const CALENDAR_DATE = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+});
+
 export function projectCarousel(
     model: Model,
     h: HtmlBuilder<Message>,
@@ -484,12 +492,9 @@ export function githubWidget(model: Model, h: HtmlBuilder<Message>): Html {
                                           );
                                           if (day === undefined) return h.span([h.Class(CELL)]);
                                           const future = day.date > today;
-                                          const date = new Intl.DateTimeFormat("en-US", {
-                                              month: "short",
-                                              day: "numeric",
-                                              year: "numeric",
-                                              timeZone: "UTC",
-                                          }).format(new Date(`${day.date}T12:00:00Z`));
+                                          const date = CALENDAR_DATE.format(
+                                              new Date(`${day.date}T12:00:00Z`),
+                                          );
                                           return h.span([
                                               h.Class(
                                                   `${CELL} ${future ? "bg-muted/40" : LEVEL_COLORS[day.contributionLevel]}`,
