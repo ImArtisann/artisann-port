@@ -58,7 +58,12 @@ export const BotPhotoClientLive: Layer.Layer<BotPhotoClient, never, BotPortfolio
                     // Unknown outcomes can keep the key reserved; reconciliation needs this ID.
                     Effect.mapError((error) =>
                         error.status === null
-                            ? new BotStorageError({ ...error, operationId })
+                            ? new BotStorageError({
+                                  operation: error.operation,
+                                  status: error.status,
+                                  reason: error.reason,
+                                  operationId,
+                              })
                             : error,
                     ),
                     Effect.tapError((error) =>
