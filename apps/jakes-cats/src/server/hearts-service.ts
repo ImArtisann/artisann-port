@@ -7,6 +7,7 @@ import { AcceptComment } from "@artisann-port/cats-domain/accept-comment.command
 import { HeartPhoto } from "@artisann-port/cats-domain/heart-photo.command";
 import { Photo } from "@artisann-port/cats-domain/photo.aggregate";
 import { PhotoIndex } from "@artisann-port/cats-domain/photo-index.projection";
+import { Timestamp } from "@artisann-port/cats-domain/photo.id";
 import type { PhotoTag } from "@artisann-port/presence/photos";
 import type { PhotoComment } from "../contracts.ts";
 
@@ -73,7 +74,7 @@ const CommentRow = Schema.Struct({
     id: Schema.Int,
     visitor_id: Schema.String,
     body: Schema.String,
-    created_at: Schema.String,
+    created_at: Timestamp,
 });
 export const AuthorityRow = Schema.Struct({
     mode: Schema.Literals(["source", "fenced", "domain"]),

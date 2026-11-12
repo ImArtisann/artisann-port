@@ -11,6 +11,28 @@ import { PHOTO_A, VISITOR_A, VISITOR_B, catsWorld } from "./cats-world.ts";
 
 describe("Cats authoritative model and trusted API", () => {
     it("has a valid model declaration", () => expect(Domain.verify(Cats)).toEqual([]));
+    it("fails a source comment read whose stored timestamp is corrupt", async () => {
+        const world = catsWorld();
+        world.installCapture();
+        world.db.sqlite
+            .prepare(
+                "INSERT INTO photo_comments (photo_key, visitor_id, body, created_at) VALUES (?, ?, ?, ?)",
+            )
+            .run(PHOTO_A, VISITOR_A, "A fluffy cat", "yesterday");
+        try {
+            const failure = await Effect.runPromise(
+                Effect.gen(function* () {
+                    const deck = yield* DeckService;
+                    return yield* deck
+                        .detail(PHOTO_A.slice("cats/".length, -".webp".length), VISITOR_A)
+                        .pipe(Effect.flip);
+                }).pipe(Effect.scoped, Effect.provide(world.layer)),
+            );
+            expect(failure).toMatchObject({ _tag: "Deck.Error", operation: "photo.read" });
+        } finally {
+            world.db.sqlite.close();
+        }
+    });
     it("keeps repeat hearts idempotent and accepts only moderated bounded comments", async () => {
         const world = catsWorld();
         world.installCapture();
