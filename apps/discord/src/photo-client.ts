@@ -4,8 +4,8 @@ import * as Layer from "effect/Layer";
 import { collectPhotos, type Photo, type PhotoTag } from "@artisann-port/presence/photos";
 import {
     BotPortfolioClient,
+    BotStorageError,
     boundedApiOperation,
-    type BotStorageError,
     type ApiStorageFailure,
 } from "./portfolio-client.ts";
 
@@ -50,7 +50,28 @@ export const BotPhotoClientLive: Layer.Layer<BotPhotoClient, never, BotPortfolio
                 tag: PhotoTag,
                 photoId: string,
             ) {
-                yield* boundedApiOperation("deletePhoto", clients.deletePhoto(tag, photoId));
+                const operationId = `discord:delete:${yield* Effect.sync(() => crypto.randomUUID())}`;
+                yield* boundedApiOperation(
+                    "deletePhoto",
+                    clients.deletePhoto(tag, photoId, operationId),
+                ).pipe(
+                    // Unknown outcomes can keep the key reserved; reconciliation needs this ID.
+                    Effect.mapError((error) =>
+                        error.status === null
+                            ? new BotStorageError({ ...error, operationId })
+                            : error,
+                    ),
+                    Effect.tapError((error) =>
+                        error.operationId === undefined
+                            ? Effect.void
+                            : Effect.logWarning("Photo deletion outcome unknown").pipe(
+                                  Effect.annotateLogs({
+                                      key: `${tag}/${photoId}.webp`,
+                                      operationId,
+                                  }),
+                              ),
+                    ),
+                );
             });
             return BotPhotoClient.of({ listPhotos, putPhoto, deletePhoto });
         }),

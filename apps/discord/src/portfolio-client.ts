@@ -7,7 +7,7 @@ import * as Schema from "effect/Schema";
 import * as HttpClient from "effect/http/HttpClient";
 import * as HttpClientRequest from "effect/http/HttpClientRequest";
 import * as HttpClientResponse from "effect/http/HttpClientResponse";
-import { HttpsUrl } from "@artisann-port/portfolio-domain/content";
+import { ManagedPhotoKey } from "@artisann-port/portfolio-domain/photo/photo-operation";
 import {
     ApiUnavailable,
     ContentWriteError,
@@ -30,6 +30,8 @@ export class BotStorageError extends Schema.TaggedError<BotStorageError>()(
         operation: Schema.String,
         status: Schema.NullOr(Schema.Finite),
         reason: Schema.String,
+        /** Present when the owner must reconcile this photo operation before retrying. */
+        operationId: Schema.optional(Schema.String),
     },
 ) {}
 export class ContentValidationError extends Schema.TaggedError<ContentValidationError>()(
@@ -59,7 +61,11 @@ export interface BotPortfolioClientService {
         interactionId: string,
         bytes: Uint8Array,
     ) => Effect.Effect<string, ClientFailure>;
-    readonly deletePhoto: (tag: PhotoTag, photoId: string) => Effect.Effect<void, ClientFailure>;
+    readonly deletePhoto: (
+        tag: PhotoTag,
+        photoId: string,
+        operationId: string,
+    ) => Effect.Effect<void, ClientFailure>;
     readonly presence: Effect.Effect<PresenceSnapshot, ClientFailure>;
     readonly publishPresence: (
         snapshot: PresenceSnapshot,
@@ -70,7 +76,7 @@ export class BotPortfolioClient extends Context.Service<
     BotPortfolioClientService
 >()("Discord.PortfolioClient") {}
 
-const UploadedPhoto = Schema.Struct({ url: HttpsUrl });
+const UploadedPhoto = Schema.Struct({ key: ManagedPhotoKey });
 const DeletedPhoto = Schema.Struct({ key: Schema.String, operationId: Schema.String });
 
 export const BotPortfolioClientLive = Layer.effect(
@@ -182,16 +188,16 @@ export const BotPortfolioClientLive = Layer.effect(
                 HttpClientRequest.setHeader("x-photo-writer", "discord"),
                 HttpClientRequest.bodyUint8Array(bytes, "image/webp"),
             );
-            return (yield* decode(request, UploadedPhoto, "photo")).url;
+            return (yield* decode(request, UploadedPhoto, "photo")).key;
         });
         const deletePhoto = Effect.fn("BotPortfolio.deletePhoto")(function* (
             tag: PhotoTag,
             photoId: string,
+            operationId: string,
         ) {
-            const id = yield* Effect.sync(() => crypto.randomUUID());
             const request = auth(HttpClientRequest.delete(photosUrl)).pipe(
                 HttpClientRequest.setUrlParam("key", `${tag}/${photoId}.webp`),
-                HttpClientRequest.setHeader("x-photo-operation-id", `discord:delete:${id}`),
+                HttpClientRequest.setHeader("x-photo-operation-id", operationId),
                 HttpClientRequest.setHeader("x-photo-writer", "discord"),
             );
             yield* decode(request, DeletedPhoto, "photo");
