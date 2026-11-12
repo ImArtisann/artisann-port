@@ -246,7 +246,6 @@ function home(h: Builder, model: Model) {
                                       [
                                           h.Type("button"),
                                           h.AriaLabel("Skip this cat"),
-                                          h.Disabled(model.busy),
                                           h.OnClick({ _tag: "RequestedSwipe", direction: "left" }),
                                           h.Class(
                                               "cat-action border-line bg-card text-pass hover:border-pass focus-visible:ring-ink focus-visible:ring-offset-cream flex size-14 items-center justify-center rounded-full border shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden",
