@@ -30,6 +30,8 @@ export const Model = Schema.Struct({
         Schema.Struct({
             before: DeckPhoto,
             latest: Schema.NullOr(Schema.Number),
+            /** Confirmed while a page load was in flight; that load can predate the heart. */
+            settled: Schema.Boolean,
         }),
     ),
 });

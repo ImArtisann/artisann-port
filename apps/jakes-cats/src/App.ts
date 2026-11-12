@@ -64,7 +64,10 @@ const heart = (model: Model, photo: DeckPhoto): AppUpdate => {
                     ? { ...entry, hearted: true, likes: entry.likes + 1 }
                     : entry,
             ),
-            pendingHearts: { ...model.pendingHearts, [photo.key]: { before: photo, latest: null } },
+            pendingHearts: {
+                ...model.pendingHearts,
+                [photo.key]: { before: photo, latest: null, settled: false },
+            },
         },
         commands: [
             {
@@ -140,11 +143,13 @@ export const update = (model: Model, message: Message): AppUpdate => {
             return photo === undefined ? { model } : heart(model, photo);
         }
         case "HeartSucceeded": {
-            if (model.pendingHearts[message.key] === undefined) return { model };
+            const pending = model.pendingHearts[message.key];
+            if (pending === undefined || pending.settled) return { model };
             const pendingHearts = { ...model.pendingHearts };
-            const latest = pendingHearts[message.key]?.latest;
-            delete pendingHearts[message.key];
-            const likes = Math.max(message.likes, latest ?? 0);
+            const likes = Math.max(message.likes, pending.latest ?? 0);
+            if (model.page.phase === "Loading")
+                pendingHearts[message.key] = { ...pending, latest: likes, settled: true };
+            else delete pendingHearts[message.key];
             return {
                 model: {
                     ...model,
@@ -290,26 +295,32 @@ export const update = (model: Model, message: Message): AppUpdate => {
                     draft: "",
                     sending: false,
                     toast: null,
+                    failedImages: [],
                 },
                 commands: [fetchPage(message.path, generation)],
             };
         }
         case "PageLoaded": {
             if (message.generation !== model.generation) return { model };
-            const page = mapPhotos(message.page, (photo) =>
-                model.pendingHearts[photo.key] === undefined
+            const page = mapPhotos(message.page, (photo) => {
+                const pending = model.pendingHearts[photo.key];
+                return pending === undefined
                     ? photo
                     : {
                           ...photo,
                           hearted: true,
                           likes: Math.max(
                               photo.likes,
-                              (model.pendingHearts[photo.key]?.before.likes ?? 0) + 1,
+                              pending.before.likes + 1,
+                              pending.settled ? (pending.latest ?? 0) : 0,
                           ),
-                      },
+                      };
+            });
+            const pendingHearts = Object.fromEntries(
+                Object.entries(model.pendingHearts).filter(([, pending]) => !pending.settled),
             );
             return {
-                model: { ...model, page },
+                model: { ...model, page, pendingHearts },
                 commands: [
                     { name: "RestoreScroll", effect: restoreScroll(model.scroll) },
                     { name: "SyncSocialMetadata", effect: syncSocialMetadata(page) },
