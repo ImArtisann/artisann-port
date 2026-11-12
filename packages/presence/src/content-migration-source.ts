@@ -1,6 +1,10 @@
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
-import { ContentSnapshot, Revision } from "@artisann-port/portfolio-domain/content/content-state";
+import {
+    ContentDecision,
+    ContentSnapshot,
+    Revision,
+} from "@artisann-port/portfolio-domain/content/content-state";
 import { decodeContentDocument } from "@artisann-port/portfolio-domain/content";
 import type {
     ContentWriterStub,
@@ -14,6 +18,8 @@ const CONTROL_KEY = "migration:control";
 const BASELINE_KEY = "migration:baseline";
 const ENTRY_PREFIX = "migration:entry:";
 const MAX_PAGE_SIZE = 100;
+/** Final decision markers, in storage key order: every `deleted:` key sorts first. */
+const DECISION_PREFIXES = ["deleted:", "rejected:"] as const;
 
 export const ContentMigrationControl = Schema.Struct({
     epoch: Schema.NonEmptyString,
@@ -21,10 +27,12 @@ export const ContentMigrationControl = Schema.Struct({
     sequence: Revision,
 });
 export type ContentMigrationControl = typeof ContentMigrationControl.Type;
+/** A content snapshot plus the one decision its source mutation recorded, if any. */
 export const ContentMigrationRecord = Schema.Struct({
     epoch: Schema.NonEmptyString,
     sequence: Revision,
     snapshot: ContentSnapshot,
+    decision: Schema.NullOr(ContentDecision),
 });
 export type ContentMigrationRecord = typeof ContentMigrationRecord.Type;
 export const ContentMigrationStatus = Schema.Struct({
@@ -37,6 +45,13 @@ export const ContentMigrationPage = Schema.Struct({
     sequence: Revision,
 });
 export type ContentMigrationPage = typeof ContentMigrationPage.Type;
+/** One bounded page of final decisions. `cursor` is the last marker key read. */
+export const ContentDecisionPage = Schema.Struct({
+    decisions: Schema.Array(ContentDecision),
+    cursor: Schema.NullOr(Schema.NonEmptyString),
+    complete: Schema.Boolean,
+});
+export type ContentDecisionPage = typeof ContentDecisionPage.Type;
 
 export class ContentMigrationFailure extends Schema.TaggedError<ContentMigrationFailure>()(
     "ContentMigrationFailure",
@@ -48,6 +63,7 @@ export interface ContentMigrationSource extends ContentWriterStub {
     migrationStatus(): Promise<ContentMigrationStatus>;
     migrationBaseline(): Promise<ContentMigrationRecord>;
     migrationEntries(after: number, take: number): Promise<ContentMigrationPage>;
+    migrationDecisions(after: string | null, take: number): Promise<ContentDecisionPage>;
     migrationFence(epoch: string, sequence: number): Promise<ContentMigrationRecord>;
     migrationComplete(epoch: string, sequence: number): Promise<ContentMigrationControl>;
 }
@@ -83,37 +99,7 @@ const readControl = (storage: DurableObjectTransactionLike) =>
 
 const entryKey = (sequence: number) => `${ENTRY_PREFIX}${sequence.toString().padStart(16, "0")}`;
 
-const markerIds = Effect.fn("ContentMigration.markerIds")(function* (
-    storage: DurableObjectTransactionLike,
-    prefix: "rejected:" | "deleted:",
-) {
-    const ids: string[] = [];
-    let after: string | undefined;
-    while (true) {
-        const rows = yield* call(() =>
-            storage.list<Schema.Json>({
-                prefix,
-                limit: 1000,
-                startAfter: after,
-            }),
-        );
-        for (const [key, value] of rows) {
-            const marker = yield* Schema.decodeUnknownEffect(
-                Schema.Struct({
-                    id: Schema.String,
-                    decision: Schema.Literals(["rejected", "deleted"]),
-                }),
-            )(value).pipe(
-                Effect.mapError(() => new ContentMigrationFailure({ reason: "unavailable" })),
-            );
-            if (key !== `${prefix}${marker.id}` || marker.decision !== prefix.slice(0, -1))
-                return yield* new ContentMigrationFailure({ reason: "unavailable" });
-            ids.push(marker.id);
-            after = key;
-        }
-        if (rows.size < 1000) return ids;
-    }
-});
+const decodeMarker = Schema.decodeUnknownEffect(ContentDecision);
 
 const snapshot = Effect.fn("ContentMigration.snapshot")(function* (
     storage: DurableObjectTransactionLike,
@@ -130,14 +116,10 @@ const snapshot = Effect.fn("ContentMigration.snapshot")(function* (
     const content = yield* decodeContentDocument(state.document).pipe(
         Effect.mapError(() => new ContentMigrationFailure({ reason: "unavailable" })),
     );
-    const rejected = yield* markerIds(storage, "rejected:");
-    const deleted = yield* markerIds(storage, "deleted:");
     return yield* decode(ContentSnapshot, {
         content,
         revision: state.revision,
         publishedRevision: state.publishedRevision,
-        rejected,
-        deleted,
     });
 });
 
@@ -160,10 +142,12 @@ export class ContentSourceJournal {
         );
     }
 
+    /** `decision` is the final decision marker this mutation adds, if any. */
     write<A>(
         mutation: (
             storage: DurableObjectTransactionLike,
         ) => Effect.Effect<A, ContentMigrationFailure>,
+        decision: ContentDecision | null = null,
     ) {
         return this.transaction((storage) =>
             Effect.gen(function* () {
@@ -179,6 +163,7 @@ export class ContentSourceJournal {
                             epoch: control.epoch,
                             sequence,
                             snapshot: next,
+                            decision,
                         } satisfies ContentMigrationRecord),
                     );
                     yield* call(() => storage.put(CONTROL_KEY, { ...control, sequence }));
@@ -208,6 +193,7 @@ export class ContentSourceJournal {
                     epoch,
                     sequence: 0,
                     snapshot: yield* snapshot(storage),
+                    decision: null,
                 } satisfies ContentMigrationRecord;
                 yield* call(() => storage.put(BASELINE_KEY, baseline));
                 yield* call(() =>
@@ -276,6 +262,54 @@ export class ContentSourceJournal {
         );
     }
 
+    /**
+     * Pages the live decision markers. Markers are final and never removed, and
+     * capture journals each new one, so a scan started after `prepare` plus the
+     * journal entries covers every decision the frozen source can hold.
+     */
+    decisions(after: string | null, take: number) {
+        return this.transaction((storage) =>
+            Effect.gen(function* () {
+                if (
+                    (after !== null &&
+                        !DECISION_PREFIXES.some((prefix) => after.startsWith(prefix))) ||
+                    !Number.isSafeInteger(take) ||
+                    take < 1 ||
+                    take > MAX_PAGE_SIZE
+                )
+                    return yield* new ContentMigrationFailure({ reason: "invalid" });
+                if ((yield* readControl(storage)) === null)
+                    return yield* new ContentMigrationFailure({ reason: "not-prepared" });
+                const decisions: ContentDecision[] = [];
+                let cursor = after;
+                for (const prefix of DECISION_PREFIXES) {
+                    if (cursor !== null && cursor > prefix && !cursor.startsWith(prefix)) continue;
+                    const rows = yield* call(() =>
+                        storage.list<Schema.Json>({
+                            prefix,
+                            startAfter: cursor?.startsWith(prefix) ? cursor : undefined,
+                            limit: take - decisions.length,
+                        }),
+                    );
+                    for (const [key, value] of rows) {
+                        const marker = yield* decodeMarker(value).pipe(
+                            Effect.mapError(
+                                () => new ContentMigrationFailure({ reason: "unavailable" }),
+                            ),
+                        );
+                        if (key !== `${prefix}${marker.id}` || `${marker.decision}:` !== prefix)
+                            return yield* new ContentMigrationFailure({ reason: "unavailable" });
+                        decisions.push(marker);
+                        cursor = key;
+                    }
+                    if (decisions.length === take)
+                        return { decisions, cursor, complete: false } satisfies ContentDecisionPage;
+                }
+                return { decisions, cursor, complete: true } satisfies ContentDecisionPage;
+            }),
+        );
+    }
+
     fence(epoch: string, sequence: number) {
         return this.transaction((storage) =>
             Effect.gen(function* () {
@@ -289,7 +323,12 @@ export class ContentSourceJournal {
                     return yield* new ContentMigrationFailure({ reason: "unavailable" });
                 if (control.mode === "legacy")
                     yield* call(() => storage.put(CONTROL_KEY, { ...control, mode: "fenced" }));
-                return { epoch, sequence, snapshot: state } satisfies ContentMigrationRecord;
+                return {
+                    epoch,
+                    sequence,
+                    snapshot: state,
+                    decision: null,
+                } satisfies ContentMigrationRecord;
             }),
         );
     }

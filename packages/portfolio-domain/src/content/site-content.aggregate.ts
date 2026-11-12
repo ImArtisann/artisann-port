@@ -20,13 +20,13 @@ import {
     NoteReviewPayloadChanged,
     NotesCapacityReached,
 } from "./approve-note.command.ts";
-import { RejectNote, VisitorNoteRejected } from "./reject-note.command.ts";
 import { DeleteNote, VisitorNoteDeleted } from "./delete-note.command.ts";
 import {
     ImportContent,
     LegacyContentImported,
     ContentImportConflict,
 } from "./import-content.command.ts";
+import { LegacyDecisionsImported, RecordDecisionImport } from "./import-decisions.command.ts";
 import { ActivateContent, ContentAuthorityActivated } from "./activate-content.command.ts";
 import { ConfirmContentPublication, ContentPublished } from "./confirm-publication.command.ts";
 
@@ -49,9 +49,9 @@ export class SiteContentAggregate extends Domain.Aggregate("SiteContent", {
     commands: [
         ReplaceContent,
         ApproveNote,
-        RejectNote,
         DeleteNote,
         ImportContent,
+        RecordDecisionImport,
         ActivateContent,
         ConfirmContentPublication,
     ],
@@ -80,10 +80,7 @@ export class SiteContentAggregate extends Domain.Aggregate("SiteContent", {
         ApproveNote: Effect.fn("Portfolio.ApproveNote")(function* (state, command, context) {
             yield* requirePortfolioActor("owner");
             if (!state.active) return yield* new ContentInactive();
-            if (state.rejected.includes(command.id))
-                return yield* new ReviewFinal({ id: command.id, decision: "rejected" });
-            if (state.deleted.includes(command.id))
-                return yield* new ReviewFinal({ id: command.id, decision: "deleted" });
+            // Rejection and deletion finality is decided first by the note's NoteReview.
             const existing = state.content.notes.find((note) => note.id === command.id);
             if (existing !== undefined) {
                 if (existing.body !== command.body || existing.name !== command.name)
@@ -105,15 +102,6 @@ export class SiteContentAggregate extends Domain.Aggregate("SiteContent", {
                     updatedAt: updatedAt(state.content.updatedAt, context.now),
                 }),
             ];
-        }),
-        RejectNote: Effect.fn("Portfolio.RejectNote")(function* (state, command) {
-            yield* requirePortfolioActor("owner");
-            if (!state.active) return yield* new ContentInactive();
-            if (state.rejected.includes(command.id))
-                return yield* new ReviewFinal({ id: command.id, decision: "rejected" });
-            if (state.content.notes.some((note) => note.id === command.id))
-                return yield* new ReviewFinal({ id: command.id, decision: "approved" });
-            return [new VisitorNoteRejected({ id: command.id })];
         }),
         DeleteNote: Effect.fn("Portfolio.DeleteNote")(function* (state, command, context) {
             yield* requirePortfolioActor("owner");
@@ -153,6 +141,35 @@ export class SiteContentAggregate extends Domain.Aggregate("SiteContent", {
                 }),
             ];
         }),
+        RecordDecisionImport: Effect.fn("Portfolio.RecordDecisionImport")(
+            function* (state, command) {
+                yield* requirePortfolioActor("migration");
+                const conflict = (reason: "active" | "epoch") =>
+                    new ContentImportConflict({
+                        reason,
+                        expectedSequence: state.sourceSequence,
+                        actualSequence: state.sourceSequence,
+                    });
+                if (state.active) return yield* conflict("active");
+                if (state.sourceEpoch !== command.epoch) return yield* conflict("epoch");
+                // Pages advance in key order; a stale retry must not move the cursor back.
+                if (
+                    state.decisionsImported ||
+                    (!command.complete &&
+                        command.cursor !== null &&
+                        state.decisionCursor !== null &&
+                        command.cursor <= state.decisionCursor)
+                )
+                    return [];
+                return [
+                    new LegacyDecisionsImported({
+                        epoch: command.epoch,
+                        cursor: command.cursor,
+                        complete: command.complete,
+                    }),
+                ];
+            },
+        ),
         ActivateContent: Effect.fn("Portfolio.ActivateContent")(function* (state, command) {
             yield* requirePortfolioActor("migration");
             if (state.sourceEpoch !== command.epoch || state.sourceSequence !== command.sequence) {
@@ -162,6 +179,13 @@ export class SiteContentAggregate extends Domain.Aggregate("SiteContent", {
                     actualSequence: command.sequence,
                 });
             }
+            // Activating without every final decision would let a stale review reapprove.
+            if (!state.decisionsImported)
+                return yield* new ContentImportConflict({
+                    reason: "decisions",
+                    expectedSequence: state.sourceSequence,
+                    actualSequence: command.sequence,
+                });
             return state.active
                 ? []
                 : [
@@ -202,10 +226,6 @@ export class SiteContentAggregate extends Domain.Aggregate("SiteContent", {
             },
             revision: event.revision,
         }),
-        VisitorNoteRejected: (state, event) => ({
-            ...state,
-            rejected: [...state.rejected, event.id],
-        }),
         VisitorNoteDeleted: (state, event) => ({
             ...state,
             content: {
@@ -214,7 +234,6 @@ export class SiteContentAggregate extends Domain.Aggregate("SiteContent", {
                 updatedAt: event.updatedAt,
             },
             revision: event.revision,
-            deleted: [...state.deleted, event.id],
         }),
         LegacyContentImported: (state, event) => ({
             ...state,
@@ -222,13 +241,17 @@ export class SiteContentAggregate extends Domain.Aggregate("SiteContent", {
             sourceEpoch: event.epoch,
             sourceSequence: event.sequence,
         }),
+        LegacyDecisionsImported: (state, event) => ({
+            ...state,
+            decisionCursor: event.cursor,
+            decisionsImported: event.complete,
+        }),
         ContentAuthorityActivated: (state) => ({ ...state, active: true, publishedRevision: 0 }),
         ContentPublished: (state, event) => ({ ...state, publishedRevision: event.revision }),
     },
     reply: {
         ReplaceContent: (state) => ({ revision: state.revision }),
         ApproveNote: (state) => ({ revision: state.revision }),
-        RejectNote: (state) => ({ revision: state.revision }),
         DeleteNote: (state) => ({ revision: state.revision }),
         ImportContent: (state) => ({ sequence: state.sourceSequence }),
         ActivateContent: (state) => ({ revision: state.revision }),

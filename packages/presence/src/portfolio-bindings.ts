@@ -46,6 +46,7 @@ export const NativePortfolioBindingsLive = Layer.effectContext(
             migrationStatus: () => source().migrationStatus(),
             migrationBaseline: () => source().migrationBaseline(),
             migrationEntries: (after, take) => source().migrationEntries(after, take),
+            migrationDecisions: (after, take) => source().migrationDecisions(after, take),
             migrationFence: (epoch, sequence) => source().migrationFence(epoch, sequence),
             migrationComplete: (epoch, sequence) => source().migrationComplete(epoch, sequence),
         };

@@ -14,7 +14,30 @@ import {
     ContentImportConflict,
 } from "../src/content/import-content.command.ts";
 import { ReplaceContent } from "../src/content/replace-content.command.ts";
-import { ActivateContent } from "../src/content/activate-content.command.ts";
+import {
+    ActivateContent,
+    ContentAuthorityActivated,
+} from "../src/content/activate-content.command.ts";
+import {
+    LegacyDecisionsImported,
+    RecordDecisionImport,
+} from "../src/content/import-decisions.command.ts";
+import { ReviewFinal } from "../src/content/review-final.rejection.ts";
+import { ContentPublished } from "../src/content/confirm-publication.command.ts";
+import {
+    ClaimNoteApproval,
+    NoteApprovalClaimed,
+} from "../src/notes/claim-note-approval.command.ts";
+import {
+    ImportNoteDecision,
+    LegacyNoteDecisionImported,
+} from "../src/notes/import-note-decision.command.ts";
+import { NoteApprovalPending } from "../src/notes/note-approval-pending.rejection.ts";
+import { RecordNoteRejection } from "../src/notes/record-note-rejection.command.ts";
+import {
+    NoteApprovalSettled,
+    SettleNoteApproval,
+} from "../src/notes/settle-note-approval.command.ts";
 import { SiteContentAggregate } from "../src/content/site-content.aggregate.ts";
 import { SITE_CONTENT_ID } from "../src/content/site-content.id.ts";
 import { PublishedContent, PublicContentChanged } from "../src/content/published-content.view.ts";
@@ -29,8 +52,6 @@ const snapshot = {
     content: { ...DEFAULT_SITE_CONTENT, updatedAt: "2026-09-08T03:01:00.000Z" },
     revision: 17,
     publishedRevision: 17,
-    rejected: ["00000000000000000000000000000002"],
-    deleted: ["00000000000000000000000000000003"],
 };
 
 it("keeps imported authority inactive, checks migration actors and rejects conflicting replay without changing public state", async () => {
@@ -92,6 +113,8 @@ it("keeps imported authority inactive, checks migration actors and rejects confl
                 active: false,
                 sourceEpoch: "copy-epoch",
                 sourceSequence: 4,
+                decisionCursor: null,
+                decisionsImported: false,
             }),
             Story.view(PublishedContent, contentRef, { content: snapshot.content, revision: 17 }),
             Story.when(
@@ -110,7 +133,10 @@ it("keeps imported authority inactive, checks migration actors and rejects confl
             Story.when(
                 contentRef,
                 new ImportContent({
-                    snapshot: { ...snapshot, rejected: [] },
+                    snapshot: {
+                        ...snapshot,
+                        content: { ...snapshot.content, updatedAt: "2026-09-08T03:02:00.000Z" },
+                    },
                     epoch: "copy-epoch",
                     sequence: 4,
                 }),
@@ -165,6 +191,8 @@ it("keeps imported authority inactive, checks migration actors and rejects confl
                 active: false,
                 sourceEpoch: "copy-epoch",
                 sourceSequence: 4,
+                decisionCursor: null,
+                decisionsImported: false,
             }),
             Story.emitted(PublishedContent, contentRef, [
                 new PublicContentChanged({ content: snapshot.content, revision: 17 }),
@@ -173,6 +201,8 @@ it("keeps imported authority inactive, checks migration actors and rejects confl
     );
     expect(projected).toEqual([]);
 });
+
+const noReview = { queued: false, approval: "none", rejected: false, deleted: false } as const;
 
 it("records a review identifier once only for the notes capability, without retaining the visitor payload", async () => {
     const documents = Layer.succeed(ContentDocumentStore, {
@@ -188,18 +218,98 @@ it("records a review identifier once only for the notes capability, without reta
             Story.when(review, new ConfirmNoteReviewQueued()),
             Story.rejected(new PortfolioDenied()),
             Story.then(review),
-            Story.state(review, { queued: false }),
+            Story.state(review, { ...noReview, queued: false }),
             Story.provide(CurrentPortfolioActor, "notes"),
             Story.when(review, new ConfirmNoteReviewQueued(), { commandId: "review-delivered" }),
             Story.then(review, new NoteReviewQueued()),
-            Story.state(review, { queued: true }),
+            Story.state(review, { ...noReview, queued: true }),
             Story.when(review, new ConfirmNoteReviewQueued(), { commandId: "review-delivered" }),
             Story.then(review),
             Story.when(review, new ConfirmNoteReviewQueued(), {
                 commandId: "review-response-retry",
             }),
             Story.then(review),
-            Story.state(review, { queued: true }),
+            Story.state(review, { ...noReview, queued: true }),
+        ),
+    );
+});
+
+it("keeps each note decision final in its own review and activates only after every decision imports", async () => {
+    const documents = Layer.succeed(ContentDocumentStore, { write: () => Effect.void });
+    const story = Story.make(Portfolio, {
+        layer: PortfolioHandlers.pipe(Layer.provide(documents)),
+    });
+    const published = "00000000000000000000000000000301";
+    const rejected = "00000000000000000000000000000302";
+    const approval = NoteReview.ref(published);
+    const rejection = NoteReview.ref(rejected);
+    await Effect.runPromise(
+        story(
+            Story.provide(CurrentPortfolioActor, "owner"),
+            Story.when(approval, new ClaimNoteApproval()),
+            Story.then(approval, new NoteApprovalClaimed()),
+            Story.when(approval, new RecordNoteRejection()),
+            Story.rejected(new NoteApprovalPending()),
+            Story.then(approval),
+            Story.when(approval, new SettleNoteApproval({ approved: true })),
+            Story.then(approval, new NoteApprovalSettled({ approved: true })),
+            Story.when(approval, new RecordNoteRejection()),
+            Story.rejected(new ReviewFinal({ id: published, decision: "approved" })),
+            Story.then(approval),
+            Story.when(approval, new ImportNoteDecision({ decision: "rejected" })),
+            Story.rejected(new PortfolioDenied()),
+            Story.then(approval),
+            Story.provide(CurrentPortfolioActor, "migration"),
+            Story.when(rejection, new ImportNoteDecision({ decision: "rejected" })),
+            Story.then(rejection, new LegacyNoteDecisionImported({ decision: "rejected" })),
+            Story.when(rejection, new ImportNoteDecision({ decision: "rejected" })),
+            Story.then(rejection),
+            Story.provide(CurrentPortfolioActor, "owner"),
+            Story.when(rejection, new ClaimNoteApproval()),
+            Story.rejected(new ReviewFinal({ id: rejected, decision: "rejected" })),
+            Story.then(rejection),
+            Story.state(rejection, { ...noReview, rejected: true }),
+            Story.provide(CurrentPortfolioActor, "migration"),
+            Story.when(
+                contentRef,
+                new ImportContent({ snapshot, epoch: "copy-epoch", sequence: 0 }),
+            ),
+            Story.then(
+                contentRef,
+                new LegacyContentImported({ snapshot, epoch: "copy-epoch", sequence: 0 }),
+            ),
+            Story.replied({ sequence: 0 }),
+            Story.when(contentRef, new ActivateContent({ epoch: "copy-epoch", sequence: 0 })),
+            Story.rejected(
+                new ContentImportConflict({
+                    reason: "decisions",
+                    expectedSequence: 0,
+                    actualSequence: 0,
+                }),
+            ),
+            Story.then(contentRef),
+            Story.when(
+                contentRef,
+                new RecordDecisionImport({
+                    epoch: "copy-epoch",
+                    cursor: `rejected:${rejected}`,
+                    complete: true,
+                }),
+            ),
+            Story.then(
+                contentRef,
+                new LegacyDecisionsImported({
+                    epoch: "copy-epoch",
+                    cursor: `rejected:${rejected}`,
+                    complete: true,
+                }),
+            ),
+            Story.when(contentRef, new ActivateContent({ epoch: "copy-epoch", sequence: 0 })),
+            Story.then(
+                contentRef,
+                new ContentAuthorityActivated({ epoch: "copy-epoch", sequence: 0 }),
+                new ContentPublished({ content: snapshot.content, revision: 17 }),
+            ),
         ),
     );
 });

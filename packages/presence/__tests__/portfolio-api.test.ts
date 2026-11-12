@@ -10,6 +10,7 @@ import {
 } from "@artisann-port/portfolio-domain/content";
 import { SiteContentAggregate } from "@artisann-port/portfolio-domain/content/site-content.aggregate";
 import { SITE_CONTENT_ID } from "@artisann-port/portfolio-domain/content/site-content.id";
+import { NoteReview } from "@artisann-port/portfolio-domain/notes/note-review.aggregate";
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import * as Stream from "effect/Stream";
@@ -97,9 +98,8 @@ it("keeps acknowledged source writes across copy, restart, a racing fence and fo
                     active: false,
                     revision: 4,
                     publishedRevision: 4,
-                    rejected: [noteId(2)],
-                    deleted: [noteId(3)],
                     sourceSequence: 0,
+                    decisionsImported: true,
                     content: {
                         notes: [
                             {
@@ -142,9 +142,13 @@ it("keeps acknowledged source writes across copy, restart, a racing fence and fo
             expect(exported.entries[3]?.snapshot).toMatchObject({
                 revision: 6,
                 publishedRevision: 6,
-                rejected: [noteId(2)],
-                deleted: [noteId(3)],
             });
+            expect(exported.entries.map((entry) => entry.decision)).toEqual([
+                null,
+                null,
+                null,
+                null,
+            ]);
             const firstPage = yield* migration("import", { take: 1 });
             expect(firstPage.target).toMatchObject({
                 sourceSequence: 1,
@@ -263,9 +267,10 @@ it("keeps acknowledged source writes across copy, restart, a racing fence and fo
             expect((yield* migration("prepare", { epoch: EPOCH })).target).toMatchObject({
                 active: true,
                 revision: 8,
-                rejected: [noteId(2)],
-                deleted: [noteId(3)],
             });
+            const reviews = yield* NoteReview;
+            expect(yield* reviews.state(noteId(2))).toMatchObject({ rejected: true });
+            expect(yield* reviews.state(noteId(3))).toMatchObject({ deleted: true });
             expect(yield* client.PublishedContent.get(SITE_CONTENT_ID)).toEqual({
                 content: restarted.content,
                 revision: 8,
@@ -293,6 +298,54 @@ it("keeps acknowledged source writes across copy, restart, a racing fence and fo
                 },
             });
             expect(edited.state.content.notes).toEqual(restarted.content.notes);
+        }).pipe(Effect.scoped, Effect.provide(world.layer)),
+    );
+});
+
+it("migrates a long decision history in bounded pages and keeps every decision final", async () => {
+    const world = portfolioWorld();
+    await Effect.runPromise(
+        Effect.gen(function* () {
+            for (let number = 1; number <= 150; number++)
+                yield* write({ action: "reject", id: noteId(number) }, `reject-${number}`);
+            yield* write(approval(151), "approve-151");
+            yield* write({ action: "delete", id: noteId(151) }, "delete-151");
+            const prepared = yield* migration("prepare", { epoch: EPOCH });
+            expect(prepared).toMatchObject({
+                converged: false,
+                target: { decisionsImported: false, decisionCursor: `rejected:${noteId(99)}` },
+            });
+            expect(Object.keys(prepared.source.snapshot)).toEqual([
+                "content",
+                "revision",
+                "publishedRevision",
+            ]);
+            expect((yield* ownerRequest("/api/migration/handoff", {})).status).toBe(409);
+            // Captured after the scan passed its key: only the journal entry carries it.
+            yield* write({ action: "reject", id: noteId(0) }, "reject-during-capture");
+            const exported = yield* ownerRequest("/api/migration/export", {
+                after: 0,
+                take: 100,
+            }).pipe(Effect.flatMap((response) => body(response, ContentMigrationPage)));
+            expect(exported.entries.map((entry) => entry.decision)).toEqual([
+                { id: noteId(0), decision: "rejected" },
+            ]);
+            const scanned = yield* migration("import", { take: 100 });
+            expect(scanned).toMatchObject({
+                converged: false,
+                target: { decisionsImported: true, sourceSequence: 0 },
+            });
+            expect((yield* migration("import", { take: 100 })).converged).toBe(true);
+            yield* world.published((yield* migration("handoff", {})).target.revision);
+            for (const [id, outcome] of [
+                [noteId(0), "already-rejected"],
+                [noteId(1), "already-rejected"],
+                [noteId(150), "already-rejected"],
+                [noteId(151), "not-found"],
+            ] as const)
+                expect(
+                    (yield* write(approval(Number.parseInt(id, 16)), `stale-${id}`)).outcome,
+                ).toBe(outcome);
         }).pipe(Effect.scoped, Effect.provide(world.layer)),
     );
 });
@@ -394,11 +447,12 @@ it("enforces capacity, CAS and note finality after migrating a nearly full appro
             expect((yield* write(approval(102), "approval-after-reject")).outcome).toBe(
                 "already-rejected",
             );
-            const state = yield* (yield* SiteContentAggregate).state(SITE_CONTENT_ID);
-            expect(state).toMatchObject({
-                revision: 4,
-                rejected: [noteId(102)],
-                deleted: [noteId(100)],
+            expect((yield* (yield* SiteContentAggregate).state(SITE_CONTENT_ID)).revision).toBe(4);
+            const reviews = yield* NoteReview;
+            expect(yield* reviews.state(noteId(102))).toMatchObject({ rejected: true });
+            expect(yield* reviews.state(noteId(100))).toMatchObject({
+                approval: "approved",
+                deleted: true,
             });
             expect(
                 (yield* client.PublishedContent.get(SITE_CONTENT_ID))?.content.notes.at(-1)?.id,
@@ -621,8 +675,12 @@ it("keeps pending and rejected text in private review delivery and refuses publi
                 JSON.stringify(yield* client.PublishedContent.get(SITE_CONTENT_ID)),
             ).not.toContain(privateText);
             yield* write({ action: "reject", id: noteId(201) }, "reject-private-review");
-            const events = yield* world.history("SiteContent", SITE_CONTENT_ID);
-            expect(events.map((entry) => entry.event._tag)).toContain("VisitorNoteRejected");
+            const decisions = yield* world.history("NoteReview", noteId(201));
+            expect(decisions.map((entry) => entry.event._tag)).toContain("NoteRejected");
+            const events = [
+                ...decisions,
+                ...(yield* world.history("SiteContent", SITE_CONTENT_ID)),
+            ];
             expect(JSON.stringify(events)).not.toContain(privateText);
             expect(JSON.stringify(events)).not.toContain("Private visitor");
             expect(world.kv.writes.every((entry) => !entry.value.includes(privateText))).toBe(true);

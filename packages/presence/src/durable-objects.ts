@@ -48,6 +48,9 @@ export class ContentWriter extends DurableObject<ContentWriterEnv> {
     migrationEntries(after: number, take: number) {
         return this.controller.migrationEntries(after, take);
     }
+    migrationDecisions(after: string | null, take: number) {
+        return this.controller.migrationDecisions(after, take);
+    }
     migrationFence(epoch: string, sequence: number) {
         return this.controller.migrationFence(epoch, sequence);
     }

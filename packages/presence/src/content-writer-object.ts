@@ -144,6 +144,10 @@ export class ContentWriterController {
         return this.run(this.journal.entries(after, take));
     }
 
+    migrationDecisions(after: string | null, take: number) {
+        return this.run(this.journal.decisions(after, take));
+    }
+
     migrationFence(epoch: string, sequence: number) {
         return this.run(
             Effect.gen({ self: this }, function* () {
@@ -336,13 +340,15 @@ export class ContentWriterController {
                 return yield* this.respond("already-approved", stored);
             }
             // Persist only the decision — never the visitor text.
-            yield* this.journal.write((storage) =>
-                Effect.promise(() =>
-                    storage.put(REJECTION_MARKER_PREFIX + action.id, {
-                        id: action.id,
-                        decision: REJECTION_MARKER_TOMBSTONE,
-                    }),
-                ),
+            yield* this.journal.write(
+                (storage) =>
+                    Effect.promise(() =>
+                        storage.put(REJECTION_MARKER_PREFIX + action.id, {
+                            id: action.id,
+                            decision: REJECTION_MARKER_TOMBSTONE,
+                        }),
+                    ),
+                { id: action.id, decision: "rejected" },
             );
             return yield* this.respond("rejected", stored);
         });
@@ -366,18 +372,20 @@ export class ContentWriterController {
             if (alarm === null || alarm === undefined || alarm > due) {
                 yield* Effect.promise(() => this.doState.storage.setAlarm(due));
             }
-            yield* this.journal.write((storage) =>
-                Effect.gen(function* () {
-                    yield* Effect.promise(() => storage.put(STATE_KEY, next));
-                    if (deletion !== undefined) {
-                        yield* Effect.promise(() =>
-                            storage.put(DELETED_MARKER_PREFIX + deletion.id, {
-                                id: deletion.id,
-                                decision: DELETED_MARKER_TOMBSTONE,
-                            }),
-                        );
-                    }
-                }),
+            yield* this.journal.write(
+                (storage) =>
+                    Effect.gen(function* () {
+                        yield* Effect.promise(() => storage.put(STATE_KEY, next));
+                        if (deletion !== undefined) {
+                            yield* Effect.promise(() =>
+                                storage.put(DELETED_MARKER_PREFIX + deletion.id, {
+                                    id: deletion.id,
+                                    decision: DELETED_MARKER_TOMBSTONE,
+                                }),
+                            );
+                        }
+                    }),
+                deletion === undefined ? null : { id: deletion.id, decision: "deleted" },
             );
             yield* this.pump();
             const stored = yield* this.readStored();

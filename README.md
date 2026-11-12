@@ -432,20 +432,29 @@ change it to bypass a conflict.
 1. Send `POST /api/migration/prepare` with
    `{ "epoch": "<stable-private-migration-id>" }`. The source transaction
    records its baseline and enables capture before later writes can commit.
-   Repeating the same epoch returns the existing baseline.
+   Repeating the same epoch returns the existing baseline. Preparation also
+   imports the first page of final note decisions.
 2. Send `POST /api/migration/import` with `{ "take": 100 }`. `take` accepts `1`
    through `100` and defaults to `100`. Repeat until `GET /api/migration/status`
    reports `converged: true`. Imports retain content revisions, note IDs,
-   timestamps, and rejected/deleted decision IDs. Stable epoch and sequence
-   command IDs make retries idempotent.
-3. Keep source writes enabled during catch-up. Convergence requires the same
-   source epoch, sequence, content, revision, publication revision, and decision
-   sets. An intervening source write requires another import page.
-4. Send `POST /api/migration/handoff` after convergence. Handoff fences the
+   timestamps, and rejected/deleted decision IDs. Stable epoch, sequence, and
+   decision command IDs make retries idempotent.
+3. Import pages final decisions first. Each rejected or deleted note ID becomes
+   its own `NoteReview` aggregate, so no stored value, journal entry, or event
+   holds the whole history. Status reports `decisionCursor` and
+   `decisionsImported`. Captured entries then carry the single decision their
+   source write added. Decision markers are never removed, so this scan and the
+   captured entries cover every decision. Activation refuses a target whose
+   decision scan is incomplete.
+4. Keep source writes enabled during catch-up. Convergence requires the same
+   source epoch, sequence, content, revision, and publication revision, plus a
+   completed decision scan. An intervening source write requires another import
+   page.
+5. Send `POST /api/migration/handoff` after convergence. Handoff fences the
    exact source sequence, verifies the frozen snapshot, activates Domain, and
    marks the source complete. It refuses a stale sequence or unpublished source
    revision. It does not acknowledge two independent writers.
-5. Inspect status after every uncertain handoff response. Retry the same handoff
+6. Inspect status after every uncertain handoff response. Retry the same handoff
    to complete an already-activated target. A `202` means publication is still
    pending. `503`, a typed error, or a timeout never proves success. Accept
    completion only after the source is in `domain` mode, the target is active,

@@ -209,6 +209,7 @@ export function portfolioWorld(initial: SiteContent = DEFAULT_SITE_CONTENT) {
         migrationStatus: () => controller.migrationStatus(),
         migrationBaseline: () => controller.migrationBaseline(),
         migrationEntries: (after, take) => controller.migrationEntries(after, take),
+        migrationDecisions: (after, take) => controller.migrationDecisions(after, take),
         migrationFence: async (epoch, sequence) => {
             await faults.beforeFence?.();
             return controller.migrationFence(epoch, sequence);

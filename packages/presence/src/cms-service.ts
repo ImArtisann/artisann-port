@@ -12,10 +12,14 @@ import { SITE_CONTENT_ID } from "@artisann-port/portfolio-domain/content/site-co
 import { PublishedContent } from "@artisann-port/portfolio-domain/content/published-content.view";
 import { ReplaceContent } from "@artisann-port/portfolio-domain/content/replace-content.command";
 import { ApproveNote } from "@artisann-port/portfolio-domain/content/approve-note.command";
-import { RejectNote } from "@artisann-port/portfolio-domain/content/reject-note.command";
+import { ReviewFinal } from "@artisann-port/portfolio-domain/content/review-final.rejection";
 import { DeleteNote } from "@artisann-port/portfolio-domain/content/delete-note.command";
 import { NoteReview } from "@artisann-port/portfolio-domain/notes/note-review.aggregate";
 import { ConfirmNoteReviewQueued } from "@artisann-port/portfolio-domain/notes/confirm-note-review-queued.command";
+import { ClaimNoteApproval } from "@artisann-port/portfolio-domain/notes/claim-note-approval.command";
+import { SettleNoteApproval } from "@artisann-port/portfolio-domain/notes/settle-note-approval.command";
+import { RecordNoteRejection } from "@artisann-port/portfolio-domain/notes/record-note-rejection.command";
+import { RecordNoteDeletion } from "@artisann-port/portfolio-domain/notes/record-note-deletion.command";
 import { ApiUnavailable, ContentWriteError } from "./api-errors.ts";
 import {
     CONTENT_WRITER_BODY_BYTES_MAX,
@@ -143,60 +147,150 @@ export const CmsContentLive = Layer.effect(
                         return yield* new ContentWriteError({ kind: result.error });
                     return result;
                 }
-                const command = Match.value(value).pipe(
-                    Match.when(
-                        { action: "replace" },
-                        (action) =>
-                            new ReplaceContent({
-                                revision: action.revision,
-                                content: action.content,
-                            }),
+                const owner = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+                    effect.pipe(Effect.provideService(CurrentPortfolioActor, "owner"));
+                const decided = (outcome: ContentWriterResult["outcome"], revision: number) => ({
+                    outcome,
+                    revision,
+                });
+                const final = (rejection: ReviewFinal) =>
+                    content.state(SITE_CONTENT_ID).pipe(
+                        Effect.map((current) =>
+                            decided(
+                                Match.value(rejection.decision).pipe(
+                                    Match.when(
+                                        "approved",
+                                        (): ContentWriterResult["outcome"] => "already-approved",
+                                    ),
+                                    Match.when(
+                                        "rejected",
+                                        (): ContentWriterResult["outcome"] => "already-rejected",
+                                    ),
+                                    Match.when(
+                                        "deleted",
+                                        (): ContentWriterResult["outcome"] => "not-found",
+                                    ),
+                                    Match.exhaustive,
+                                ),
+                                current.revision,
+                            ),
+                        ),
+                    );
+                /** The current revision while the note is not published; none once it is. */
+                const unpublishedRevision = (id: string) =>
+                    content
+                        .state(SITE_CONTENT_ID)
+                        .pipe(
+                            Effect.map((current) =>
+                                current.content.notes.some((note) => note.id === id)
+                                    ? Option.none<number>()
+                                    : Option.some(current.revision),
+                            ),
+                        );
+                // Each note's NoteReview decides finality first; SiteContent then owns the notes.
+                const result = yield* Match.value(value).pipe(
+                    Match.when({ action: "replace" }, (action) =>
+                        owner(
+                            content.send(
+                                SITE_CONTENT_ID,
+                                new ReplaceContent({
+                                    revision: action.revision,
+                                    content: action.content,
+                                }),
+                                { commandId },
+                            ),
+                        ).pipe(Effect.map((receipt) => decided("updated", receipt.reply.revision))),
                     ),
-                    Match.when(
-                        { action: "approve" },
-                        (action) =>
-                            new ApproveNote({
-                                id: action.id,
-                                name: action.name,
-                                body: action.body,
-                                submittedAt: action.submittedAt,
-                            }),
-                    ),
-                    Match.when({ action: "reject" }, (action) => new RejectNote({ id: action.id })),
-                    Match.when({ action: "delete" }, (action) => new DeleteNote({ id: action.id })),
-                    Match.exhaustive,
-                );
-                const outcome = Match.value(value.action).pipe(
-                    Match.when("replace", (): ContentWriterResult["outcome"] => "updated"),
-                    Match.when("approve", (): ContentWriterResult["outcome"] => "approved"),
-                    Match.when("reject", (): ContentWriterResult["outcome"] => "rejected"),
-                    Match.when("delete", (): ContentWriterResult["outcome"] => "deleted"),
-                    Match.exhaustive,
-                );
-                const result = yield* content.send(SITE_CONTENT_ID, command, { commandId }).pipe(
-                    Effect.provideService(CurrentPortfolioActor, "owner"),
-                    Effect.map((receipt) => ({ outcome, revision: receipt.reply.revision })),
-                    Effect.catchTag("ReviewFinal", (final) =>
+                    Match.when({ action: "approve" }, (action) =>
                         Effect.gen(function* () {
-                            const current = yield* content.state(SITE_CONTENT_ID);
-                            const decided = Match.value(final.decision).pipe(
-                                Match.when(
-                                    "approved",
-                                    (): ContentWriterResult["outcome"] => "already-approved",
+                            const settle = (approved: boolean) =>
+                                owner(
+                                    reviews.send(action.id, new SettleNoteApproval({ approved }), {
+                                        commandId: `${commandId}:settle:${approved}`,
+                                    }),
+                                );
+                            const refused = yield* owner(
+                                reviews.send(action.id, new ClaimNoteApproval(), {
+                                    commandId: `${commandId}:claim`,
+                                }),
+                            ).pipe(
+                                Effect.as(
+                                    Option.none<{
+                                        outcome: ContentWriterResult["outcome"];
+                                        revision: number;
+                                    }>(),
                                 ),
-                                Match.when(
-                                    "rejected",
-                                    (): ContentWriterResult["outcome"] => "already-rejected",
+                                Effect.catchTag("ReviewFinal", (rejection) =>
+                                    Effect.asSome(final(rejection)),
                                 ),
-                                Match.when(
-                                    "deleted",
-                                    (): ContentWriterResult["outcome"] => "not-found",
-                                ),
-                                Match.exhaustive,
                             );
-                            return { outcome: decided, revision: current.revision };
+                            if (Option.isSome(refused)) return refused.value;
+                            return yield* owner(
+                                content.send(
+                                    SITE_CONTENT_ID,
+                                    new ApproveNote({
+                                        id: action.id,
+                                        name: action.name,
+                                        body: action.body,
+                                        submittedAt: action.submittedAt,
+                                    }),
+                                    { commandId },
+                                ),
+                            ).pipe(
+                                Effect.map((receipt) =>
+                                    decided("approved", receipt.reply.revision),
+                                ),
+                                Effect.catchTag("ReviewFinal", final),
+                                Effect.tap(() => settle(true)),
+                                // A refused approval releases its claim unless the note is published.
+                                Effect.tapError((error) =>
+                                    Match.value(error._tag).pipe(
+                                        Match.when("NoteReviewPayloadChanged", () => settle(true)),
+                                        Match.when("NotesCapacityReached", () => settle(false)),
+                                        Match.orElse(() => Effect.void),
+                                    ),
+                                ),
+                            );
                         }),
                     ),
+                    Match.when({ action: "reject" }, (action) =>
+                        Effect.gen(function* () {
+                            const unpublished = yield* unpublishedRevision(action.id);
+                            if (Option.isNone(unpublished))
+                                return yield* final(
+                                    new ReviewFinal({ id: action.id, decision: "approved" }),
+                                );
+                            return yield* owner(
+                                reviews.send(action.id, new RecordNoteRejection(), { commandId }),
+                            ).pipe(
+                                Effect.as(decided("rejected", unpublished.value)),
+                                Effect.catchTag("ReviewFinal", final),
+                            );
+                        }),
+                    ),
+                    Match.when({ action: "delete" }, (action) =>
+                        Effect.gen(function* () {
+                            if (Option.isSome(yield* unpublishedRevision(action.id)))
+                                return yield* final(
+                                    new ReviewFinal({ id: action.id, decision: "deleted" }),
+                                );
+                            // Final before removal: a crash in between leaves a retryable deletion.
+                            yield* owner(
+                                reviews.send(action.id, new RecordNoteDeletion(), {
+                                    commandId: `${commandId}:final`,
+                                }),
+                            );
+                            return yield* owner(
+                                content.send(SITE_CONTENT_ID, new DeleteNote({ id: action.id }), {
+                                    commandId,
+                                }),
+                            ).pipe(
+                                Effect.map((receipt) => decided("deleted", receipt.reply.revision)),
+                                Effect.catchTag("ReviewFinal", final),
+                            );
+                        }),
+                    ),
+                    Match.exhaustive,
                     Effect.mapError((error) =>
                         error._tag === "ContentRevisionConflict"
                             ? new ContentWriteError({ kind: "conflict" })

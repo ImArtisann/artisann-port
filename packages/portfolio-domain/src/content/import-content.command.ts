@@ -5,7 +5,7 @@ import { ContentSnapshot, Revision } from "./content-state.ts";
 import { SiteContentId } from "./site-content.id.ts";
 
 export class ContentImportConflict extends Domain.Rejection("ContentImportConflict", {
-    reason: Schema.Literals(["active", "epoch", "sequence", "snapshot"]),
+    reason: Schema.Literals(["active", "epoch", "sequence", "snapshot", "decisions"]),
     expectedSequence: Revision,
     actualSequence: Revision,
 }) {}
