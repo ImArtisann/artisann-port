@@ -10,6 +10,7 @@
     "dependencies": {
         "@artisann-port/assets": "workspace:*",
         "@artisann-port/presence": "workspace:*",
+        "@artisann-port/portfolio-domain": "workspace:*",
         "@effect/platform-bun": "catalog:",
         "dfx": "1.1.0",
         "effect": "catalog:",

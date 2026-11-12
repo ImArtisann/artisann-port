@@ -3,38 +3,29 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "dev": "astro dev",
-        "build": "astro build",
-        "preview": "astro preview",
-        "check": "astro check"
+        "dev": "vite",
+        "build": "vite build",
+        "preview": "vite preview --outDir dist/client",
+        "check": "vp check"
     },
     "dependencies": {
+        "@alchemy.run/domain": "catalog:",
         "@artisann-port/assets": "workspace:*",
+        "@artisann-port/portfolio-domain": "workspace:*",
         "@artisann-port/presence": "workspace:*",
-        "@artisann-port/ui": "workspace:*",
-        "@astrojs/react": "^7.1.0",
-        "@effect/atom-react": "4.0.5",
+        "@effect/platform-browser": "catalog:",
         "@fontsource-variable/geist": "catalog:",
-        "@fontsource-variable/geist-mono": "5.3.0",
         "@hugeicons-pro/core-solid-rounded": "catalog:",
-        "@hugeicons/react": "catalog:",
-        "@tailwindcss/vite": "catalog:",
-        "@unpic/astro": "catalog:",
-        "astro": "catalog:",
+        "cn": "catalog:",
         "effect": "catalog:",
-        "motion": "catalog:",
-        "react": "catalog:",
-        "react-dom": "catalog:",
-        "scheduler": "0.28.0",
+        "foldkit": "catalog:",
         "tailwindcss": "catalog:"
     },
     "devDependencies": {
-        "@astrojs/check": "0.9.10",
         "@artisann-port/typescript-config": "workspace:*",
+        "@foldkit/vite-plugin": "catalog:",
+        "@tailwindcss/vite": "catalog:",
         "@types/node": "^26.6.5",
-        "@types/react": "catalog:",
-        "@types/react-dom": "catalog:",
-        "typescript": "^6.0.3",
         "vite": "catalog:"
     }
 }

@@ -2,15 +2,7 @@
     "extends": "@artisann-port/typescript-config/base.json",
     "compilerOptions": {
         "lib": ["ESNext", "DOM", "DOM.Iterable"],
-        "jsx": "react-jsx",
         "types": ["bun", "vite/client", "@cloudflare/workers-types"]
     },
-    "include": [
-        "alchemy.run.ts",
-        "vite.config.ts",
-        "src/**/*.ts",
-        "src/**/*.tsx",
-        "__tests__/**/*.ts",
-        "__tests__/**/*.tsx"
-    ]
+    "include": ["alchemy.run.ts", "vite.config.ts", "src/**/*.ts", "__tests__/**/*.ts"]
 }

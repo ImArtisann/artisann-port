@@ -36,6 +36,24 @@ export class ContentWriter extends DurableObject<ContentWriterEnv> {
     ): Promise<ContentWriterResult | { error: ContentWriterErrorKind }> {
         return this.controller.apply(action);
     }
+    migrationPrepare(epoch: string) {
+        return this.controller.migrationPrepare(epoch);
+    }
+    migrationStatus() {
+        return this.controller.migrationStatus();
+    }
+    migrationBaseline() {
+        return this.controller.migrationBaseline();
+    }
+    migrationEntries(after: number, take: number) {
+        return this.controller.migrationEntries(after, take);
+    }
+    migrationFence(epoch: string, sequence: number) {
+        return this.controller.migrationFence(epoch, sequence);
+    }
+    migrationComplete(epoch: string, sequence: number) {
+        return this.controller.migrationComplete(epoch, sequence);
+    }
     override alarm(): Promise<void> {
         return this.controller.alarm();
     }

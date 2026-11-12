@@ -11,7 +11,7 @@
  */
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
-import { HttpsUrl, IsoTimestamp } from "./content.ts";
+import { HttpsUrl, IsoTimestamp } from "@artisann-port/portfolio-domain/content";
 
 /** The two public photo collections. */
 export const PhotoTag = Schema.Literals(["life", "cats"]);

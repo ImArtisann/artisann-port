@@ -5,8 +5,8 @@ import { decodeHTMLAttribute } from "entities/decode";
 import * as FetchHttpClient from "effect/http/FetchHttpClient";
 import * as HttpClient from "effect/http/HttpClient";
 import type { HttpClientResponse } from "effect/http/HttpClientResponse";
-import type { DeployedApp, SiteContent } from "./content.ts";
-import { isPublicDnsHostname } from "./project-hosts.ts";
+import type { DeployedApp, SiteContent } from "@artisann-port/portfolio-domain/content";
+import { isPublicDnsHostname } from "@artisann-port/portfolio-domain/project-hosts";
 import { projectPreviewUrl } from "./projects.ts";
 
 /** The subset of Cloudflare's Cache API used by project previews. */

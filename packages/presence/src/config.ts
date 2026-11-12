@@ -5,9 +5,6 @@
  */
 
 export const PORTFOLIO_API_ORIGIN = "https://presence.artisann.dev";
-export const PUBLIC_RPC_PATH = "/rpc";
-export const WRITER_RPC_PATH = "/rpc/writer";
-export const NOTES_RPC_PATH = "/rpc/notes";
 export const PRESENCE_WEBSOCKET_PATH = "/presence";
 
 /**
@@ -39,26 +36,6 @@ export function isPortfolioApiOrigin(value: string): boolean {
                     value.slice(value.indexOf("//") + 2).split("/")[0] ?? "",
                 )))
     );
-}
-
-export interface PortfolioEndpoints {
-    rpcUrl: string;
-    writerRpcUrl: string;
-    notesRpcUrl: string;
-    presenceUrl: string;
-}
-
-/** Call only after validating the configured HTTP(S) base origin. */
-export function portfolioEndpoints(baseUrl: string): PortfolioEndpoints {
-    const origin = new URL(baseUrl);
-    const presence = new URL(PRESENCE_WEBSOCKET_PATH, origin);
-    presence.protocol = origin.protocol === "https:" ? "wss:" : "ws:";
-    return {
-        rpcUrl: new URL(PUBLIC_RPC_PATH, origin).href,
-        writerRpcUrl: new URL(WRITER_RPC_PATH, origin).href,
-        notesRpcUrl: new URL(NOTES_RPC_PATH, origin).href,
-        presenceUrl: presence.href,
-    };
 }
 
 export const GITHUB_CRON = "*/15 * * * *";

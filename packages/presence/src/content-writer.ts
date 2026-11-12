@@ -15,7 +15,12 @@
  * - Failure results carry a sanitized machine code, never a diagnostic cause.
  */
 import * as Schema from "effect/Schema";
-import { NoteBody, NoteName, SiteContent, IsoTimestamp } from "./content.ts";
+import {
+    NoteBody,
+    NoteName,
+    SiteContent,
+    IsoTimestamp,
+} from "@artisann-port/portfolio-domain/content";
 import type { PresenceKvBinding } from "./store.ts";
 
 /** The single Durable Object instance name backing all site content. */
@@ -148,12 +153,21 @@ export interface ContentWriterBinding {
  * transparently (de)serialized by the runtime; alarms drive projection
  * reconciliation.
  */
-export interface DurableObjectStorageLike {
+export interface DurableObjectTransactionLike {
     get<T>(key: string): Promise<T | undefined>;
     put<T>(key: string, value: T): Promise<void>;
     delete(key: string): Promise<boolean>;
+    list<T>(options: {
+        readonly prefix: string;
+        readonly startAfter?: string;
+        readonly limit: number;
+    }): Promise<Map<string, T>>;
     setAlarm(scheduledTime: number | Date): Promise<void>;
     getAlarm(): Promise<number | null | undefined>;
+}
+
+export interface DurableObjectStorageLike extends DurableObjectTransactionLike {
+    transaction<A>(callback: (storage: DurableObjectTransactionLike) => Promise<A>): Promise<A>;
 }
 
 /** The subset of `DurableObjectState` the writer needs. */

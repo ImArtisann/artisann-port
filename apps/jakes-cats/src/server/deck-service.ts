@@ -1,9 +1,9 @@
 /**
  * The deck, the leaderboard, and one photo's page. Every photo comes from the
  * shared R2 bucket's managed keys, so a deleted (or never uploaded) object
- * never ranks and never gets a page; heart counts and comments come from D1,
- * and the deck is shuffled fresh on every read so two visitors — and two
- * reloads — never see the same order.
+ * never ranks and never gets a page. D1 reads the active source or Domain
+ * projection, while authoritative post-handoff comments come from the model.
+ * Every deck read shuffles the current live collection again.
  */
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
@@ -21,7 +21,7 @@ import {
     type LeaderboardPayload,
     type PhotoDetail,
 } from "../contracts.ts";
-import type { PhotosR2MutationBinding } from "../env.ts";
+import type { PhotosR2ReadBinding } from "../env.ts";
 import { HeartsService } from "./hearts-service.ts";
 
 export class DeckError extends Schema.TaggedError<DeckError>()("Deck.Error", {
@@ -33,8 +33,8 @@ export class PhotoNotFound extends Schema.TaggedError<PhotoNotFound>()("Deck.Pho
     id: Schema.String,
 }) {}
 
-/** The assets bucket binding (list for photos, put/head for uploads). */
-export class PhotosBinding extends Context.Service<PhotosBinding, PhotosR2MutationBinding>()(
+/** The read-only assets bucket surface; Portfolio alone owns mutations. */
+export class PhotosBinding extends Context.Service<PhotosBinding, PhotosR2ReadBinding>()(
     "Photos.Binding",
 ) {}
 

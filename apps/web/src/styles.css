@@ -1,5 +1,115 @@
-@import "@artisann-port/ui/styles/globals.css";
-@source "./**/*.{astro,ts,tsx}";
+@import "tailwindcss";
+@import "@fontsource-variable/geist";
+@source "./**/*.ts";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+    --color-note: var(--note);
+    --color-note-foreground: var(--note-foreground);
+    --color-note-muted-foreground: var(--note-muted-foreground);
+    --color-note-fold: var(--note-fold);
+    --font-heading: var(--font-sans);
+    --color-ring: var(--ring);
+    --color-input: var(--input);
+    --color-border: var(--border);
+    --color-destructive: var(--destructive);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-accent: var(--accent);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-muted: var(--muted);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-secondary: var(--secondary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary: var(--primary);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-popover: var(--popover);
+    --color-card-foreground: var(--card-foreground);
+    --color-card: var(--card);
+    --color-foreground: var(--foreground);
+    --color-background: var(--background);
+    --radius-sm: calc(var(--radius) * 0.6);
+    --radius-md: calc(var(--radius) * 0.8);
+    --radius-lg: var(--radius);
+    --radius-xl: 0.75rem;
+    --font-sans: "Geist Variable", sans-serif;
+}
+
+:root {
+    color-scheme: light;
+    --note: #f0f0eb;
+    --note-foreground: #202328;
+    --note-muted-foreground: #5d626b;
+    --note-fold: #d7d9d3;
+    --background: #f5f6f7;
+    --foreground: #202328;
+    --card: #ffffff;
+    --card-foreground: #202328;
+    --popover: #ffffff;
+    --popover-foreground: #202328;
+    --primary: #30353c;
+    --primary-foreground: #ffffff;
+    --secondary: #e5e7eb;
+    --secondary-foreground: #30353c;
+    --muted: #e5e7eb;
+    --muted-foreground: #5d626b;
+    --accent: #e5e7eb;
+    --accent-foreground: #202328;
+    --destructive: oklch(0.577 0.245 27.325);
+    --border: #cdd1d7;
+    --input: #cdd1d7;
+    --ring: #5d626b;
+    --radius: 0.625rem;
+}
+
+.dark {
+    color-scheme: dark;
+    --note: #292c31;
+    --note-foreground: #f4f5f6;
+    --note-muted-foreground: #bbc0c7;
+    --note-fold: #41464e;
+    --background: #111214;
+    --foreground: #f4f5f6;
+    --card: #1b1d20;
+    --card-foreground: #f4f5f6;
+    --popover: #1b1d20;
+    --popover-foreground: #f4f5f6;
+    --primary: #eceef1;
+    --primary-foreground: #1b1d20;
+    --secondary: #292c31;
+    --secondary-foreground: #eceef1;
+    --muted: #292c31;
+    --muted-foreground: #b0b4bb;
+    --accent: #292c31;
+    --accent-foreground: #f4f5f6;
+    --destructive: oklch(0.704 0.191 22.216);
+    --border: #363a40;
+    --input: #363a40;
+    --ring: #b0b4bb;
+}
+
+@layer base {
+    * {
+        @apply border-border outline-ring/50;
+    }
+    body {
+        @apply bg-background text-foreground;
+    }
+}
+
+@keyframes portfolio-slide {
+    from {
+        opacity: 0;
+        transform: translateX(var(--slide-from, 20px));
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+.portfolio-slide {
+    animation: portfolio-slide 250ms ease-out;
+}
 
 /*
  * Typography transferred from the Pencil frames (mobile 390 / desktop 1440).

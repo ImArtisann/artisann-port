@@ -22,7 +22,7 @@ import {
     type PresenceEvent,
     type PresenceWorker,
 } from "../src/presence.ts";
-import { BotStorageError } from "../src/rpc-client.ts";
+import { BotStorageError } from "../src/portfolio-client.ts";
 import type { BotPresenceClientService } from "../src/presence-client.ts";
 
 const SERVER_ID = "100000000000000001";

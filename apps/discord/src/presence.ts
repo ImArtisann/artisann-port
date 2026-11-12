@@ -15,8 +15,7 @@
  * rather than fabricating an offline status.
  */
 import * as DateTime from "effect/DateTime";
-import * as Crypto from "effect/Crypto";
-import * as BunCrypto from "@effect/platform-bun/BunCrypto";
+import * as SecureRandom from "effect/crypto/SecureRandom";
 import * as Effect from "effect/Effect";
 import * as Exit from "effect/Exit";
 import * as Layer from "effect/Layer";
@@ -38,7 +37,7 @@ import * as SendEvent from "dfx/DiscordGateway/Shard/sendEvents";
 import type * as Discord from "dfx/types";
 import { BotConfig } from "./config.ts";
 import { BotPresenceClient, type BotPresenceClientService } from "./presence-client.ts";
-import { BotStorageError } from "./rpc-client.ts";
+import { BotStorageError } from "./portfolio-client.ts";
 
 /** One GUILD_MEMBERS_CHUNK dispatch, narrowed before it reaches the reducer. */
 export interface MemberChunkEvent {
@@ -138,14 +137,10 @@ export interface PresenceWorker {
     readonly flush: Effect.Effect<void>;
 }
 
-/**
- * Build the presence worker over the presence domain client. Tests inject a
- * fake; production passes the scoped RPC client.
- */
 export const makePresenceWorker = Effect.fn("Presence.makeWorker")(function* (
     options: PresenceWorkerOptions,
 ) {
-    const cryptography = yield* Crypto.Crypto;
+    const cryptography = yield* SecureRandom.SecureRandom;
     const state = yield* Ref.make<WorkerState>(INITIAL_STATE);
     // One mutex for every state transition: dispatch reducer, timer-armed
     // requests, and flush publish decisions.
@@ -283,10 +278,7 @@ export const makePresenceWorker = Effect.fn("Presence.makeWorker")(function* (
             Effect.gen(function* () {
                 const current = yield* Ref.get(state);
                 if (!current.guildAvailable) return Option.none<string>();
-                const nonce = (yield* cryptography.randomUUIDv4().pipe(Effect.orDie)).replaceAll(
-                    "-",
-                    "",
-                );
+                const nonce = (yield* cryptography.uuidV4()).replaceAll("-", "");
                 yield* Ref.set(state, { ...current, pendingNonce: nonce });
                 return Option.some(nonce);
             }),
@@ -319,7 +311,7 @@ export const makePresenceWorker = Effect.fn("Presence.makeWorker")(function* (
         snapshot: Effect.map(Ref.get(state), (current) => current.snapshot),
         flush,
     } satisfies PresenceWorker;
-}, Effect.provide(BunCrypto.layer));
+}, Effect.provide(SecureRandom.layerWebCrypto));
 
 /** Map one raw Gateway dispatch onto a reducer event, or ignore it. */
 const toPresenceEvent = (payload: Discord.GatewayReceivePayload): PresenceEvent | null => {

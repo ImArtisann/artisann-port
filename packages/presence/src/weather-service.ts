@@ -5,7 +5,7 @@ import * as Schema from "effect/Schema";
 import * as HttpClient from "effect/http/HttpClient";
 import * as HttpClientResponse from "effect/http/HttpClientResponse";
 import { ApiUnavailable } from "./api-errors.ts";
-import type { WeatherReading } from "./rpc.ts";
+import type { Weather } from "./api.ts";
 
 const WEATHER_URL =
     "https://api.open-meteo.com/v1/forecast?latitude=32.9343&longitude=-97.0781&hourly=temperature_2m&current=temperature_2m";
@@ -17,7 +17,7 @@ const CurrentTemperature = Schema.Struct({
 
 export class WeatherService extends Context.Service<
     WeatherService,
-    { readonly get: Effect.Effect<WeatherReading, ApiUnavailable> }
+    { readonly get: Effect.Effect<Weather, ApiUnavailable> }
 >()("Weather.Service") {}
 
 /** Fixed Open-Meteo provider; no caller-controlled URL or coordinates. */

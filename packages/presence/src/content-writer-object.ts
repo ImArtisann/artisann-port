@@ -36,7 +36,12 @@ import * as Schema from "effect/Schema";
 import * as Semaphore from "effect/Semaphore";
 
 import { CONTENT_KEY } from "./config.ts";
-import { DEFAULT_SITE_CONTENT, decodeContentDocument, MAX_NOTES, SiteContent } from "./content.ts";
+import {
+    DEFAULT_SITE_CONTENT,
+    decodeContentDocument,
+    MAX_NOTES,
+    SiteContent,
+} from "@artisann-port/portfolio-domain/content";
 import {
     encodeContentDocument,
     PROJECTION_RETRY_MS,
@@ -52,6 +57,7 @@ import {
     type DurableObjectStateLike,
     type ReplaceAction,
 } from "./content-writer.ts";
+import { ContentSourceJournal, ContentMigrationFailure } from "./content-migration-source.ts";
 
 /** Internal storage keys. Marker payloads hold only the id and the decision. */
 const STATE_KEY = "state";
@@ -90,6 +96,7 @@ function nextUpdatedAt(previous: string | null, now: number): string {
 export class ContentWriterController {
     private canonicalDocument: string | undefined;
     private readonly lock = Semaphore.makeUnsafe(1);
+    private readonly journal: ContentSourceJournal;
     /**
      * The native KV write currently in flight, if any. A projection attempt
      * never starts while a previous one is unsettled, whatever its response
@@ -100,7 +107,9 @@ export class ContentWriterController {
     constructor(
         private readonly doState: DurableObjectStateLike,
         private readonly env: ContentWriterEnv,
-    ) {}
+    ) {
+        this.journal = new ContentSourceJournal(doState.storage);
+    }
 
     private run<A, E>(effect: Effect.Effect<A, E>): Promise<A> {
         return Effect.runPromise(this.lock.withPermits(1)(effect));
@@ -108,6 +117,48 @@ export class ContentWriterController {
 
     getState(): Promise<ContentWriterState> {
         return this.run(this.serveState());
+    }
+    migrationPrepare(epoch: string) {
+        return this.run(
+            Effect.gen({ self: this }, function* () {
+                yield* this.ensureState();
+                return yield* this.journal.prepare(epoch);
+            }),
+        );
+    }
+
+    migrationStatus() {
+        return this.run(
+            Effect.gen({ self: this }, function* () {
+                yield* this.ensureState();
+                return yield* this.journal.status;
+            }),
+        );
+    }
+
+    migrationBaseline() {
+        return this.run(this.journal.baseline);
+    }
+
+    migrationEntries(after: number, take: number) {
+        return this.run(this.journal.entries(after, take));
+    }
+
+    migrationFence(epoch: string, sequence: number) {
+        return this.run(
+            Effect.gen({ self: this }, function* () {
+                yield* this.pump();
+                const current = yield* this.readStored();
+                if (current === undefined || current.dirty || this.inFlightWrite !== null) {
+                    return yield* new ContentMigrationFailure({ reason: "unavailable" });
+                }
+                return yield* this.journal.fence(epoch, sequence);
+            }),
+        );
+    }
+
+    migrationComplete(epoch: string, sequence: number) {
+        return this.run(this.journal.complete(epoch, sequence));
     }
 
     apply(action: ContentWriterAction): Promise<WriterOutcome> {
@@ -127,10 +178,13 @@ export class ContentWriterController {
     }
 
     private applyAction(action: ContentWriterAction) {
-        if (action.action === "replace") return this.replace(action);
-        if (action.action === "approve") return this.approve(action);
-        if (action.action === "delete") return this.deleteNote(action);
-        return this.reject(action);
+        return Effect.gen({ self: this }, function* () {
+            if (!(yield* this.journal.isLegacy)) return error("unavailable");
+            if (action.action === "replace") return yield* this.replace(action);
+            if (action.action === "approve") return yield* this.approve(action);
+            if (action.action === "delete") return yield* this.deleteNote(action);
+            return yield* this.reject(action);
+        });
     }
 
     /** CAS whole-document replace. Notes are preserved exactly, or refused. */
@@ -282,11 +336,13 @@ export class ContentWriterController {
                 return yield* this.respond("already-approved", stored);
             }
             // Persist only the decision — never the visitor text.
-            yield* Effect.promise(() =>
-                this.doState.storage.put(REJECTION_MARKER_PREFIX + action.id, {
-                    id: action.id,
-                    decision: REJECTION_MARKER_TOMBSTONE,
-                }),
+            yield* this.journal.write((storage) =>
+                Effect.promise(() =>
+                    storage.put(REJECTION_MARKER_PREFIX + action.id, {
+                        id: action.id,
+                        decision: REJECTION_MARKER_TOMBSTONE,
+                    }),
+                ),
             );
             return yield* this.respond("rejected", stored);
         });
@@ -310,18 +366,19 @@ export class ContentWriterController {
             if (alarm === null || alarm === undefined || alarm > due) {
                 yield* Effect.promise(() => this.doState.storage.setAlarm(due));
             }
-            yield* this.persist(next);
-            if (deletion !== undefined) {
-                // Durable with the deletion itself, before any projection: a
-                // crash now leaves the id tombstoned rather than revivable.
-                // Only the decision is stored — never the note text.
-                yield* Effect.promise(() =>
-                    this.doState.storage.put(DELETED_MARKER_PREFIX + deletion.id, {
-                        id: deletion.id,
-                        decision: DELETED_MARKER_TOMBSTONE,
-                    }),
-                );
-            }
+            yield* this.journal.write((storage) =>
+                Effect.gen(function* () {
+                    yield* Effect.promise(() => storage.put(STATE_KEY, next));
+                    if (deletion !== undefined) {
+                        yield* Effect.promise(() =>
+                            storage.put(DELETED_MARKER_PREFIX + deletion.id, {
+                                id: deletion.id,
+                                decision: DELETED_MARKER_TOMBSTONE,
+                            }),
+                        );
+                    }
+                }),
+            );
             yield* this.pump();
             const stored = yield* this.readStored();
             if (stored === undefined || stored.dirty) return error("unavailable");
@@ -340,6 +397,7 @@ export class ContentWriterController {
      */
     private pump() {
         return Effect.gen({ self: this }, function* () {
+            if (!(yield* this.journal.isLegacy)) return;
             if (this.inFlightWrite !== null) {
                 const pending = yield* this.awaitProjection(this.inFlightWrite);
                 if (pending === "uncertain") {
@@ -359,6 +417,7 @@ export class ContentWriterController {
                     document: stored.document,
                     dirty: false,
                 });
+                this.inFlightWrite = null;
                 return;
             }
             const retryAt =
@@ -441,7 +500,7 @@ export class ContentWriterController {
     }
 
     private persist(state: StoredState) {
-        return Effect.promise(() => this.doState.storage.put(STATE_KEY, state));
+        return this.journal.write((storage) => Effect.promise(() => storage.put(STATE_KEY, state)));
     }
 
     private toWriterState(stored: StoredState) {

@@ -4,17 +4,15 @@ import * as Fiber from "effect/Fiber";
 import * as Layer from "effect/Layer";
 import * as Result from "effect/Result";
 import * as TestClock from "effect/testing/TestClock";
-import * as RpcTest from "effect/rpc/RpcTest";
 import { MemoryRateLimitStoreLive, RateLimiterLive } from "dfx/RateLimit";
 import { ApiUnavailable, ContentWriteError } from "@artisann-port/presence/api-errors";
-import { DEFAULT_SITE_CONTENT } from "@artisann-port/presence/content";
+import { DEFAULT_SITE_CONTENT } from "@artisann-port/portfolio-domain/content";
 import type { ContentWriterAction } from "@artisann-port/presence/content-writer";
-import { PublicRpcs, WriterAuth, WriterRpcs } from "@artisann-port/presence/rpc";
 import type {
     ContentWriterResult,
     ContentWriterState,
 } from "@artisann-port/presence/content-writer";
-import { BotRpcClients, ContentValidationError } from "../src/rpc-client.ts";
+import { BotPortfolioClient, ContentValidationError } from "../src/portfolio-client.ts";
 import {
     BotContentClient,
     BotContentClientLive,
@@ -38,54 +36,40 @@ type Call =
     | "content.state"
     | { readonly tag: "content.apply"; readonly action: ContentWriterAction };
 
-interface FakeRpc {
+interface ClientCase {
     readonly layer: Layer.Layer<BotContentClient>;
     readonly calls: ReadonlyArray<Call>;
 }
 
-interface FakeRpcBehavior {
+interface ClientBehavior {
     readonly state: () => Effect.Effect<ContentWriterState, ApiUnavailable>;
     readonly apply: (
         action: ContentWriterAction,
     ) => Effect.Effect<ContentWriterResult, ApiUnavailable | ContentWriteError>;
 }
 
-const unavailable = (operation: string): Effect.Effect<never, ApiUnavailable> =>
-    Effect.fail(new ApiUnavailable({ operation }));
-
-const makeFakeRpc = (behavior: FakeRpcBehavior): FakeRpc => {
+const makeClientCase = (behavior: ClientBehavior): ClientCase => {
     const calls: Array<Call> = [];
-    const writerHandlers = WriterRpcs.toLayer({
-        "presence.get": () => unavailable("presence.get"),
-        "presence.publish": () => unavailable("presence.publish"),
-        "content.state": () => {
-            calls.push("content.state");
-            return behavior.state();
-        },
-        "content.apply": (action) => {
-            calls.push({ tag: "content.apply", action });
-            return behavior.apply(action);
-        },
-        "photos.upload": () => unavailable("photos.upload"),
-        "photos.delete": () => unavailable("photos.delete"),
-    });
-    const publicHandlers = PublicRpcs.toLayer({
-        "content.get": () => unavailable("content.get"),
-        "photos.list": () => unavailable("photos.list"),
-        "github.get": () => unavailable("github.get"),
-        "weather.get": () => unavailable("weather.get"),
-    });
-    const writerAuth = Layer.succeed(WriterAuth, (effect) => effect);
-    const rpcClients = Layer.effect(
-        BotRpcClients,
-        Effect.gen(function* () {
-            const writer = yield* RpcTest.makeClient(WriterRpcs, { flatten: true });
-            const publicClient = yield* RpcTest.makeClient(PublicRpcs, { flatten: true });
-            return BotRpcClients.of({ writer, public: publicClient });
+    const client = Layer.succeed(
+        BotPortfolioClient,
+        BotPortfolioClient.of({
+            contentState: Effect.suspend(() => {
+                calls.push("content.state");
+                return behavior.state();
+            }),
+            applyContent: (action) => {
+                calls.push({ tag: "content.apply", action });
+                return behavior.apply(action);
+            },
+            presence: Effect.die("Unexpected presence read"),
+            publishPresence: () => Effect.die("Unexpected presence write"),
+            photoPage: () => Effect.die("Unexpected photo read"),
+            uploadPhoto: () => Effect.die("Unexpected photo upload"),
+            deletePhoto: () => Effect.die("Unexpected photo deletion"),
         }),
-    ).pipe(Layer.provide(Layer.mergeAll(writerHandlers, publicHandlers, writerAuth)));
+    );
     const dependencies = Layer.mergeAll(
-        rpcClients,
+        client,
         RateLimiterLive.pipe(Layer.provide(MemoryRateLimitStoreLive)),
     );
     return {
@@ -94,10 +78,10 @@ const makeFakeRpc = (behavior: FakeRpcBehavior): FakeRpc => {
     };
 };
 
-const run = <A, E>(rpc: FakeRpc, effect: Effect.Effect<A, E, BotContentClient>) =>
+const run = <A, E>(rpc: ClientCase, effect: Effect.Effect<A, E, BotContentClient>) =>
     effect.pipe(Effect.provide(rpc.layer));
 
-const runValue = <A, E>(rpc: FakeRpc, effect: Effect.Effect<A, E, BotContentClient>) =>
+const runValue = <A, E>(rpc: ClientCase, effect: Effect.Effect<A, E, BotContentClient>) =>
     Effect.runPromise(run(rpc, effect));
 
 const updated = (revision: number, publishedRevision = revision): ContentWriterResult => ({
@@ -105,11 +89,11 @@ const updated = (revision: number, publishedRevision = revision): ContentWriterR
     state: state(revision, publishedRevision),
 });
 
-describe("BotContentClient RPC boundary", () => {
+describe("BotContentClient publication decisions", () => {
     it.each(["deleted", "not-found"] as const)(
         "returns %s after confirmed note deletion",
         async (outcome) => {
-            const rpc = makeFakeRpc({
+            const rpc = makeClientCase({
                 state: () => Effect.succeed(state()),
                 apply: () => Effect.succeed({ outcome, state: state(2) }),
             });
@@ -127,7 +111,7 @@ describe("BotContentClient RPC boundary", () => {
     it.each(["deleted", "not-found"] as const)(
         "refuses %s when publication remains unconfirmed",
         async (outcome) => {
-            const rpc = makeFakeRpc({
+            const rpc = makeClientCase({
                 state: () => Effect.succeed(state()),
                 apply: () => Effect.succeed({ outcome, state: state(2, 1) }),
             });
@@ -148,7 +132,7 @@ describe("BotContentClient RPC boundary", () => {
     );
 
     it("rejects an unexpected deletion outcome", async () => {
-        const rpc = makeFakeRpc({
+        const rpc = makeClientCase({
             state: () => Effect.succeed(state()),
             apply: () => Effect.succeed(updated(2)),
         });
@@ -169,7 +153,7 @@ describe("BotContentClient RPC boundary", () => {
 
     it("retries only a typed CAS conflict and then returns the confirmed projection", async () => {
         let applyCount = 0;
-        const rpc = makeFakeRpc({
+        const rpc = makeClientCase({
             state: () => Effect.succeed(state(1)),
             apply: () => {
                 applyCount += 1;
@@ -191,7 +175,7 @@ describe("BotContentClient RPC boundary", () => {
 
     it("does not retry a non-conflict content error", async () => {
         let applyCount = 0;
-        const rpc = makeFakeRpc({
+        const rpc = makeClientCase({
             state: () => Effect.succeed(state()),
             apply: () => {
                 applyCount += 1;
@@ -215,7 +199,7 @@ describe("BotContentClient RPC boundary", () => {
 
     it("fails an update when the writer has not confirmed KV publication", async () => {
         let applyCount = 0;
-        const rpc = makeFakeRpc({
+        const rpc = makeClientCase({
             state: () => Effect.succeed(state()),
             apply: () => {
                 applyCount += 1;
@@ -241,7 +225,7 @@ describe("BotContentClient RPC boundary", () => {
     });
 
     it("does not resend an approval after an ambiguous RPC failure", async () => {
-        const rpc = makeFakeRpc({
+        const rpc = makeClientCase({
             state: () => Effect.succeed(state()),
             apply: () => {
                 return Effect.fail(new ApiUnavailable({ operation: "content.apply" }));
@@ -266,7 +250,7 @@ describe("BotContentClient RPC boundary", () => {
     });
 
     it("bounds a stuck RPC operation to fifteen seconds", async () => {
-        const rpc = makeFakeRpc({
+        const rpc = makeClientCase({
             state: () => Effect.never,
             apply: () => Effect.never,
         });
@@ -292,7 +276,7 @@ describe("BotContentClient RPC boundary", () => {
     });
 
     it("returns caller validation failures without an RPC mutation", async () => {
-        const rpc = makeFakeRpc({
+        const rpc = makeClientCase({
             state: () => Effect.succeed(state()),
             apply: () => Effect.die("unexpected mutation"),
         });
@@ -318,7 +302,7 @@ describe("BotContentClient RPC boundary", () => {
 
     it("deletes a note and returns deleted outcome on success", async () => {
         const testNoteId = "b".repeat(32);
-        const rpc = makeFakeRpc({
+        const rpc = makeClientCase({
             state: () => Effect.succeed(state(1, 1)),
             apply: (action) => {
                 expect(action).toEqual({ action: "delete", id: testNoteId });
@@ -346,7 +330,7 @@ describe("BotContentClient RPC boundary", () => {
 
     it("returns not-found outcome when note does not exist", async () => {
         const testNoteId = "c".repeat(32);
-        const rpc = makeFakeRpc({
+        const rpc = makeClientCase({
             state: () => Effect.succeed(state(1, 1)),
             apply: (action) => {
                 expect(action).toEqual({ action: "delete", id: testNoteId });

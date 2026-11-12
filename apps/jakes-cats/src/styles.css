@@ -32,4 +32,73 @@ body {
 
 body {
     overscroll-behavior: none;
+    background: var(--color-cream);
+    color: var(--color-ink);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    color-scheme: light dark;
+}
+
+#cats-app {
+    min-height: calc(100dvh - env(safe-area-inset-bottom));
+}
+
+::selection {
+    background: var(--color-heart);
+    color: white;
+}
+
+textarea {
+    caret-color: var(--color-heart);
+}
+
+.cat-action {
+    transition: transform 100ms ease-out;
+}
+
+.cat-action:active:not(:disabled) {
+    transform: scale(0.92);
+}
+
+.heart-number {
+    display: inline-block;
+    animation: heart-pop 250ms ease-out;
+}
+
+@keyframes heart-pop {
+    from {
+        transform: scale(1.3);
+    }
+    to {
+        transform: scale(1);
+    }
+}
+
+.cat-toast {
+    animation: toast-enter 200ms ease-out;
+}
+
+@keyframes toast-enter {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cat-action {
+        transition: none;
+    }
+    .cat-action:active:not(:disabled) {
+        transform: none;
+    }
+    .heart-number,
+    .cat-toast {
+        animation: none;
+    }
 }

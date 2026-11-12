@@ -8,16 +8,16 @@ import * as Semaphore from "effect/Semaphore";
 import * as Duration from "effect/Duration";
 import { RateLimiter } from "dfx/RateLimit";
 import type { ContentWriterAction } from "@artisann-port/presence/content-writer";
-import { SiteContent } from "@artisann-port/presence/content";
+import { SiteContent } from "@artisann-port/portfolio-domain/content";
 import { ContentWriteError } from "@artisann-port/presence/api-errors";
 import {
-    BotRpcClients,
-    boundedRpcOperation,
-    rpcStorageError,
+    BotPortfolioClient,
+    boundedApiOperation,
+    apiStorageError,
     BotStorageError,
     ContentValidationError,
-    type RpcStorageFailure,
-} from "./rpc-client.ts";
+    type ApiStorageFailure,
+} from "./portfolio-client.ts";
 
 export interface NoteApproval {
     readonly id: string;
@@ -47,32 +47,32 @@ export class BotContentClient extends Context.Service<BotContentClient, BotConte
 const siteContent = Schema.decodeUnknownEffect(SiteContent);
 
 const isContentConflict = (
-    error: RpcStorageFailure | BotStorageError | ContentValidationError,
+    error: ApiStorageFailure | BotStorageError | ContentValidationError,
 ): error is ContentWriteError => Schema.is(ContentWriteError)(error) && error.kind === "conflict";
 
 export const BotContentClientLive: Layer.Layer<
     BotContentClient,
     never,
-    BotRpcClients | RateLimiter
+    BotPortfolioClient | RateLimiter
 > = Layer.effect(
     BotContentClient,
     Effect.gen(function* () {
-        const clients = yield* BotRpcClients;
+        const clients = yield* BotPortfolioClient;
         const rateLimiter = yield* RateLimiter;
         const writePermit = yield* Semaphore.make(1);
 
         const readState = Effect.fn("BotContentClient.readState")(function* () {
-            return yield* boundedRpcOperation("loadContent", clients.writer("content.state", {}));
+            return yield* boundedApiOperation("loadContent", clients.contentState);
         });
 
         const apply = (operation: string, action: ContentWriterAction, limited: boolean) =>
             Effect.gen(function* () {
                 if (limited)
                     yield* rateLimiter.maybeWait("kv:site-content", Duration.seconds(1), 1);
-                return yield* clients.writer("content.apply", action);
+                return yield* clients.applyContent(action);
             }).pipe(
                 Effect.timeout("15 seconds"),
-                Effect.mapError((error) => rpcStorageError(operation, error)),
+                Effect.mapError((error) => apiStorageError(operation, error)),
             );
 
         const loadContent = readState().pipe(
@@ -103,7 +103,7 @@ export const BotContentClientLive: Layer.Layer<
                     );
                     const result = yield* Effect.gen(function* () {
                         yield* rateLimiter.maybeWait("kv:site-content", Duration.seconds(1), 1);
-                        return yield* clients.writer("content.apply", {
+                        return yield* clients.applyContent({
                             action: "replace",
                             revision: current.revision,
                             content: stamped,
@@ -126,7 +126,7 @@ export const BotContentClientLive: Layer.Layer<
                         error._tag === "Discord.BotStorageError" ||
                         error._tag === "Discord.ContentValidationError"
                             ? error
-                            : rpcStorageError("updateContent", error),
+                            : apiStorageError("updateContent", error),
                     ),
                 ),
             );

@@ -1,0 +1,6 @@
+{
+    "extends": "@artisann-port/typescript-config/base.json",
+    "compilerOptions": { "lib": ["ESNext", "DOM"] },
+    "include": ["src/**/*.ts", "__tests__/**/*.ts"],
+    "exclude": ["node_modules"]
+}

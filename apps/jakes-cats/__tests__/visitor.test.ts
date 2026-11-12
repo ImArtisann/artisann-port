@@ -1,108 +1,50 @@
-/**
- * The visitor id: its grammar, its byte renderer, and the cookie round trip.
- * The request-scoped parts use Start's server entry, so cookie reads and writes
- * run in the framework's request context: a hand-edited cookie never becomes an
- * identity, a fresh visitor gets an HttpOnly cookie, and a known visitor is
- * left alone.
- */
 import { describe, expect, it } from "vite-plus/test";
-import { createServerEntry, getResponseHeaders } from "@tanstack/react-start/server";
-import * as Effect from "effect/Effect";
-import * as Option from "effect/Option";
-import {
-    VISITOR_COOKIE,
-    VISITOR_COOKIE_MAX_AGE_SECONDS,
-    clientKey,
-    currentVisitor,
-    decodeVisitorId,
-    visitorIdFromBytes,
-} from "../src/server/visitor.ts";
+import { clientKey, resolveVisitor } from "../src/server/visitor.ts";
 
 const KNOWN_ID = "0123456789abcdef0123456789abcdef";
-
-async function getWithVisitor(request: Request): Promise<{ id: string; setCookie: string | null }> {
-    const handler = createServerEntry({
-        fetch: async () => {
-            const id = await Effect.runPromise(currentVisitor);
-            return new Response(id, { headers: Array.from(getResponseHeaders()) });
-        },
+describe("native visitor cookie boundary", () => {
+    it("mints a private cookie and reuses its identity on the next request", () => {
+        const first = resolveVisitor(new Request("https://jakes.cat/api/deck"));
+        expect(first.id).toMatch(/^[0-9a-f]{32}$/u);
+        expect(first.cookie).toContain("HttpOnly");
+        expect(first.cookie).toContain("SameSite=Lax");
+        expect(first.cookie).toContain("Secure");
+        expect(first.cookie).toContain("Max-Age=31536000");
+        const second = resolveVisitor(
+            new Request("https://jakes.cat/api/hearts", {
+                headers: { cookie: first.cookie ?? "" },
+            }),
+        );
+        expect(second).toEqual({ id: first.id, cookie: null });
     });
-    const response = await handler.fetch(request);
-    return { id: await response.text(), setCookie: response.headers.get("set-cookie") };
-}
-
-describe("visitor identity", () => {
-    it("decodes exactly 32 lowercase hex characters", () => {
-        expect(Option.isSome(decodeVisitorId(KNOWN_ID))).toBe(true);
-
-        expect(Option.isNone(decodeVisitorId(""))).toBe(true);
-        expect(Option.isNone(decodeVisitorId("0123456789abcdef0123456789abcde"))).toBe(true);
-        expect(Option.isNone(decodeVisitorId(`${KNOWN_ID}0`))).toBe(true);
-        expect(Option.isNone(decodeVisitorId(KNOWN_ID.toUpperCase()))).toBe(true);
-        expect(Option.isNone(decodeVisitorId("0123456789abcdef0123456789abcdeg"))).toBe(true);
+    it("preserves existing identities and replaces malformed cookies", () => {
+        expect(
+            resolveVisitor(
+                new Request("https://jakes.cat/api/top", {
+                    headers: { cookie: `other=x; jc_visitor=${KNOWN_ID}` },
+                }),
+            ),
+        ).toEqual({ id: KNOWN_ID, cookie: null });
+        const invalid = resolveVisitor(
+            new Request("http://localhost/api/deck", {
+                headers: { cookie: "jc_visitor=not-valid" },
+            }),
+        );
+        expect(invalid.id).toMatch(/^[0-9a-f]{32}$/u);
+        expect(invalid.cookie).not.toContain("Secure");
     });
-
-    it("renders 16 bytes as zero-padded hex", () => {
-        const bytes = new Uint8Array([0, 1, 15, 16, 255, 0, 1, 15, 16, 255, 0, 1, 15, 16, 255, 7]);
-
-        const id = visitorIdFromBytes(bytes);
-
-        expect(id).toBe("00010f10ff00010f10ff00010f10ff07");
-        expect(id).toHaveLength(32);
-    });
-
-    it("mints ids its own grammar accepts", () => {
-        const bytes = new Uint8Array(16);
-        for (let index = 0; index < bytes.length; index++) bytes[index] = (index * 37) % 256;
-
-        expect(Option.isSome(decodeVisitorId(visitorIdFromBytes(bytes)))).toBe(true);
-    });
-
-    it("mints an HttpOnly cookie for a request that arrives without one", async () => {
-        const { id, setCookie } = await getWithVisitor(new Request("https://jakes.cat/"));
-
-        expect(Option.isSome(decodeVisitorId(id))).toBe(true);
-        expect(setCookie).toContain(`${VISITOR_COOKIE}=${id}`);
-        expect(setCookie).toContain("HttpOnly");
-        expect(setCookie).toContain("Secure");
-        expect(setCookie).toContain("SameSite=Lax");
-        expect(setCookie).toContain("Path=/");
-        expect(setCookie).toContain(`Max-Age=${VISITOR_COOKIE_MAX_AGE_SECONDS}`);
-    });
-
-    it("reuses a well-formed cookie instead of minting another", async () => {
-        const request = new Request("https://jakes.cat/", {
-            headers: { cookie: `${VISITOR_COOKIE}=${KNOWN_ID}` },
-        });
-
-        const { id, setCookie } = await getWithVisitor(request);
-
-        expect(id).toBe(KNOWN_ID);
-        expect(setCookie).toBeNull();
-    });
-
-    it("replaces a malformed cookie with a fresh identity", async () => {
-        const request = new Request("https://jakes.cat/", {
-            headers: { cookie: `${VISITOR_COOKIE}=not-a-visitor` },
-        });
-
-        const { id, setCookie } = await getWithVisitor(request);
-
-        expect(id).not.toBe("not-a-visitor");
-        expect(Option.isSome(decodeVisitorId(id))).toBe(true);
-        expect(setCookie).toContain(`${VISITOR_COOKIE}=${id}`);
-    });
-});
-
-describe("rate limit key", () => {
-    it("buckets on Cloudflare's client IP header", async () => {
-        const request = new Request("https://jakes.cat/", {
-            headers: { "cf-connecting-ip": "203.0.113.7" },
-        });
-
-        const handler = createServerEntry({ fetch: () => new Response(clientKey()) });
-        const response = await handler.fetch(request);
-
-        expect(await response.text()).toBe("203.0.113.7");
+    it("buckets by the trusted edge header, never user supplied forwarded headers", () => {
+        expect(
+            clientKey(
+                new Request("https://jakes.cat", {
+                    headers: { "cf-connecting-ip": "203.0.113.7", "x-forwarded-for": "attacker" },
+                }),
+            ),
+        ).toBe("203.0.113.7");
+        expect(
+            clientKey(
+                new Request("https://jakes.cat", { headers: { "x-forwarded-for": "attacker" } }),
+            ),
+        ).toBe("unknown-client");
     });
 });

@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vite-plus/test";
 import * as Schema from "effect/Schema";
 import { CONTENT_KEY } from "../src/config.ts";
-import { DEFAULT_SITE_CONTENT, MAX_NOTES, type SiteContent } from "../src/content.ts";
+import {
+    DEFAULT_SITE_CONTENT,
+    MAX_NOTES,
+    type SiteContent,
+} from "@artisann-port/portfolio-domain/content";
 import type {
     ApproveAction,
     ContentWriterAction,
@@ -96,6 +100,30 @@ function memoryState(): DurableObjectStateLike & {
             return Promise.resolve();
         },
         getAlarm: () => Promise.resolve(alarms.at(-1) ?? null),
+        list: async <T>(options: { prefix: string; startAfter?: string; limit: number }) => {
+            const values = new Map<string, T>();
+            const keys = Object.keys(data)
+                .filter(
+                    (key) =>
+                        key.startsWith(options.prefix) &&
+                        (options.startAfter === undefined || key > options.startAfter),
+                )
+                .sort()
+                .slice(0, options.limit);
+            for (const key of keys) {
+                const value = await storage.get<T>(key);
+                if (value !== undefined) values.set(key, value);
+            }
+            return values;
+        },
+        transaction: (callback) => {
+            const before = structuredClone(data);
+            return callback(storage).catch((cause) => {
+                for (const key of Object.keys(data)) delete data[key];
+                Object.assign(data, before);
+                return Promise.reject(cause);
+            });
+        },
     };
     return { storage, data, alarms };
 }

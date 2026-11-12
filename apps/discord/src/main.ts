@@ -24,7 +24,7 @@ import * as DfxDiscordConfig from "dfx/DiscordConfig";
 import { DiscordLive } from "dfx/gateway";
 import { DiscordREST, DiscordRESTLive, MemoryRateLimitStoreLive } from "dfx";
 import { BotConfig, BotConfigError, BotConfigLive } from "./config.ts";
-import { BotRpcClientsLive, type BotStorageError } from "./rpc-client.ts";
+import { BotPortfolioClientLive, type BotStorageError } from "./portfolio-client.ts";
 import { BotPresenceClient, BotPresenceClientLive } from "./presence-client.ts";
 import { BotPhotoClient, BotPhotoClientLive } from "./photo-client.ts";
 import { BotContentClient, BotContentClientLive } from "./content-client.ts";
@@ -71,13 +71,13 @@ export interface RuntimeLayerOptions {
     readonly botPresence?: Layer.Layer<BotPresenceClient>;
     readonly botPhotos?: Layer.Layer<BotPhotoClient>;
     readonly botContent?: Layer.Layer<BotContentClient>;
-    /** Shared HTTP transport for site RPC, Discord REST, and attachment downloads. */
+    /** Shared HTTP transport for Portfolio, Discord REST, and attachment downloads. */
     readonly httpClient?: Layer.Layer<HttpClient.HttpClient>;
 }
 
 /**
- * Presence worker plus commands over one shared dfx session and RPC registry,
- * and one HTTP client. The WebSocket constructor stays a requirement.
+ * One dfx Gateway session and shared HTTP client for presence and commands.
+ * The WebSocket constructor stays a requirement.
  */
 export const runtimeLayer = (
     options: RuntimeLayerOptions,
@@ -92,12 +92,14 @@ export const runtimeLayer = (
     // One DiscordLive value, referenced by both consumers below, so the
     // memoized build gives presence and commands the same Gateway session.
     const discord = DiscordLive.pipe(Layer.provide(Layer.mergeAll(dfxConfig, httpClient)));
-    const rpc = BotRpcClientsLive.pipe(Layer.provide(Layer.mergeAll(botConfig, httpClient)));
+    const portfolio = BotPortfolioClientLive.pipe(
+        Layer.provide(Layer.mergeAll(botConfig, httpClient)),
+    );
     const clients = Layer.mergeAll(
         options.botPresence ?? BotPresenceClientLive,
         options.botPhotos ?? BotPhotoClientLive,
         options.botContent ?? BotContentClientLive,
-    ).pipe(Layer.provide(Layer.mergeAll(rpc, discord)));
+    ).pipe(Layer.provide(Layer.mergeAll(portfolio, discord)));
     // The command handlers download attachments with this exact client, so it
     // stays exposed rather than being hidden inside client provisioning.
     const services = Layer.mergeAll(botConfig, clients, discord, httpClient);

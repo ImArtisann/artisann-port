@@ -1,7 +1,6 @@
 /**
  * Browser-safe contracts shared by the deck, the leaderboard, the photo page,
- * the server functions, and the upload API. No env reads, no Worker imports:
- * this module is bundled into the client.
+ * and permanent HTTP APIs. No env reads or Worker imports reach the client.
  */
 import * as Schema from "effect/Schema";
 import * as SchemaGetter from "effect/SchemaGetter";
@@ -99,11 +98,8 @@ export type LeaderboardPayload = typeof LeaderboardPayload.Type;
 export const MAX_COMMENT_LENGTH = 280;
 
 /**
- * Every phrase a server function may put in a `ServerFailure`. The client
- * shows a rejected call's own phrase only when it appears here, so a framework,
- * transport, or validator message that leaks through is replaced by a generic
- * fallback. Matching is by message text on purpose: serialization strips the
- * `ServerFailure` class, and class identity is not a trust boundary.
+ * HTTP failures may expose only these fixed phrases. The browser substitutes
+ * a generic fallback for transport, validation or unexpected failure messages.
  */
 export const SERVER_FAILURE_MESSAGES = {
     deckUnavailable: "Deck unavailable",
@@ -126,7 +122,7 @@ const APPROVED_SERVER_FAILURE_MESSAGES: Readonly<Record<string, true>> = Object.
     Object.values(SERVER_FAILURE_MESSAGES).map((message) => [message, true] as const),
 );
 
-/** True when `message` is one of the phrases this site's server functions send. */
+/** True when `message` is one of the phrases the HTTP APIs may expose. */
 export function isServerFailureMessage(message: string): message is ServerFailureMessage {
     return APPROVED_SERVER_FAILURE_MESSAGES[message] === true;
 }

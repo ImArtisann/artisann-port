@@ -44,9 +44,9 @@ export interface BotConfigService {
     readonly notesWebhookId: string;
     /** Application-owned webhook URL for current-message reads/updates (redacted). */
     readonly notesWebhookUrl: Redacted.Redacted<string>;
-    /** Presence Worker origin used by the typed RPC clients. */
+    /** Portfolio API origin used by the typed HTTP client. */
     readonly portfolioApiUrl: string;
-    /** Shared bearer secret for authenticated writer RPCs (redacted). */
+    /** Shared bearer secret for authenticated writer HTTP requests (redacted). */
     readonly contentWriterToken: Redacted.Redacted<string>;
     /** Public assets host photo URLs are built from. */
     readonly assetsHost: string;

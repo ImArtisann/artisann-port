@@ -3,7 +3,7 @@ import * as Schema from "effect/Schema";
 import { DiscordREST, Ix } from "dfx";
 import { MessageComponentData } from "dfx/Interactions/context";
 import type * as Discord from "dfx/types";
-import { type VisitorNote } from "@artisann-port/presence/content";
+import { type VisitorNote } from "@artisann-port/portfolio-domain/content";
 import { NoteId } from "@artisann-port/presence/content-writer";
 import { escapeNoteText } from "@artisann-port/presence/notes";
 import { BotConfig } from "./config.ts";
