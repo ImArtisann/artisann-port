@@ -1,6 +1,10 @@
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
-import { PhotoOwnerClient, PhotoMutationError } from "@artisann-port/presence/photo-owner-client";
+import {
+    PhotoOwnerClient,
+    PhotoMutationError,
+    type PhotoOwnerUploadReceipt,
+} from "@artisann-port/presence/photo-owner-client";
 import { UploadImages, UploadLive } from "../src/server/upload-service.ts";
 import { catsWorld } from "./cats-world.ts";
 
@@ -11,6 +15,9 @@ export function uploadWorld() {
     const base = catsWorld();
     base.installCapture();
     const objects = new Map<string, { bytes: Uint8Array; etag: string }>();
+    // Like the real owner, a reused operation ID replays its receipt or conflicts.
+    const operations = new Map<string, { bytes: Uint8Array; receipt: PhotoOwnerUploadReceipt }>();
+    const outputs: Array<Uint8Array> = [];
     const uploads: Array<string> = [];
     const deletes: Array<string> = [];
     const received: Array<Array<number>> = [];
@@ -19,6 +26,7 @@ export function uploadWorld() {
         uncertainOnce: false,
         failDelete: false,
         invalidImage: false,
+        outputs,
         transforms: 0,
         uploads,
         deletes,
@@ -28,6 +36,16 @@ export function uploadWorld() {
         upload: (input) =>
             Effect.suspend(() => {
                 script.uploads.push(input.key);
+                const previous = operations.get(input.operationId);
+                if (previous !== undefined)
+                    return previous.bytes.join() === input.bytes.join()
+                        ? Effect.succeed(previous.receipt)
+                        : Effect.fail(
+                              new PhotoMutationError({
+                                  reason: "OperationConflict",
+                                  outcome: "not-applied",
+                              }),
+                          );
                 if (script.collideOnce) {
                     script.collideOnce = false;
                     objects.set(input.key, { bytes: new Uint8Array([9, 8, 7]), etag: "original" });
@@ -46,13 +64,15 @@ export function uploadWorld() {
                         new PhotoMutationError({ reason: "Uncertain", outcome: "unknown" }),
                     );
                 }
-                return Effect.succeed({
+                const receipt = {
                     key: input.key,
                     tag: input.tag,
                     operationId: input.operationId,
                     url: `https://assets.example.com/${input.key}`,
                     etag,
-                });
+                };
+                operations.set(input.operationId, { bytes: Uint8Array.from(input.bytes), receipt });
+                return Effect.succeed(receipt);
             }),
         delete: (input) =>
             Effect.suspend(() => {
@@ -96,7 +116,9 @@ export function uploadWorld() {
                                 arrayBuffer: () =>
                                     Promise.resolve(
                                         Uint8Array.from(
-                                            script.invalidImage ? [1, 2, 3] : WEBP_BYTES,
+                                            script.invalidImage
+                                                ? [1, 2, 3]
+                                                : (outputs.shift() ?? WEBP_BYTES),
                                         ).buffer,
                                     ),
                             }),

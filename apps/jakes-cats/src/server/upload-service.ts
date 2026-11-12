@@ -175,12 +175,15 @@ export const UploadLive = Layer.effect(
                     const id = yield* makePhotoId;
                     const key = photoKey(tag, id);
                     if (key === null) return yield* new UploadError({ reason: "InvalidImage" });
+                    // Keys can collide, so they cannot identify an upload: a shared ID would
+                    // replay or conflict with the other upload instead of reporting Collision.
+                    const attempt = yield* Effect.sync(() => crypto.randomUUID());
                     const written = yield* photos
                         .upload({
                             key,
                             tag,
                             bytes: stored,
-                            operationId: `cats-upload:${key}`,
+                            operationId: `cats-upload:${key}:${attempt}`,
                         })
                         .pipe(
                             Effect.match({

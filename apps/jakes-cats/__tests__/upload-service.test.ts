@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import * as Effect from "effect/Effect";
+import * as Random from "effect/Random";
+import * as TestClock from "effect/testing/TestClock";
 import * as Redacted from "effect/Redacted";
 import { MAX_UPLOAD_BYTES } from "../src/contracts.ts";
 import { handleCatsRequest } from "../src/server/http.ts";
@@ -61,6 +63,36 @@ describe("permanent iPhone upload API through the photo owner", () => {
                         world.db.sqlite.prepare("SELECT COUNT(*) AS count FROM photos").get(),
                     ).toEqual({ count: 1 });
                 }).pipe(Effect.scoped, Effect.provide(world.layer)),
+            );
+        } finally {
+            world.db.sqlite.close();
+        }
+    });
+    it("rerolls a key minted by another upload instead of replaying its operation", async () => {
+        const world = uploadWorld();
+        world.script.outputs.push(WEBP_BYTES, Uint8Array.from([...WEBP_BYTES, 1]));
+        try {
+            await Effect.runPromise(
+                Effect.gen(function* () {
+                    yield* TestClock.setTime(Date.UTC(2026, 10, 12));
+                    const uploads = yield* UploadService;
+                    const first = yield* uploads
+                        .upload("cats", WEBP_BYTES)
+                        .pipe(Random.withSeed("same-millisecond"));
+                    const second = yield* uploads
+                        .upload("cats", WEBP_BYTES)
+                        .pipe(Random.withSeed("same-millisecond"));
+                    expect(world.script.uploads[1]).toBe(first.key);
+                    expect(second.key).not.toBe(first.key);
+                    expect(world.objects.get(first.key)?.bytes).toEqual(WEBP_BYTES);
+                    expect(world.objects.get(second.key)?.bytes).toEqual(
+                        Uint8Array.from([...WEBP_BYTES, 1]),
+                    );
+                }).pipe(
+                    Effect.scoped,
+                    Effect.provide(world.layer),
+                    Effect.provide(TestClock.layer()),
+                ),
             );
         } finally {
             world.db.sqlite.close();
