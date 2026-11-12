@@ -13,6 +13,11 @@ import { SITE_CONTENT_ID } from "@artisann-port/portfolio-domain/content/site-co
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import * as Stream from "effect/Stream";
+import * as TestClock from "effect/testing/TestClock";
+import {
+    ContentDocumentUnavailable,
+    ContentDocumentStore,
+} from "@artisann-port/portfolio-domain/content/content-document-store";
 import { ContentWriterResult, ContentWriterState } from "../src/content-writer.ts";
 import { PortfolioMigrationStatus } from "../src/content-migration-service.ts";
 import { ContentMigrationPage } from "../src/content-migration-source.ts";
@@ -438,6 +443,46 @@ it("returns unavailable for an acknowledged source approval until restart reconc
                 yield* publicGet().pipe(Effect.flatMap((response) => body(response, SiteContent))),
             ).toEqual(recovered.state.content);
         }).pipe(Effect.scoped, Effect.provide(world.layer)),
+    );
+});
+
+it("never lets a timed-out KV publication land after a newer one", async () => {
+    const world = portfolioWorld();
+    let release = () => {};
+    const stalled = new Promise<void>((resolve) => {
+        release = resolve;
+    });
+    let puts = 0;
+    world.kv.put = (key, value) => {
+        puts += 1;
+        const commit = () => {
+            world.kv.documents.set(key, value);
+        };
+        if (puts === 1) return stalled.then(commit);
+        commit();
+        return Promise.resolve();
+    };
+    const older = { ...DEFAULT_SITE_CONTENT, updatedAt: "2026-11-12T01:00:00.000Z" };
+    const newer = { ...DEFAULT_SITE_CONTENT, updatedAt: "2026-11-12T02:00:00.000Z" };
+    await Effect.runPromise(
+        Effect.gen(function* () {
+            const documents = yield* ContentDocumentStore;
+            const timedOut = yield* documents.write(older).pipe(Effect.flip, Effect.forkChild);
+            yield* Effect.yieldNow;
+            yield* TestClock.adjust("10 seconds");
+            expect(yield* Fiber.join(timedOut)).toBeInstanceOf(ContentDocumentUnavailable);
+            const retry = yield* documents.write(newer).pipe(Effect.forkChild);
+            yield* Effect.yieldNow;
+            release();
+            yield* Fiber.join(retry);
+            // The stalled put commits in a callback registered before this await.
+            yield* Effect.promise(() => stalled);
+            expect(
+                yield* Schema.decodeUnknownEffect(Schema.fromJsonString(SiteContent))(
+                    world.kv.documents.get("site-content"),
+                ),
+            ).toEqual(newer);
+        }).pipe(Effect.scoped, Effect.provide(world.layer), Effect.provide(TestClock.layer())),
     );
 });
 
