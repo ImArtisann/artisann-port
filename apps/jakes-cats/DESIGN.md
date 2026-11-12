@@ -116,11 +116,12 @@ Constants live in `src/components/deck-config.ts` (mirrors the portfolio deck).
 
 - Drag: x only, `DRAG_ELASTIC = 0.7`, rotation `DRAG_ROTATE_DEG = 15` mapped
   over `DRAG_ROTATE_RANGE_PX = 200`.
-- Commit threshold: `SWIPE_OFFSET_PX = 80` **or** `SWIPE_VELOCITY_PX_S = 400`;
-  `commitDirection(offset, velocity)` owns the decision (distance wins over
-  velocity) and returns `null` to snap back.
-- Exit: `EXIT_SPRING` stiffness 400 / damping 40, travels
-  `EXIT_DISTANCE_PX = 400`.
+- Commit threshold: `SWIPE_OFFSET_PX = 80` **or** `SWIPE_VELOCITY_PX_S = 400`
+  after at least `SWIPE_FLICK_MIN_PX = 30`; `commitDirection(offset, velocity)`
+  owns the decision (distance wins over velocity) and returns `null` to snap
+  back.
+- Exit: `EXIT_SPRING` stiffness 400 / damping 40, travels until the rotated card
+  clears the viewport edge by `EXIT_MARGIN_PX = 24` (`exitTranslation`).
 - An exiting swipe owns the motion value: a later drag release cannot replace it
   with snapback. Cancellation completes that exit once so controls do not remain
   locked.

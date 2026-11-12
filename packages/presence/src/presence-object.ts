@@ -4,7 +4,7 @@ import * as Schema from "effect/Schema";
 import * as Semaphore from "effect/Semaphore";
 import { PRESENCE_SNAPSHOT_KEY, PRESENCE_STALE_AFTER_MS } from "./config.ts";
 import { ApiUnavailable } from "./api-errors.ts";
-import { IsoTimestamp } from "./content.ts";
+import { IsoTimestamp } from "@artisann-port/portfolio-domain/content";
 import { withFreshness } from "./presence.ts";
 import { PresenceSnapshot, UNINITIALIZED_SNAPSHOT } from "./schema.ts";
 import type { PresenceKvBinding } from "./store.ts";

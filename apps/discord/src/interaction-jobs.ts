@@ -114,10 +114,11 @@ const UserFacingError = Schema.Struct({
 });
 const decodeUserFacing = Schema.decodeUnknownOption(UserFacingError);
 
-/** Storage's own sanitized failure: an operation name and an HTTP status. */
+/** Storage's own sanitized failure: an operation name, HTTP status, and reconcile identity. */
 const StorageError = Schema.TaggedStruct("Discord.BotStorageError", {
     operation: Schema.String,
     status: Schema.NullOr(Schema.Finite),
+    operationId: Schema.optional(Schema.String),
 });
 const decodeStorageError = Schema.decodeUnknownOption(StorageError);
 
@@ -143,7 +144,9 @@ export const describeError = (cause: unknown): string => {
     if (Option.isSome(userFacing)) return oneLine(userFacing.value.message);
     const storage = decodeStorageError(cause);
     if (Option.isSome(storage)) {
-        const { operation, status } = storage.value;
+        const { operation, status, operationId } = storage.value;
+        if (operationId !== undefined)
+            return `the ${operation} outcome is unknown; reconcile operation ${operationId} before retrying`;
         return status === null
             ? `storage rejected the ${operation}`
             : `storage rejected the ${operation} (HTTP ${status})`;

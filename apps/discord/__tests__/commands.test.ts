@@ -54,10 +54,11 @@ const interactionData = {
     ],
 } satisfies Discord.APIChatInputApplicationCommandInteractionData;
 
-const photo = (id: string, uploadedAt: string): Photo => ({
+const photo = (id: string, uploadedAt: string, etag = `etag${id}`): Photo => ({
     key: `life/${id}.webp`,
     url: `https://assets.example.com/life/${id}.webp`,
     uploadedAt,
+    etag,
 });
 
 describe("command extraction", () => {
@@ -219,10 +220,11 @@ describe("stateless gallery identity", () => {
         const older = photo("100000000000000010", "2026-09-08T00:00:00.000Z");
         const selected = photo("100000000000000011", "2026-09-08T00:01:00.000Z");
         expect(photoIdFromKey("life", selected.key)).toBe("100000000000000011");
-        expect(parsePhotosCustomId("photos:life:confirm:100000000000000011")).toEqual({
+        expect(parsePhotosCustomId("photos:life:confirm:100000000000000011:abc123")).toEqual({
             tag: "life",
             action: "confirm",
             photoId: "100000000000000011",
+            etag: "abc123",
         });
         const reordered = [
             photo("100000000000000012", "2026-09-08T00:02:00.000Z"),
@@ -231,11 +233,17 @@ describe("stateless gallery identity", () => {
         ];
         const payload = renderGallery("life", reordered, "100000000000000011", null);
         expect(payload.embeds[0]?.footer?.text).toContain("id 100000000000000011");
-        expect(parsePhotosCustomId("photos:life:confirm:100000000000000099")).toEqual({
+        expect(parsePhotosCustomId("photos:life:confirm:100000000000000099:abc123")).toEqual({
             tag: "life",
             action: "confirm",
             photoId: "100000000000000099",
+            etag: "abc123",
         });
+        // A confirm without the confirmed version, or with one that cannot be an ETag, fails closed.
+        expect(parsePhotosCustomId("photos:life:confirm:100000000000000011")).toBeNull();
+        expect(parsePhotosCustomId("photos:life:confirm:100000000000000011:a:b")).toBeNull();
+        expect(parsePhotosCustomId('photos:life:confirm:100000000000000011:"abc"')).toBeNull();
+        expect(parsePhotosCustomId("photos:life:delete:100000000000000011:abc123")).toBeNull();
     });
 });
 
@@ -321,8 +329,8 @@ const makePhotoStorage = (state: PhotoStorageState): BotPhotoClientService => ({
             return state.photos;
         }),
     putPhoto: () => Effect.die("unexpected putPhoto in photo test"),
-    deletePhoto: (_tag, photoId) => {
-        state.deleted.push(photoId);
+    deletePhoto: (_tag, photoId, etag) => {
+        state.deleted.push(`${photoId}@${etag}`);
         state.photos = state.photos.filter((photo) => !photo.key.includes(`/${photoId}.`));
         return Effect.void;
     },
@@ -474,15 +482,33 @@ describe("photo gallery handlers", () => {
         );
         await runPhotoJob(prompt.pendingRef);
         state.photos = [replacement, selected];
+        const confirmId = `photos:life:confirm:100000000000000010:${selected.etag}`;
         const confirm = await runPhotoHandler(
             transport,
             makePhotoStorage(state),
-            photoInteraction(photoButton("photos:life:confirm:100000000000000010")),
-            photoButton("photos:life:confirm:100000000000000010"),
+            photoInteraction(photoButton(confirmId)),
+            photoButton(confirmId),
         );
         await runPhotoJob(confirm.pendingRef);
-        expect(state.deleted).toEqual(["100000000000000010"]);
+        expect(state.deleted).toEqual([`100000000000000010@${selected.etag}`]);
         expect(state.photos).toEqual([replacement]);
+    });
+
+    it("refuses a confirm when the listed photo changed after the prompt", async () => {
+        const prompted = photo("100000000000000010", "2026-09-08T00:00:00.000Z", "before");
+        const changed = { ...prompted, etag: "after" };
+        const state: PhotoStorageState = { photos: [changed], deleted: [], reads: 0 };
+        const transport = { patches: 0 };
+        const confirmId = `photos:life:confirm:100000000000000010:${prompted.etag}`;
+        const confirm = await runPhotoHandler(
+            transport,
+            makePhotoStorage(state),
+            photoInteraction(photoButton(confirmId)),
+            photoButton(confirmId),
+        );
+        await runPhotoJob(confirm.pendingRef);
+        expect(state.deleted).toEqual([]);
+        expect(state.photos).toEqual([changed]);
     });
 
     it("never deletes a replacement on a repeated stale confirm", async () => {
@@ -490,22 +516,23 @@ describe("photo gallery handlers", () => {
         const replacement = photo("100000000000000011", "2026-09-08T00:01:00.000Z");
         const state: PhotoStorageState = { photos: [oldPhoto, replacement], deleted: [], reads: 0 };
         const transport = { patches: 0 };
+        const confirmId = `photos:life:confirm:100000000000000010:${oldPhoto.etag}`;
         const first = await runPhotoHandler(
             transport,
             makePhotoStorage(state),
-            photoInteraction(photoButton("photos:life:confirm:100000000000000010")),
-            photoButton("photos:life:confirm:100000000000000010"),
+            photoInteraction(photoButton(confirmId)),
+            photoButton(confirmId),
         );
         await runPhotoJob(first.pendingRef);
         state.photos = [replacement];
         const repeated = await runPhotoHandler(
             transport,
             makePhotoStorage(state),
-            photoInteraction(photoButton("photos:life:confirm:100000000000000010")),
-            photoButton("photos:life:confirm:100000000000000010"),
+            photoInteraction(photoButton(confirmId)),
+            photoButton(confirmId),
         );
         await runPhotoJob(repeated.pendingRef);
-        expect(state.deleted).toEqual(["100000000000000010"]);
+        expect(state.deleted).toEqual([`100000000000000010@${oldPhoto.etag}`]);
         expect(state.photos).toEqual([replacement]);
     });
 

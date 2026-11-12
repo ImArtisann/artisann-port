@@ -4,23 +4,21 @@
     "private": true,
     "type": "module",
     "exports": {
-        "./rpc": "./src/rpc.ts",
-        "./rpc-transport": "./src/rpc-transport.ts",
         "./api-errors": "./src/api-errors.ts",
         "./config": "./src/config.ts",
         "./schema": "./src/schema.ts",
         "./activity": "./src/activity.ts",
-        "./content": "./src/content.ts",
         "./photos": "./src/photos.ts",
         "./content-writer": "./src/content-writer.ts",
         "./content-writer-object": "./src/content-writer-object.ts",
         "./notes": "./src/notes.ts",
         "./github-schema": "./src/github-schema.ts",
         "./projects": "./src/projects.ts",
-        "./project-hosts": "./src/project-hosts.ts",
         "./store": "./src/store.ts",
         "./presence": "./src/presence.ts",
-        "./worker": "./src/worker.ts"
+        "./worker": "./src/worker.ts",
+        "./api": "./src/api.ts",
+        "./photo-owner-client": "./src/photo-owner-client.ts"
     },
     "scripts": {
         "deploy": "alchemy deploy",
@@ -34,6 +32,9 @@
     },
     "dependencies": {
         "@artisann-port/assets": "workspace:*",
+        "@artisann-port/portfolio-domain": "workspace:*",
+        "@alchemy.run/cloudflare": "catalog:",
+        "@alchemy.run/domain": "catalog:",
         "effect": "catalog:",
         "entities": "^8.1.0"
     }

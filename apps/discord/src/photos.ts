@@ -234,7 +234,8 @@ export const ImageNormalizerLive: Layer.Layer<ImageNormalizer> = Layer.effect(
     })),
 );
 
-// === Gallery custom ids: `photos:<tag>:<action>:<photoId>` ==================
+// === Gallery custom ids: `photos:<tag>:<action>:<photoId>[:<etag>]` ==========
+// Only `confirm` carries the ETag the owner saw, and it always does.
 
 export type PhotoGalleryAction = "prev" | "next" | "select" | "delete" | "confirm" | "cancel";
 
@@ -247,29 +248,47 @@ const PHOTO_GALLERY_ACTIONS: readonly PhotoGalleryAction[] = [
     "cancel",
 ];
 
+/** R2 ETags are hex, with a `-<parts>` suffix for multipart objects; bounded to fit 100 chars. */
+const CONFIRMABLE_ETAG_PATTERN = /^[A-Za-z0-9-]{1,48}$/u;
+
 export const photosCustomId = (
     tag: PhotoTag,
-    action: PhotoGalleryAction,
+    action: Exclude<PhotoGalleryAction, "confirm">,
     photoId: string,
 ): string => `photos:${tag}:${action}:${photoId}`;
+
+/** The confirm button, or `null` when the listed ETag cannot travel in a custom id. */
+export const photosConfirmCustomId = (
+    tag: PhotoTag,
+    photoId: string,
+    etag: string,
+): string | null =>
+    CONFIRMABLE_ETAG_PATTERN.test(etag) ? `photos:${tag}:confirm:${photoId}:${etag}` : null;
 
 export interface ParsedPhotosCustomId {
     readonly tag: PhotoTag;
     readonly action: PhotoGalleryAction;
     readonly photoId: string;
+    /** Present exactly when `action` is `confirm`. */
+    readonly etag: string | null;
 }
 
 /** Full grammar + Discord's 100-character custom-id limit; `null` when invalid. */
 export const parsePhotosCustomId = (customId: string): ParsedPhotosCustomId | null => {
     if (customId.length > 100) return null;
     const parts = customId.split(":");
-    if (parts.length !== 4 || parts[0] !== "photos") return null;
+    if (parts[0] !== "photos") return null;
     const tag = PHOTO_TAGS.find((candidate) => candidate === parts[1]);
     const action = PHOTO_GALLERY_ACTIONS.find((candidate) => candidate === parts[2]);
     const photoId = parts[3];
     if (tag === undefined || action === undefined || photoId === undefined || photoId === "")
         return null;
-    return { tag, action, photoId };
+    if (action !== "confirm")
+        return parts.length === 4 ? { tag, action, photoId, etag: null } : null;
+    const etag = parts[4];
+    if (parts.length !== 5 || etag === undefined || !CONFIRMABLE_ETAG_PATTERN.test(etag))
+        return null;
+    return { tag, action, photoId, etag };
 };
 
 /** The interaction id embedded in a managed photo key, or `null`. */
@@ -379,11 +398,12 @@ export const renderGallery = (
     };
 };
 
-/** The explicit delete confirmation for one photo; no storage effect. */
+/** The explicit delete confirmation for one photo version; no storage effect. */
 export const renderDeleteConfirmation = (
     tag: PhotoTag,
     photo: Photo,
     photoId: string,
+    confirmId: string,
 ): GalleryPayload => ({
     content: null,
     embeds: [
@@ -397,7 +417,7 @@ export const renderDeleteConfirmation = (
     components: [
         UI.row([
             UI.button({
-                custom_id: photosCustomId(tag, "confirm", photoId),
+                custom_id: confirmId,
                 label: "Confirm delete",
                 style: 4,
             }),
@@ -618,16 +638,18 @@ export const handlePhotosComponent = Effect.gen(function* () {
                     return;
                 }
                 const photoId = photoIdFromKey(tag, photo.key);
-                if (photoId === null) {
+                const confirmId =
+                    photoId === null ? null : photosConfirmCustomId(tag, photoId, photo.etag);
+                if (photoId === null || confirmId === null) {
                     return yield* new AttachmentError({
-                        message: "Stored photo key is invalid.",
+                        message: "Stored photo key or version is invalid.",
                         cause: undefined,
                     });
                 }
                 yield* patchGallery(
                     reporter,
                     interaction,
-                    renderDeleteConfirmation(tag, photo, photoId),
+                    renderDeleteConfirmation(tag, photo, photoId, confirmId),
                 );
                 return;
             }
@@ -645,7 +667,8 @@ export const handlePhotosComponent = Effect.gen(function* () {
                     );
                     return;
                 }
-                if (indexOf(parsed.photoId) === -1) {
+                const confirmed = photos[indexOf(parsed.photoId)];
+                if (confirmed === undefined) {
                     yield* patchGallery(
                         reporter,
                         interaction,
@@ -658,7 +681,20 @@ export const handlePhotosComponent = Effect.gen(function* () {
                     );
                     return;
                 }
-                yield* photoClient.deletePhoto(tag, parsed.photoId);
+                if (parsed.etag === null || confirmed.etag !== parsed.etag) {
+                    yield* patchGallery(
+                        reporter,
+                        interaction,
+                        renderGallery(
+                            tag,
+                            photos,
+                            parsed.photoId,
+                            "That photo changed after you chose it — nothing was deleted.",
+                        ),
+                    );
+                    return;
+                }
+                yield* photoClient.deletePhoto(tag, parsed.photoId, parsed.etag);
                 const remaining = yield* photoClient.listPhotos(tag);
                 yield* patchGallery(
                     reporter,

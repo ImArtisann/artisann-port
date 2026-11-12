@@ -1,39 +1,21 @@
-import * as Context from "effect/Context";
+import type { SiteContent } from "@artisann-port/portfolio-domain/content";
+import { PORTFOLIO_API_ORIGIN, isPortfolioApiOrigin } from "@artisann-port/presence/config";
 import * as Effect from "effect/Effect";
-import * as AtomRegistry from "effect/reactivity/AtomRegistry";
-import { DEFAULT_SITE_CONTENT, type SiteContent } from "@artisann-port/presence/content";
-import { portfolioApiEndpoints, publicClientFor } from "@/lib/rpc-client";
+import * as Layer from "effect/Layer";
+import * as FetchHttpClient from "effect/http/FetchHttpClient";
+import { PortfolioHttp, portfolioHttpLayer } from "./api-client.ts";
 
-/**
- * Read through the same typed public RPC client used by browser atoms. The
- * registry and runtime are scoped to this build-time invocation so SSR never
- * leaks mutable atom state into another render.
- */
-const readContent = Effect.gen(function* () {
-    const registry = yield* AtomRegistry.AtomRegistry;
-    const client = publicClientFor(portfolioApiEndpoints.rpcUrl);
-    yield* AtomRegistry.mount(registry, client.runtime);
-    const context = yield* AtomRegistry.getResult(registry, client.runtime);
-    const rpc = Context.get(context, client);
-    return yield* rpc("content.get", {});
-}).pipe(
-    Effect.timeout("10 seconds"),
-    Effect.provide(AtomRegistry.layerOptions({ defaultIdleTTL: 0, timeoutResolution: 1 })),
-    Effect.scoped,
-);
-
-/**
- * Reads the published site content at build time so every content section is server-rendered.
- * A Worker outage degrades to the compiled seed document, which is the same content the bot
- * starts from; mounted browser atoms pick up later owner edits.
- */
-export const loadSiteContent = (): Promise<SiteContent> =>
-    Effect.runPromise(
-        readContent.pipe(
-            Effect.catch((error) =>
-                Effect.logWarning("site content: using compiled defaults", error).pipe(
-                    Effect.as(DEFAULT_SITE_CONTENT),
+export const loadSiteContent = (): Promise<SiteContent> => {
+    const configured = (import.meta.env.PUBLIC_PORTFOLIO_API_URL ?? PORTFOLIO_API_ORIGIN).trim();
+    if (!isPortfolioApiOrigin(configured))
+        throw new Error("PUBLIC_PORTFOLIO_API_URL must be a valid portfolio API origin");
+    return Effect.runPromise(
+        PortfolioHttp.use((http) => http.content).pipe(
+            Effect.provide(
+                portfolioHttpLayer(new URL(configured).origin).pipe(
+                    Layer.provide(FetchHttpClient.layer),
                 ),
             ),
         ),
     );
+};

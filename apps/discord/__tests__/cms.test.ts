@@ -29,11 +29,11 @@ import {
     ModalSubmitData,
 } from "dfx/Interactions/index";
 import * as Discord from "dfx/types";
-import { DEFAULT_SITE_CONTENT, SiteContent } from "@artisann-port/presence/content";
-import type { DeployedApp, SocialLink, UseItem } from "@artisann-port/presence/content";
+import { DEFAULT_SITE_CONTENT, SiteContent } from "@artisann-port/portfolio-domain/content";
+import type { DeployedApp, SocialLink, UseItem } from "@artisann-port/portfolio-domain/content";
 import { BotConfig } from "../src/config.ts";
 import type { BotConfigService } from "../src/config.ts";
-import { BotStorageError, ContentValidationError } from "../src/rpc-client.ts";
+import { BotStorageError, ContentValidationError } from "../src/portfolio-client.ts";
 import { BotContentClient } from "../src/content-client.ts";
 import type { BotContentClientService, NoteApproval } from "../src/content-client.ts";
 import {

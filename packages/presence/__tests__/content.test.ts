@@ -12,8 +12,8 @@ import {
     decodeContentDocument,
     formatUseLines,
     parseUseLines,
-    readContent,
-} from "../src/content.ts";
+} from "@artisann-port/portfolio-domain/content";
+import { readContent } from "../src/content-store.ts";
 import { photoKey, photoUrl } from "../src/photos.ts";
 import type { PresenceKvBinding } from "../src/store.ts";
 

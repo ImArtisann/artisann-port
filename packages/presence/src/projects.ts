@@ -1,4 +1,4 @@
-import type { DeployedApp } from "./content.ts";
+import type { DeployedApp } from "@artisann-port/portfolio-domain/content";
 import { PORTFOLIO_API_ORIGIN } from "./config.ts";
 
 /**

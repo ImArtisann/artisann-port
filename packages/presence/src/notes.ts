@@ -19,7 +19,7 @@ import {
     MAX_NOTE_BODY,
     normalizeNoteName,
     normalizeNoteText,
-} from "./content.ts";
+} from "@artisann-port/portfolio-domain/content";
 
 /** Visitor display-name limit; a blank or missing name is anonymous. */
 export const NOTE_NAME_MAX = 40;

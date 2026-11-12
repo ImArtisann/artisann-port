@@ -1,15 +1,13 @@
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
-import type { ApiUnavailable } from "@artisann-port/presence/api-errors";
+import { collectPhotos, type Photo, type PhotoTag } from "@artisann-port/presence/photos";
 import {
-    collectPhotos,
-    type Photo,
-    type PhotoPage,
-    type PhotoTag,
-} from "@artisann-port/presence/photos";
-import type { RpcClientError } from "effect/rpc/RpcClientError";
-import { BotRpcClients, boundedRpcOperation, type BotStorageError } from "./rpc-client.ts";
+    BotPortfolioClient,
+    BotStorageError,
+    boundedApiOperation,
+    type ApiStorageFailure,
+} from "./portfolio-client.ts";
 
 export interface BotPhotoClientService {
     readonly listPhotos: (tag: PhotoTag) => Effect.Effect<ReadonlyArray<Photo>, BotStorageError>;
@@ -18,50 +16,76 @@ export interface BotPhotoClientService {
         interactionId: string,
         bytes: Uint8Array,
     ) => Effect.Effect<string, BotStorageError>;
-    readonly deletePhoto: (tag: PhotoTag, photoId: string) => Effect.Effect<void, BotStorageError>;
+    /** `etag` is the listed version the owner confirmed; it also names the deletion operation. */
+    readonly deletePhoto: (
+        tag: PhotoTag,
+        photoId: string,
+        etag: string,
+    ) => Effect.Effect<void, BotStorageError>;
 }
 
 export class BotPhotoClient extends Context.Service<BotPhotoClient, BotPhotoClientService>()(
     "Discord.BotPhotoClient",
 ) {}
 
-export const BotPhotoClientLive: Layer.Layer<BotPhotoClient, never, BotRpcClients> = Layer.effect(
-    BotPhotoClient,
-    Effect.gen(function* () {
-        const clients = yield* BotRpcClients;
-        const listPhotos = Effect.fn("BotPhotoClient.listPhotos")(function* (tag: PhotoTag) {
-            return yield* boundedRpcOperation(
-                "listPhotos",
-                collectPhotos<ApiUnavailable | RpcClientError, never>(
-                    tag,
-                    (
-                        cursor: string | undefined,
-                    ): Effect.Effect<PhotoPage, ApiUnavailable | RpcClientError> => {
-                        const payload = cursor === undefined ? { tag } : { tag, cursor };
-                        return clients.public("photos.list", payload);
-                    },
-                ),
-            );
-        });
-        const putPhoto = Effect.fn("BotPhotoClient.putPhoto")(function* (
-            tag: PhotoTag,
-            interactionId: string,
-            bytes: Uint8Array,
-        ) {
-            return yield* boundedRpcOperation(
-                "putPhoto",
-                clients.writer("photos.upload", { tag, interactionId, bytes }),
-            );
-        });
-        const deletePhoto = Effect.fn("BotPhotoClient.deletePhoto")(function* (
-            tag: PhotoTag,
-            photoId: string,
-        ) {
-            yield* boundedRpcOperation(
-                "deletePhoto",
-                clients.writer("photos.delete", { tag, photoId }),
-            );
-        });
-        return BotPhotoClient.of({ listPhotos, putPhoto, deletePhoto });
-    }),
-);
+export const BotPhotoClientLive: Layer.Layer<BotPhotoClient, never, BotPortfolioClient> =
+    Layer.effect(
+        BotPhotoClient,
+        Effect.gen(function* () {
+            const clients = yield* BotPortfolioClient;
+            const listPhotos = Effect.fn("BotPhotoClient.listPhotos")(function* (tag: PhotoTag) {
+                return yield* boundedApiOperation(
+                    "listPhotos",
+                    collectPhotos<ApiStorageFailure, never>(tag, (cursor) =>
+                        clients.photoPage(tag, cursor),
+                    ),
+                );
+            });
+            const putPhoto = Effect.fn("BotPhotoClient.putPhoto")(function* (
+                tag: PhotoTag,
+                interactionId: string,
+                bytes: Uint8Array,
+            ) {
+                return yield* boundedApiOperation(
+                    "putPhoto",
+                    clients.uploadPhoto(tag, interactionId, bytes),
+                );
+            });
+            const deletePhoto = Effect.fn("BotPhotoClient.deletePhoto")(function* (
+                tag: PhotoTag,
+                photoId: string,
+                etag: string,
+            ) {
+                // One confirmed object version is one operation: a retry after owner
+                // reconciliation must reuse the reserved ID, and a changed object gets a new one.
+                const operationId = `discord:delete:${tag}:${photoId}:${etag}`;
+                yield* boundedApiOperation(
+                    "deletePhoto",
+                    clients.deletePhoto(tag, photoId, operationId, etag),
+                ).pipe(
+                    // Unknown outcomes can keep the key reserved; reconciliation needs this ID.
+                    Effect.mapError((error) =>
+                        error.status === null
+                            ? new BotStorageError({
+                                  operation: error.operation,
+                                  status: error.status,
+                                  reason: error.reason,
+                                  operationId,
+                              })
+                            : error,
+                    ),
+                    Effect.tapError((error) =>
+                        error.operationId === undefined
+                            ? Effect.void
+                            : Effect.logWarning("Photo deletion outcome unknown").pipe(
+                                  Effect.annotateLogs({
+                                      key: `${tag}/${photoId}.webp`,
+                                      operationId,
+                                  }),
+                              ),
+                    ),
+                );
+            });
+            return BotPhotoClient.of({ listPhotos, putPhoto, deletePhoto });
+        }),
+    );

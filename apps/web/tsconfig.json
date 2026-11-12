@@ -1,17 +1,13 @@
 {
-    "extends": ["@artisann-port/typescript-config/base.json", "astro/tsconfigs/strict"],
-    "include": [".astro/types.d.ts", "**/*"],
+    "extends": "@artisann-port/typescript-config/base.json",
+    "include": ["src/**/*.ts", "__tests__/**/*.ts", "scripts/**/*.ts", "vite.config.ts"],
     "exclude": ["dist", "node_modules"],
     "compilerOptions": {
-        "allowImportingTsExtensions": true,
-        "jsx": "react-jsx",
-        "jsxImportSource": "react",
+        "lib": ["ESNext", "DOM", "DOM.Iterable"],
+        "types": ["vite/client", "node"],
         "noUnusedLocals": true,
         "noUnusedParameters": true,
-        "noFallthroughCasesInSwitch": true,
         "noUncheckedSideEffectImports": true,
-        "paths": {
-            "@/*": ["./src/*"]
-        }
+        "paths": { "@/*": ["./src/*"] }
     }
 }

@@ -33,7 +33,7 @@ import {
 } from "@artisann-port/presence/notes";
 import { BotConfig } from "../src/config.ts";
 import type { BotConfigService } from "../src/config.ts";
-import { BotStorageError, ContentValidationError } from "../src/rpc-client.ts";
+import { BotStorageError, ContentValidationError } from "../src/portfolio-client.ts";
 import { BotContentClient } from "../src/content-client.ts";
 import type { BotContentClientService } from "../src/content-client.ts";
 import { NoteModeration, noteDecisionHandler, verifyNotesWebhook } from "../src/notes.ts";

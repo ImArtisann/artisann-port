@@ -1,0 +1,11 @@
+{
+    "version": 2,
+    "skills": {
+        "alchemy-domain": {
+            "source": "alchemy-run/alchemy",
+            "sourceType": "github",
+            "skillPath": ".agents/skills/alchemy-domain/SKILL.md",
+            "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+    }
+}

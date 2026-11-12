@@ -1,15 +1,21 @@
 /**
  * The visitor's two write actions. The edge rate limiter runs first per client,
  * the photo key must be a managed photo that actually exists in the bucket,
- * and the count that comes back is the authoritative one from D1. A repeat
- * heart from the same visitor never raises the count, and a comment is trimmed,
- * length-checked, and content-filtered before it is stored.
+ * and the reply is authoritative from the active source or Domain aggregate.
+ * Domain writes wait for the D1 projection before acknowledging success.
+ * A repeat heart from the same visitor never raises the count. Comments are
+ * trimmed, length-checked and moderated before the trusted command is sent.
  */
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Schema from "effect/Schema";
-import { MAX_COMMENT_LENGTH, SITE_PHOTO_TAG, type CommentResult } from "../contracts.ts";
+import {
+    MAX_COMMENT_LENGTH,
+    SITE_PHOTO_TAG,
+    type CommentResult,
+    type LikeResult,
+} from "../contracts.ts";
 import type { VisitorRateLimitBinding } from "../env.ts";
 import { spamProblem } from "./comment-filter.ts";
 import { PhotosBinding } from "./deck-service.ts";
@@ -34,20 +40,13 @@ export class RateLimitBinding extends Context.Service<RateLimitBinding, VisitorR
     "Heart.RateLimit",
 ) {}
 
-/** The authoritative count after one heart landed. */
-export interface HeartOutcome {
-    readonly key: string;
-    readonly likes: number;
-    readonly hearted: true;
-}
-
 export interface HeartOperations {
     /** Land one heart on one managed cat photo; a repeat is a no-op. */
     readonly heart: (
         key: string,
         visitorId: string,
         clientKey: string,
-    ) => Effect.Effect<HeartOutcome, HeartError>;
+    ) => Effect.Effect<LikeResult, HeartError>;
     /** Store one comment on one managed cat photo. */
     readonly comment: (
         key: string,
@@ -61,7 +60,7 @@ export class HeartService extends Context.Service<HeartService, HeartOperations>
     "Heart.Service",
 ) {}
 
-/** Native R2 + D1 heart and comment actions. Acquisition captures bindings, no I/O. */
+/** Adapter checks finish before the active authority receives a mutation. */
 export const HeartLive = Layer.effect(
     HeartService,
     Effect.gen(function* () {
@@ -105,7 +104,7 @@ export const HeartLive = Layer.effect(
                 .heart(key, visitorId)
                 .pipe(Effect.mapError(() => new HeartError({ reason: "Unavailable" })));
 
-            const outcome: HeartOutcome = { key, likes: count, hearted: true };
+            const outcome: LikeResult = { key, likes: count, hearted: true };
             return outcome;
         });
 

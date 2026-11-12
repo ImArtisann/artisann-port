@@ -12,22 +12,21 @@
     },
     "dependencies": {
         "@artisann-port/assets": "workspace:*",
+        "@artisann-port/cats-domain": "workspace:*",
         "@artisann-port/presence": "workspace:*",
-        "@tanstack/react-router": "catalog:",
-        "@tanstack/react-start": "catalog:",
+        "@alchemy.run/cloudflare": "catalog:",
+        "@alchemy.run/domain": "catalog:",
+        "@effect/platform-browser": "catalog:",
         "alchemy": "catalog:",
         "effect": "catalog:",
-        "motion": "catalog:",
-        "react": "catalog:",
-        "react-dom": "catalog:"
+        "foldkit": "catalog:",
+        "motion": "catalog:"
     },
     "devDependencies": {
         "@artisann-port/typescript-config": "workspace:*",
         "@cloudflare/workers-types": "catalog:",
         "@tailwindcss/vite": "catalog:",
-        "@types/react": "catalog:",
-        "@types/react-dom": "catalog:",
-        "@vitejs/plugin-react": "catalog:",
+        "@foldkit/vite-plugin": "catalog:",
         "tailwindcss": "catalog:",
         "vite": "catalog:"
     }

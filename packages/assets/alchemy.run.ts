@@ -1,5 +1,5 @@
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Config from "effect/Config";
 import * as Effect from "effect/Effect";
 import { DEFAULT_ASSETS_BUCKET_NAME, DEFAULT_ASSETS_HOST } from "./src/config.ts";

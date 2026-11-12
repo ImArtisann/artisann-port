@@ -36,7 +36,7 @@ import {
     type BotContentClientService,
     type NoteApproval,
 } from "./content-client.ts";
-import { BotStorageError, ContentValidationError } from "./rpc-client.ts";
+import { BotStorageError, ContentValidationError } from "./portfolio-client.ts";
 import {
     PRIVATE_BOT_MESSAGE,
     deferredComponentAck,

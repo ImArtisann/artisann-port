@@ -1,5 +1,5 @@
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Output from "alchemy/Output";
 import * as Effect from "effect/Effect";
 
@@ -24,24 +24,21 @@ export default Alchemy.Stack(
                       return zone.id;
                   })
                 : undefined;
-        const website = yield* Cloudflare.Website.Astro("Website", {
+        const backend = yield* Cloudflare.Worker.ref("PortfolioBackend", {
+            stack: "ArtisannPortfolioPresence",
+            stage,
+        });
+        const website = yield* Cloudflare.Website.Foldkit("Website", {
             rootDir: "apps/web",
-            // Hash workspace dependencies relative to this checkout, not paths
-            // auto-detected and persisted by a deploy on another machine.
             memo: {
                 workspaces: [
                     { cwd: "../../packages/assets" },
                     { cwd: "../../packages/presence" },
-                    { cwd: "../../packages/ui" },
+                    { cwd: "../../packages/portfolio-domain" },
                 ],
             },
-            astro: { output: "static" },
-            // Vite 8 emits a Rolldown runtime chunk that calls
-            // `createRequire(import.meta.url)` at module scope. The local
-            // workerd loader leaves `import.meta.url` undefined, so the
-            // workerd prerenderer crashes before rendering anything. Astro's
-            // Node prerenderer produces the same static pages.
-            prerenderEnvironment: "node",
+            env: { PORTFOLIO: backend },
+            assets: { runWorkerFirst: ["/api/*", "/presence", "/projects/*"] },
             domain: stage === "prod" ? "www.artisann.dev" : undefined,
         });
 

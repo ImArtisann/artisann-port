@@ -1,7 +1,7 @@
 /**
  * The upload path behind the owner's iOS Shortcut. Bytes are read under the
  * size cap before anything else, transcoded to WebP by the Images binding,
- * written to the managed key grammar in R2, and claimed in D1 at zero hearts.
+ * written create-only through Portfolio's photo owner, then claimed in D1.
  */
 import * as Context from "effect/Context";
 import * as DateTime from "effect/DateTime";
@@ -10,13 +10,10 @@ import * as Exit from "effect/Exit";
 import * as Layer from "effect/Layer";
 import * as Schema from "effect/Schema";
 import * as Stream from "effect/Stream";
-import type {
-    ImagesBinding,
-    ReadableStream as WorkersReadableStream,
-} from "@cloudflare/workers-types";
-import { photoKey, photoUrl, type PhotoTag } from "@artisann-port/presence/photos";
+import type { ReadableStream as WorkersReadableStream } from "@cloudflare/workers-types";
+import { photoKey, type PhotoTag } from "@artisann-port/presence/photos";
+import { PhotoOwnerClient } from "@artisann-port/presence/photo-owner-client";
 import { MAX_PHOTO_EDGE_PX, MAX_UPLOAD_BYTES, type UploadResult } from "../contracts.ts";
-import { PhotosBinding, PhotosConfig } from "./deck-service.ts";
 import { HeartsService } from "./hearts-service.ts";
 import { makePhotoId } from "./photo-id.ts";
 
@@ -24,14 +21,21 @@ export class UploadError extends Schema.TaggedError<UploadError>()("Upload.Error
     reason: Schema.Literals(["InvalidImage", "TooLarge", "Unavailable"]),
 }) {}
 
-/** The Cloudflare Images binding used to transcode uploads. */
-export class UploadImages extends Context.Service<UploadImages, ImagesBinding>()("Upload.Images") {}
+export interface UploadImagesBinding {
+    input(stream: WorkersReadableStream<Uint8Array>): {
+        transform(options: { width: number; height: number; fit: "scale-down" }): {
+            output(options: { format: "image/webp"; quality: number }): Promise<{
+                response(): { arrayBuffer(): Promise<ArrayBuffer> };
+            }>;
+        };
+    };
+}
+export class UploadImages extends Context.Service<UploadImages, UploadImagesBinding>()(
+    "Upload.Images",
+) {}
 
 /** WebP encoder quality for stored photos; visually lossless at card sizes. */
 const WEBP_QUALITY = 82;
-
-/** R2 cache directive for stored photos: short, revalidated. */
-const PHOTO_CACHE_CONTROL = "public, max-age=60, must-revalidate";
 
 /**
  * Create-only writes allowed per upload: the first id plus two fresh ones for
@@ -135,8 +139,7 @@ export const UploadLive = Layer.effect(
     UploadService,
     Effect.gen(function* () {
         const images = yield* UploadImages;
-        const photos = yield* PhotosBinding;
-        const config = yield* PhotosConfig;
+        const photos = yield* PhotoOwnerClient;
         const hearts = yield* HeartsService;
 
         const upload = Effect.fn("Upload.upload")(function* (
@@ -167,57 +170,49 @@ export const UploadLive = Layer.effect(
             const stored = new Uint8Array(encoded);
             if (!isWebp(stored)) return yield* new UploadError({ reason: "InvalidImage" });
 
-            // Create-only: a key that already exists is a collision, not a
-            // silent overwrite, so a `null` write mints a fresh id and tries
-            // again, bounded by `STORE_ATTEMPTS`. A thrown R2 error is an
-            // outage and is never retried, and neither is a registration
-            // failure below: only the id is re-rolled, never the write's luck.
             const created = yield* Effect.gen(function* () {
                 for (let attempt = 0; attempt < STORE_ATTEMPTS; attempt += 1) {
                     const id = yield* makePhotoId;
                     const key = photoKey(tag, id);
                     if (key === null) return yield* new UploadError({ reason: "InvalidImage" });
-
-                    const url = photoUrl(key, config.assetsHost);
-                    if (url === null) return yield* new UploadError({ reason: "Unavailable" });
-
-                    const written = yield* Effect.tryPromise({
-                        try: () =>
-                            photos.put(key, stored, {
-                                onlyIf: { etagDoesNotMatch: "*" },
-                                httpMetadata: {
-                                    contentType: "image/webp",
-                                    cacheControl: PHOTO_CACHE_CONTROL,
-                                },
+                    // Keys can collide, so they cannot identify an upload: a shared ID would
+                    // replay or conflict with the other upload instead of reporting Collision.
+                    const attempt = yield* Effect.sync(() => crypto.randomUUID());
+                    const written = yield* photos
+                        .upload({
+                            key,
+                            tag,
+                            bytes: stored,
+                            operationId: `cats-upload:${key}:${attempt}`,
+                        })
+                        .pipe(
+                            Effect.match({
+                                onSuccess: (receipt) => ({ _tag: "Stored" as const, receipt }),
+                                onFailure: (error) => ({ _tag: "Failed" as const, error }),
                             }),
-                        catch: () => new UploadError({ reason: "Unavailable" }),
-                    });
-                    if (written !== null) return { key, url };
+                        );
+                    if (written._tag === "Stored") return written.receipt;
+                    if (written.error.reason !== "Collision") {
+                        return yield* new UploadError({ reason: "Unavailable" });
+                    }
                 }
                 return yield* new UploadError({ reason: "Unavailable" });
             });
             const { key, url } = created;
 
             const uploadedAt = DateTime.formatIso(yield* DateTime.now);
-            // The object is already live under its key; a photo D1 never
-            // claimed should not stay there, so the rollback deletes it. The
-            // delete names exactly the key this upload created, so no other
-            // object — in particular none that predates the create-only put —
-            // can be caught in the rollback.
-            const rollback = Effect.tryPromise({
-                try: () => photos.delete(key),
-                catch: () => new UploadError({ reason: "Unavailable" }),
-            }).pipe(
-                Effect.tapError(() => Effect.logError("Upload rollback failed", key)),
-                // The client still gets `Unavailable`: nothing registered the
-                // photo, so no heart or comment can point at it. The delete is
-                // best effort, and the deck lists straight from the bucket —
-                // so if it fails, the object stays reachable under its key and
-                // appears there with no likes. The log is the trace of that
-                // orphan; the failure is never reported as success nor
-                // silently discarded.
-                Effect.ignore,
-            );
+            const rollback = photos
+                .delete({
+                    key,
+                    operationId: `cats-rollback:${created.operationId}`,
+                    expectedEtag: created.etag,
+                    // Identical bytes share an ETag; only this upload's object may be removed.
+                    expectedUploadOperationId: created.operationId,
+                })
+                .pipe(
+                    Effect.tapError(() => Effect.logError("Upload rollback failed", key)),
+                    Effect.match({ onFailure: () => undefined, onSuccess: () => undefined }),
+                );
 
             yield* hearts.register(key, tag, uploadedAt).pipe(
                 Effect.mapError(() => new UploadError({ reason: "Unavailable" })),

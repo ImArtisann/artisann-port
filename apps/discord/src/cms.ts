@@ -45,8 +45,8 @@ import {
     SOCIAL_ICONS,
     formatUseLines,
     parseUseLines,
-} from "@artisann-port/presence/content";
-import { parseOgImageHosts } from "@artisann-port/presence/project-hosts";
+} from "@artisann-port/portfolio-domain/content";
+import { parseOgImageHosts } from "@artisann-port/portfolio-domain/project-hosts";
 import type {
     DeployedApp,
     OpenSourceProject,
@@ -59,13 +59,13 @@ import type {
     SocialLink,
     UseItem,
     Uses,
-} from "@artisann-port/presence/content";
+} from "@artisann-port/portfolio-domain/content";
 import { BotConfig } from "./config.ts";
 import type { BotConfigService } from "./config.ts";
-import { ContentValidationError } from "./rpc-client.ts";
+import { ContentValidationError } from "./portfolio-client.ts";
 import { BotContentClient } from "./content-client.ts";
 import type { BotContentClientService } from "./content-client.ts";
-import type { BotStorageError } from "./rpc-client.ts";
+import type { BotStorageError } from "./portfolio-client.ts";
 import type { ModalField } from "./modal.ts";
 import { modalFields, selectValues, textField } from "./modal.ts";
 import {
