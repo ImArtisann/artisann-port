@@ -1,4 +1,3 @@
-import { projectPreviewUrl } from "@artisann-port/presence/projects";
 import {
     Album01Icon,
     ArrowUpRight01Icon,
@@ -9,6 +8,7 @@ import {
     SunCloud02Icon,
 } from "@hugeicons-pro/core-solid-rounded";
 import type { Html, HtmlBuilder } from "foldkit/html";
+import { projectImageSource } from "../lib/project-image.ts";
 import { AdoptImage, Message, type Model } from "../main.ts";
 import { card, CARD_CONTENT, CARD_HEADER, icon, ICON_BUTTON } from "./ui.ts";
 
@@ -35,15 +35,7 @@ export function projectCarousel(
             ],
         );
     const url = new URL(project.url);
-    let src: string | null = null;
-    if ("ogImageHosts" in project) {
-        const preview = new URL(projectPreviewUrl(project));
-        src = `${preview.pathname}${preview.search}`;
-    } else if (url.hostname === "github.com") {
-        const [owner, repo] = url.pathname.split("/").filter(Boolean);
-        if (owner !== undefined && repo !== undefined)
-            src = `https://opengraph.githubassets.com/1/${owner}/${repo}`;
-    }
+    const src = projectImageSource(project);
     const failed = src === null || model.failedImages.includes(src);
     const loading = src !== null && !model.loadedImages.includes(src);
     const placeholder = h.div(

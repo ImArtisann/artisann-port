@@ -14,6 +14,7 @@ import { defineMessageUnion } from "foldkit/message";
 import * as Gallery from "./components/gallery.ts";
 import * as Notes from "./components/notes.ts";
 import { PortfolioHttp } from "./lib/api-client.ts";
+import { projectImageSource } from "./lib/project-image.ts";
 import { INITIAL_PRESENCE, PresenceState, presenceStream } from "./lib/presence-client.ts";
 
 export const Flags = Schema.Struct({
@@ -167,6 +168,11 @@ export const init = (flags: Flags): Update.Return<Model, Message, PortfolioHttp>
     };
 };
 
+/** Both content transports carry the authority's monotonic `updatedAt`. */
+const isOlderContent = (model: Model, content: SiteContent): boolean =>
+    model.content.updatedAt !== null &&
+    (content.updatedAt === null || content.updatedAt < model.content.updatedAt);
+
 const applyContent = (
     model: Model,
     content: SiteContent,
@@ -185,16 +191,13 @@ export const update = (
     message: Message,
 ): Update.Return<Model, Message, PortfolioHttp> =>
     Message.match(message, {
-        ReceivedContent: ({ content }) => {
-            if (
-                model.content.updatedAt !== null &&
-                (content.updatedAt === null || content.updatedAt < model.content.updatedAt)
-            )
-                return { model };
-            return applyContent(model, content);
-        },
+        ReceivedContent: ({ content }) =>
+            isOlderContent(model, content) ? { model } : applyContent(model, content),
+        // Before handoff, HTTP reads the live source while the watch can lag on an import.
         ReceivedPublished: ({ content, revision }) =>
-            revision < model.revision ? { model } : applyContent({ ...model, revision }, content),
+            revision < model.revision || isOlderContent(model, content)
+                ? { model }
+                : applyContent({ ...model, revision }, content),
         FailedContent: () => ({ model }),
         FailedWatch: () => ({
             model: { ...model, watchEnabled: false },
@@ -245,11 +248,17 @@ export const update = (
             );
             const next = entries[(index + delta + entries.length) % entries.length];
             if (next === undefined) return { model };
+            // Like the retired keyed preview, revisiting a project retries its failed image.
+            const src = projectImageSource(next);
+            const retried = {
+                ...model,
+                failedImages: model.failedImages.filter((failed) => failed !== src),
+            };
             return {
                 model:
                     kind === "apps"
-                        ? { ...model, appId: next.id, appDirection: delta }
-                        : { ...model, openSourceId: next.id, openSourceDirection: delta },
+                        ? { ...retried, appId: next.id, appDirection: delta }
+                        : { ...retried, openSourceId: next.id, openSourceDirection: delta },
             };
         },
         SettledImage: ({ src, failed }) => ({
